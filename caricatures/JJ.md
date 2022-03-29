@@ -30,7 +30,7 @@ As a python package without CLI
 ```
 import toolbox
 from generative_models import GenerativeModel
-form utils import load_data, fancy_plot
+from utils import load_data, fancy_plot
 
 save_dir = 'path/to/save/at'
 
@@ -44,5 +44,5 @@ attack = toolbox.Attack1(generative_model, data, attack_config)
 
 results = attack.evaluate()
 
-fancy_plot(out, save_dir)
+fancy_plot(results, save_dir)
 ```
