@@ -1,5 +1,3 @@
-from utils.data import read_meta
-
 class DirectLinkage(MIAttack):
     """
     Attack that checks only whether or not the target is in the generated synthetic

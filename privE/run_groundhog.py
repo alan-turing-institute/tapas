@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 
-from attacks.set_classifiers import LRClassifier, SetReprClassifier, NaiveRep
+from privE.attacks.set_classifiers import LRClassifier, SetReprClassifier, NaiveRep
 from attack_models import Groundhog
 from datasets import TabularDataset
 

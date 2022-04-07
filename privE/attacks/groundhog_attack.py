@@ -6,13 +6,11 @@ import numpy as np
 import pandas as pd
 
 from attack_models.base_classes import MIAttack
-from utils.data import read_meta
 
 from warnings import simplefilter
 simplefilter('ignore', category=FutureWarning)
 simplefilter('ignore', category=DeprecationWarning)
 
-import multiprocessing as mp
 
 class Groundhog(MIAttack):
     """
