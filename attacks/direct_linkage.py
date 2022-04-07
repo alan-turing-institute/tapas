@@ -5,14 +5,8 @@ class DirectLinkage(MIAttack):
     Attack that checks only whether or not the target is in the generated synthetic
     dataset or not
     """
-    def __init__(self, Generator, metadata, target, quids=None):
-        self.Generator = Generator
+    def __init__(self, target):
         self.target = target
-
-        (self.metadata,
-         self.categoricalAttributes,
-         self.numericalAttributes 
-         = read_meta(metadata, quids))
 
     def train(self):
         pass
