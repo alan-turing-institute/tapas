@@ -1,4 +1,5 @@
 .DS_Store
+runs/*
 __pycache__/*
 */__pycache__/*
 */__pycache__
