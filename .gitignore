@@ -1,6 +1,4 @@
 .DS_Store
-.idea
-runs/*
 __pycache__/*
 */__pycache__/*
 */__pycache__
