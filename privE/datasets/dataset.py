@@ -1,6 +1,7 @@
 """Abstract base classes to represent the data object"""
 from abc import ABC, abstractmethod
-
+import json
+import pandas as pd
 
 class Dataset(ABC):
 
@@ -53,14 +54,14 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def replace(self, record):
+    def replace(self, record_in, record_out):
         """
-        ?
+        Replace a row with a given row.
         """
         pass
 
     @abstractmethod
-    def create_training_samples(self, n, sample_size, record_drop=None):
+    def create_subsets(self, n, sample_size, record_drop=None):
         """ Create a number of training datasets (sub-samples from main dataset)
          of a given sample size and with the option to remove a recotd"""
         pass
