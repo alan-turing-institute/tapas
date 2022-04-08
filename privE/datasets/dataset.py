@@ -80,12 +80,12 @@ class TabularDataset(Dataset):
         Read csv and json files dataframe and and dictionary respectively.
 
         :param input_path: A string with the path where the csv and json file are located
-        :return: A pandas dataframe.
+        :return: A pandas dataframe and a dictionary with data description.
         """
         with open(f'{input_path}.json') as f:
             description = json.load(f)
 
-        # TODO: something like this to determine types and columns to be read in the dataframe
+        #TODO: something like this to determine types and columns to be read in the dataframe
         #dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
         #columns = self.description['columns']
 
@@ -134,8 +134,5 @@ class TabularDataset(Dataset):
         """ Create a number of training datasets (sub-samples from main dataset)
          of a given sample size and with the option to remove a recotd"""
         pass
-
-    def __call__(self, input_path):
-        return self.read(input_path)
 
 
