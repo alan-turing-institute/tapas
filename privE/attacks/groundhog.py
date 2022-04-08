@@ -1,15 +1,40 @@
 """
 Parent class for launching a membership inference attack on the output of a 
-generative model
+generative model.
 """
 import numpy as np
 import pandas as pd
 
-from attack_models.base_classes import MIAttack
+from attacks.base_classes import MIAttack
 
 from warnings import simplefilter
 simplefilter('ignore', category=FutureWarning)
 simplefilter('ignore', category=DeprecationWarning)
+
+
+# Specific classifiers for the groundhog attack.
+
+class Classifier(ABC):
+    """
+    Abstract base class for a classifier
+    """
+    @abstractmethod
+    def fit(X, y, *args, **kwargs):
+        """Fit classifier to data"""
+        pass
+
+    @abstractmethod
+    def predict(X, *args, **kwargs):
+        """Predict classes from input data"""
+        pass
+
+
+class GroundhogClassifier(Classifier):
+    """
+    Abstract base class for a classifier that can be used in the groundhog attack.
+    """
+    pass
+
 
 
 class Groundhog(MIAttack):
