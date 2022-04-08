@@ -1,4 +1,4 @@
-name: Synthetic data release (poetry installation)
+name: Privacy toolbox (poetry installation)
 on: [push, pull_request]
 
 jobs:
