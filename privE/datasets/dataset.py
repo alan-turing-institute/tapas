@@ -74,7 +74,6 @@ class Dataset(ABC):
 
 
 
-
 class TabularDataset(Dataset):
 
     """Base class for data objects """
@@ -84,6 +83,7 @@ class TabularDataset(Dataset):
         else:
             self.dataset = dataset
             self.description = description
+
 
     def read(self, input_path):
         """
@@ -95,11 +95,13 @@ class TabularDataset(Dataset):
         with open(f'{input_path}.json') as f:
             self.description = json.load(f)
 
+
         #TODO: something like this to determine types and columns to be read in the dataframe
         #dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
         #columns = self.description['columns']
 
         self.dataset = pd.read_csv(f'{input_path}.csv')
+
 
     def write(self, output_path):
         """
@@ -120,6 +122,7 @@ class TabularDataset(Dataset):
         """
         return TabularDataset(dataset=self.dataset.sample(n_samples), description=self.description)
 
+
     def get_record(self, record_ids):
         """
         Select and return a record(s).
@@ -131,8 +134,6 @@ class TabularDataset(Dataset):
         Drop a record(s) and return modified dataset.
         """
         pass
-
-
 
     def add_record(self, record):
         """
@@ -162,6 +163,5 @@ class TabularDataset(Dataset):
         assert self.description == other.description, "Both datasets must have the same data description"
 
         return TabularDataset(dataset=pd.concat([self.dataset,other.dataset]),description=self.description)
-
 
 
