@@ -5,7 +5,7 @@ generative model.
 import numpy as np
 import pandas as pd
 
-from attacks.base_classes import MIAttack
+from attacks.base_classes import Attack
 
 from warnings import simplefilter
 simplefilter('ignore', category=FutureWarning)
@@ -37,43 +37,49 @@ class GroundhogClassifier(Classifier):
 
 
 
-class Groundhog(MIAttack):
+class Groundhog(Attack):
     """
     Parent class for membership inference attack on the output of a 
     generative model using a classifier. A single instance of this class
     corresponds to a specific target data point.
 
     Args:
-        Classifier : Classifier to use to distinguish synthetic datasets
+        threat_model: the threat model for this attack.
+        classifier : Classifier to use to distinguish synthetic datasets
         metadata (dict) : Metadata dictionary describing data
         quids (list) : List of column names to be regarded as quasi-identifiers.
             This list makers the Attack class aware of which columns that would
             usually be continuous are going to be categorical (binned).
     """
     def __init__(self,
-                 Classifier,
+                 threat_model,
+                 classifier,
                  data_description,
                  quids=None
                  ):
-        self.Classifier = Classifier
+        Attack.__init__(self, threat_model)
+        self.classifier = classifier
         self.data_description = data_description
 
         self.trained = False
 
         self.__name__ = f'{self.Classifier.__class__.__name__}Groundhog'
 
-    def train(self, datasets, labels):
+    def train(self, num_samples = 100, synthetic_datasets = None, labels = None):
         """
         Train the attack classifier on a labelled training set
 
         Args:
-            datasets (List[pd.DataFrame]): List of synthetic datasets to use
-                as training data
+            synthetic_datasets (List[pd.DataFrame]): List of synthetic datasets
+                to use as training data.
             labels (np.ndarray): Labels for datasets indicating whether or not
                 the target was present in the training data that produced each
                 synthetic dataset
         """
         # Fit the classifier to the data
+        if datasets is None or labels is None:
+            synthetic_datasets, labels = self.threat_model.generate_training_samples(num_samples)
+
         self.Classifier.fit(synthetic_datasets, labels)
 
         self.trained = True

@@ -45,20 +45,20 @@ class Attack(ABC):
 #  AIAs with the exact same code (since the sampling logic of train/test is in
 #  the threat model).
 
-class MIAttack(Attack):
-    """
-    Abstract base class for membership inference attacks
-    """
-    @abstractmethod
-    def attack(self, target, priv_output, *args, **kwargs):
-        """Infer presence of target in (training data that generated) priv_output"""
-        pass
+# class MIAttack(Attack):
+#     """
+#     Abstract base class for membership inference attacks
+#     """
+#     @abstractmethod
+#     def attack(self, target, priv_output, *args, **kwargs):
+#         """Infer presence of target in (training data that generated) priv_output"""
+#         pass
 
 
-class AIAttack(Attack):
-    """
-    Abstract base class for attribute inference attacks
-    """
-    @abstractmethod
-    def attack(self, target, priv_output, target_cols, *args, **kwargs):
-        pass
+# class AIAttack(Attack):
+#     """
+#     Abstract base class for attribute inference attacks
+#     """
+#     @abstractmethod
+#     def attack(self, target, priv_output, target_cols, *args, **kwargs):
+#         pass

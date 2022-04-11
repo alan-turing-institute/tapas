@@ -4,9 +4,10 @@ import numpy as np
 from sklearn.metrics import roc_curve
 
 from attacks.base_classes import MIAttack
+from threat_models.mia import TargetedMembershipInference
 
 
-class ClosestDistanceAttack( MIAttack ):
+class ClosestDistanceAttack( MIAttack ):  # or, honestly, just Attack.
 	"""Attack that looks for the closest record to a given target in the
 	    synthetic data to determine whether the target was in the
 	    training dataset.
@@ -29,6 +30,8 @@ class ClosestDistanceAttack( MIAttack ):
 
 		    Exactly one of threshold, fpr or tpr must be not None.
 		"""
+		assert isinstance(threat_model, TargetedMembershipInference), \
+			 "Incompatible attack model: needs targeted MIA."
 		MIAttack.__init__(self, threat_model)
 		self.target_record = self.threat_model.target_record
 		self.distance_function = distance_function or self._default_distance

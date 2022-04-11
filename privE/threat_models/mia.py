@@ -28,8 +28,8 @@ class AuxiliaryDataMIA(TargetedMembershipInference):
     """
 
     def __init__(self, target_record, dataset=None, dataset_sampler=None,
-        generator=None, num_synthetic_records=1000, auxiliary_test_split=0.9,
-        memoize_datasets=True):
+        generator=None, num_training_records=1000, num_synthetic_records=1000,
+        auxiliary_test_split=0.9, memoize_datasets=True):
         """Create a MIA threat model with black-box access to the generator,
             and where the attacker has access to an auxiliary dataset.
 
@@ -40,6 +40,8 @@ class AuxiliaryDataMIA(TargetedMembershipInference):
             dataset_sampler (callable): alternatively, a sampler for the datasets.
                 (not implemented yet).
             generator (callable): the generating model, as a black-box.
+            num_training_records (int): number of training samples in the
+                private training dataset.
             num_synthetic_records (int): number of synthetic samples to generate.
             auxiliary_test_split (float in [0,1]): fraction of the dataset to
                 use as auxiliary information available to attacker.
@@ -52,6 +54,8 @@ class AuxiliaryDataMIA(TargetedMembershipInference):
         TargetedMembershipInference.__init__(self, target_record)
         # Split the dataset between auxiliary and testing dataset.
         self.auxiliary_test_split = auxiliary_test_split
+        self.num_training_records = num_training_records
+        self.num_synthetic_records = num_synthetic_records
         self.datasets = self._split_auxiliary_testing(dataset, auxiliary_test_split)
         self.generator = generator
 
@@ -97,11 +101,12 @@ class AuxiliaryDataMIA(TargetedMembershipInference):
         #  sample datasets from the testing dataset.
         dataset = self.datasets['auxiliary' if training else 'testing'].copy()
 
+        # TODO: the interface should include some number of synthetic records to produce.
         num_synthetic_records = num_synthetic_records or self.num_synthetic_records
 
         for i in range(num_samples):
             # Compute a sample dataset D and generator(D).
-            training_dataset = dataset.subsample(size=num_synthetic_records)
+            training_dataset = dataset.subsample(size=self.num_training_records)
             synthetic_dataset = self.generator(training_dataset)
             synthetic_datasets.append(synthetic_dataset)
             # Then, add  - or replace a record by - the target the record.
