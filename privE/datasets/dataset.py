@@ -66,14 +66,24 @@ class Dataset(ABC):
          of a given sample size and with the option to remove a recotd"""
         pass
 
+    def __add__(self, other):
+        """
+        Adding two Dataset objects toguether
+        """
+        pass
+
 
 
 
 class TabularDataset(Dataset):
 
     """Base class for data objects """
-    def __init__(self, input_path):
-        self.dataset, self.description = self.read(input_path)
+    def __init__(self, input_path=None,dataset=None, description=None):
+        if input_path:
+            self.read(input_path)
+        else:
+            self.dataset = dataset
+            self.description = description
 
     def read(self, input_path):
         """
@@ -83,27 +93,32 @@ class TabularDataset(Dataset):
         :return: A pandas dataframe and a dictionary with data description.
         """
         with open(f'{input_path}.json') as f:
-            description = json.load(f)
+            self.description = json.load(f)
 
         #TODO: something like this to determine types and columns to be read in the dataframe
         #dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
         #columns = self.description['columns']
 
-        dataset = pd.read_csv(f'{input_path}.csv')
-
-        return dataset, description
+        self.dataset = pd.read_csv(f'{input_path}.csv')
 
     def write(self, output_path):
         """
         Write dataset and description to file
+
+        :param output_path: A string with the path where the csv and json file are going to be saved.
+        :return: None
         """
-        pass
+        with open(f'{output_path}.csv', 'w') as fp:
+            json.dump(dict, fp)
+
+        self.dataset.to_csv(output_path)
+
 
     def sample(self, n_samples):
         """
-        Sample from dataset a set of records.
+        Sample from dataframe a set of records.
         """
-        pass
+        return TabularDataset(dataset=self.dataset.sample(n_samples), description=self.description)
 
     def get_record(self, record_ids):
         """
@@ -116,6 +131,7 @@ class TabularDataset(Dataset):
         Drop a record(s) and return modified dataset.
         """
         pass
+
 
 
     def add_record(self, record):
@@ -134,5 +150,18 @@ class TabularDataset(Dataset):
         """ Create a number of training datasets (sub-samples from main dataset)
          of a given sample size and with the option to remove a recotd"""
         pass
+
+    def __add__(self, other):
+        """
+        Adding two TabularDataset objects with the same data description together
+
+        :param other: A TabularDataset object.
+        :return: A new TabularDataset object that contains both objects.
+        
+        """
+        assert self.description == other.description, "Both datasets must have the same data description"
+
+        return TabularDataset(dataset=pd.concat([self.dataset,other.dataset]),description=self.description)
+
 
 
