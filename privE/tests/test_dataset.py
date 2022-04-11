@@ -34,6 +34,5 @@ class TestTabularDataset(TestCase):
         self.assertEqual(data_1000.description, data_sample1.description)
         self.assertEqual(data_1000.dataset.shape[0], 1000)
 
-
 if __name__ == '__main__':
     unittest.main()
