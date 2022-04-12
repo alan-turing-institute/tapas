@@ -30,7 +30,7 @@ jobs:
 
     - name: Install dependencies
       shell: bash
-      run: python -m poetry install
+      run: poetry install
 
     - name: Test with pytest
       run: |
