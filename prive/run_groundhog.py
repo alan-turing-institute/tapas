@@ -1,12 +1,12 @@
 from datetime import datetime
 import os
 
-from privE.attacks.set_classifiers import LRClassifier, SetReprClassifier, NaiveRep
-from privE.threat_models.mia import AuxiliaryDataMIA
-from privE.attacks import Groundhog, ClosestDistanceAttack
-from privE.datasets import TabularDataset
+from prive.attacks.set_classifiers import LRClassifier, SetReprClassifier, NaiveRep
+from prive.threat_models.mia import AuxiliaryDataMIA
+from prive.attacks import Groundhog, ClosestDistanceAttack
+from prive.datasets import TabularDataset
 
-from privE.generative_models import ReturnRaw
+from prive.generative_models import ReturnRaw
 
 
 # Set some parameters

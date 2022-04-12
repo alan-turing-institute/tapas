@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
-from privE.utils.data import encode_data, get_num_features
+from prive.utils.data import encode_data, get_num_features
 
 class SetClassifier(ABC):
     """Abstract base class for set classifiers"""
