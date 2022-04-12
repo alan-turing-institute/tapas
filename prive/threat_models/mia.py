@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from .base_classes import ThreatModel
+from ..attacks import Attack # for typing
 
 
 class TargetedMIA(ThreatModel):
@@ -121,7 +122,6 @@ class AuxiliaryDataMIA(TargetedMIA):
         
         return synthetic_datasets, labels
 
-
     def generate_training_samples(self, num_samples, num_synthetic_records=None,
                                   replace_targets=False):
         """Generate samples according to the attacker's known information.
@@ -131,6 +131,7 @@ class AuxiliaryDataMIA(TargetedMIA):
             training=True, replace_target=replace_targets)
 
 
+    # JJ: I think this can be removed in favour of test
     def generate_testing_samples(self, num_samples, num_synthetic_records=None,
                                 replace_targets=False):
         """Generate testing samples (depending on known information).
@@ -138,3 +139,42 @@ class AuxiliaryDataMIA(TargetedMIA):
             (see _sample_datasets for the specific arguments)."""
         return self._sample_datasets(num_samples, num_synthetic_records,
             training=False, replace_target=replace_targets)
+
+    # TODO: Better docstring description
+    def test(self,
+             attack: Attack,
+             num_samples: int,
+             num_synthetic_records: int = None,
+             replace_targets: bool = False) -> tuple(list(int), list(int)):
+        """
+        Test an attack against this threat model.
+
+        Parameters
+        ----------
+        attack : Attack
+            Attack to test.
+        num_samples : int
+            Number of test datasets to generate and test against.
+        num_synthetic_records : int, optional
+            Number of synthetic records to generate per synthetic dataset.
+            The default is None.
+        replace_targets : bool, optional
+            Whether or not to remove a row before adding the target in each dataset.
+            The default is False.
+
+        Returns
+        -------
+        tuple(list(int), list(int))
+            Tuple of (ground_truth, guesses), where ground_truth indicates
+            what the attack needed to guess, and guesses are the attack's actual
+            guesses.
+
+        """
+        # Generate test samples
+        test_datasets, test_labels = self._sample_datasets(
+            num_samples, num_synthetic_records, training=False, replace_targets=replace_targets)
+
+        # Attack makes guesses about test samples
+        guesses = attack.attack(test_datasets)
+
+        return test_labels, guesses
