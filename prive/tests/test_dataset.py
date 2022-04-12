@@ -38,8 +38,8 @@ class TestTabularDataset(TestCase):
         data = TabularDataset.read('tests/data/texas')
 
         # returns a subset of the records
-        index = [10,20]
-        record = data.get_record(index)
+        index = [10, 20]
+        record = data.get_records(index)
 
         self.assertEqual(record.dataset.iloc[0]['DISCHARGE'], data.dataset.iloc[index[0]]['DISCHARGE'])
         self.assertEqual(record.dataset.shape[0], len(index))
