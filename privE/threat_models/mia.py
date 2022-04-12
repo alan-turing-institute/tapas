@@ -7,7 +7,8 @@ from threat_models.base_classes import ThreatModel
 
 
 class TargetedMembershipInference(ThreatModel):
-    """Abstract base class for a targeted MIA.
+    """
+    Abstract base class for a targeted MIA.
 
     A MIA (membership inference attack) aims at identifying whether a given
     target record is in the training dataset.
