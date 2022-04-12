@@ -5,7 +5,7 @@ from warnings import filterwarnings
 
 filterwarnings('ignore')
 
-from datasets.dataset import TabularDataset
+from privE.datasets.dataset import TabularDataset
 
 
 class TestTabularDataset(TestCase):
