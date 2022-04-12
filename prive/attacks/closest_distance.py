@@ -30,7 +30,7 @@ class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.
 
 		    Exactly one of threshold, fpr or tpr must be not None.
 		"""
-		assert isinstance(threat_model, TargetedMembershipInference), \
+		assert isinstance(threat_model, TargetedMIA), \
 			 "Incompatible attack model: needs targeted MIA."
 		MIAttack.__init__(self, threat_model)
 		self.target_record = self.threat_model.target_record
