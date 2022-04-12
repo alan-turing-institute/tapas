@@ -1,7 +1,7 @@
 """Abstract base classes for various privacy attacks."""
 
 from abc import ABC, abstractmethod
-from threat_model import ThreatModel
+from ..threat_models.base_classes import ThreatModel
 
 
 class Attack(ABC):

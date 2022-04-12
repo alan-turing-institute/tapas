@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from threat_models.base_classes import ThreatModel
+from .base_classes import ThreatModel
 
 
 class TargetedMembershipInference(ThreatModel):
@@ -72,7 +72,7 @@ class AuxiliaryDataMIA(TargetedMembershipInference):
 
 
     def _sample_datasets(self, num_samples, num_synthetic_records=None,
-        training=True, replace_target=False, training=True):
+        replace_target=False, training=True):
         """Generate synthetic datasets and labels using self.shadow_model.
 
         Args:
@@ -122,7 +122,7 @@ class AuxiliaryDataMIA(TargetedMembershipInference):
         return synthetic_datasets, labels
 
 
-    def generate_training_samples(self, num_samples, num_synthetic_records=None,,
+    def generate_training_samples(self, num_samples, num_synthetic_records=None,
                                   replace_targets=False):
         """Generate samples according to the attacker's known information.
 

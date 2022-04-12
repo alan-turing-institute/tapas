@@ -1,6 +1,6 @@
 """A direct linkage attack looks up the target record in the synthetic data."""
 
-from attacks.base_classes import Attack
+from .base_classes import Attack
 
 
 class DirectLinkage(Attack):

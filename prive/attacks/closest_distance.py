@@ -3,11 +3,11 @@
 import numpy as np
 from sklearn.metrics import roc_curve
 
-from attacks.base_classes import MIAttack
-from threat_models.mia import TargetedMembershipInference
+from .base_classes import Attack
+from ..threat_models.mia import TargetedMembershipInference
 
 
-class ClosestDistanceAttack( MIAttack ):  # or, honestly, just Attack.
+class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.
 	"""Attack that looks for the closest record to a given target in the
 	    synthetic data to determine whether the target was in the
 	    training dataset.

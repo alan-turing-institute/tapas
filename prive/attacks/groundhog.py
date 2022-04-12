@@ -2,10 +2,12 @@
 Parent class for launching a membership inference attack on the output of a 
 generative model.
 """
+from abc import ABC, abstractmethod
+
 import numpy as np
 import pandas as pd
 
-from attacks.base_classes import Attack
+from .base_classes import Attack
 
 from warnings import simplefilter
 simplefilter('ignore', category=FutureWarning)
