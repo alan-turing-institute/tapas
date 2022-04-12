@@ -7,58 +7,59 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 
-from .base_classes import Attack
+from ..datasets import DataDescription # for typing # TODO: define this class
+from ..threat_models import ThreatModel # for typing
 
+from .base_classes import Attack
+from .set_classifiers import SetClassifier # for typing
+
+# TODO: Remove this import potentially?
 from warnings import simplefilter
 simplefilter('ignore', category=FutureWarning)
 simplefilter('ignore', category=DeprecationWarning)
 
 
-# Specific classifiers for the groundhog attack.
-
-class Classifier(ABC):
-    """
-    Abstract base class for a classifier
-    """
-    @abstractmethod
-    def fit(X, y, *args, **kwargs):
-        """Fit classifier to data"""
-        pass
-
-    @abstractmethod
-    def predict(X, *args, **kwargs):
-        """Predict classes from input data"""
-        pass
-
-
-class GroundhogClassifier(Classifier):
-    """
-    Abstract base class for a classifier that can be used in the groundhog attack.
-    """
-    pass
-
-
-
 class Groundhog(Attack):
     """
-    Parent class for membership inference attack on the output of a 
-    generative model using a classifier. A single instance of this class
-    corresponds to a specific target data point.
+    Implementation of Stadler et al. (2022) attack
 
-    Args:
-        threat_model: the threat model for this attack.
-        classifier : Classifier to use to distinguish synthetic datasets
-        metadata (dict) : Metadata dictionary describing data
-        quids (list) : List of column names to be regarded as quasi-identifiers.
-            This list makers the Attack class aware of which columns that would
-            usually be continuous are going to be categorical (binned).
+    Parent class for membership inference attack on the output of a 
+    generative model using a classifier.
+
+    Attributes
+    ----------
+    threat_model : ThreatModel
+        Instance of a ThreatModel that will be used to generate training
+        samples for this attack.
+    classifier : SetClassifier
+        Instance of a SetClassifier that will be used as the classification
+        model for this attack.
+    data_description : DataDescription
+        Instance of DataDescription that describes that data that the attack
+        will be performed on.
+    trained : bool
+        Indicates whether or not the attack has been trained on some data.
+
     """
+
     def __init__(self,
-                 threat_model,
-                 classifier,
-                 data_description,
-                 quids=None
-                 ):
+                 threat_model: ThreatModel,
+                 classifier: SetClassifier,
+                 data_description: DataDescription):
+        """
+        Initialise a Groundhog attack from a threat model, classifier and
+        data description.
+
+        Parameters
+        ----------
+        threat_model : ThreatModel
+            ThreatModel to set for attack.
+        classifier : SetClassifier
+            SetClassifier to set for attack.
+        data_description : DataDescription
+            DataDescription to set for attack.
+
+        """
         Attack.__init__(self, threat_model)
         self.classifier = classifier
         self.data_description = data_description
@@ -67,57 +68,69 @@ class Groundhog(Attack):
 
         self.__name__ = f'{self.Classifier.__class__.__name__}Groundhog'
 
-    def train(self, num_samples = 100, synthetic_datasets = None, labels = None):
+    def train(self,
+              num_samples: int = 100,
+              synthetic_datasets: list[Dataset] = None,
+              labels: list[int] = None):
         """
-        Train the attack classifier on a labelled training set
+        Train the attack classifier on a labelled set of datasets.
 
-        Args:
-            synthetic_datasets (List[pd.DataFrame]): List of synthetic datasets
-                to use as training data.
-            labels (np.ndarray): Labels for datasets indicating whether or not
-                the target was present in the training data that produced each
-                synthetic dataset
+        Parameters
+        ----------
+        num_samples : int, optional
+            Number of datasets to generate using self.threat_model if
+            synthetic_datasets or labels are not given. The default is 100.
+        synthetic_datasets : list[Dataset], optional
+            List of datasets.Dataset objects. If not provided, self.threat_model
+            will be used to generate a new batch of synthetic_datasets and labels.
+            The default is None.
+        labels : list[int], optional
+            Labels for the given synthetic_datasets. A label of 1 indicates that
+            the target row is present in the data. The default is None.
+
         """
+
         # Fit the classifier to the data
-        if datasets is None or labels is None:
+        if synthetic_datasets is None or labels is None:
             synthetic_datasets, labels = self.threat_model.generate_training_samples(num_samples)
 
         self.Classifier.fit(synthetic_datasets, labels)
 
         self.trained = True
 
-    def attack(self, datasets):
+    def attack(self, datasets: list[Dataset]) -> list[int]:
         """
-        Make a guess about the target's membership in the training data of
-        each of the generative models that produced each of the synthetic
-        input datasets
+        Make a guess about the target's membership in the training data that was
+        used to produce each dataset in datasets.
 
-        Args:
-            datasets (List[pd.DataFrame]) : List of synthetic datasets to attack
-            attemptLinkage (bool) : If True, search for Target explicitly in
-                each dataset before using the classifier
-            target : Target to find if attemptLinkage=True
+        Parameters
+        ----------
+        datasets : list[Dataset]
+            List of (synthetic) datasets to make a guess for.
 
-        Returns:
-            guesses (List[int]) : List of guesses. The ith entry corresponds
-                to the guess for the ith dataset in datasets. Guess of 0
-                corresponds to target not present.
+        Returns
+        -------
+        guesses : list[int]
+            Binary guesses for each dataset. A guess of 1 at index i indicates
+            that the attack believes that the target was present in dataset i.
+
         """
         assert self.trained, 'Attack must first be trained.'
 
         guesses = []
-        for df in datasets:
-            guess = self._make_guess(df)
+        for dataset in datasets:
+            guess = self._make_guess(dataset)
             guesses.append(guess)
         return guesses
 
-    def _make_guess(self, df):
+    def _make_guess(self, dataset: Dataset) -> int:
         """
         Make a guess for a single dataset about the presence of the target in
         the training data that generated the dataset
         """
-        return np.round(self.Distinguisher.predict(f), 0).astype(int)[0]
+        return np.round(self.Distinguisher.predict(dataset.data), 0).astype(int)[0]
 
+    # TODO: Fix arg type, add type hints and reformat docstring
     def get_confidence(self, synT, secret):
         """
         Calculate classifier's raw probability about the presence of the target.

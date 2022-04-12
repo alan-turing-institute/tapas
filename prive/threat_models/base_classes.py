@@ -24,14 +24,17 @@ class ThreatModel(ABC):
      * What the attacker is trying to learn.
      * What the attacker knows about the method.
      * What the attacker knows about the training dataset.
+
     """
 
     @abstractmethod
     def test(self, attack, *args, **kwargs):
         """
         This method should implement the logic for testing an attack's success
-        against the prescribed threat model
+        against the prescribed threat model.
+
         """
+
         pass
 
 
@@ -39,12 +42,14 @@ class StaticDataThreatModel(ThreatModel):
     """
     Abstract base class for threat models in which training samples are generated
     for attacks to train on.
+
     """
 
     @abstractmethod
     def generate_training_samples(self, num_samples, *args, **kwargs):
         """
         Logic to generate training samples.
+
         """
         pass
 
@@ -53,11 +58,13 @@ class InteractiveThreatModel(ThreatModel):
     """
     Placeholder for interactive threat model idea (and to indicate divergence
     from static data threat model).
+
     """
 
     @abstractmethod
     def interact(self, attack, *args, **kwargs):
         """
         Houses logic for how an attack can interact with this threat model.
+
         """
         pass
