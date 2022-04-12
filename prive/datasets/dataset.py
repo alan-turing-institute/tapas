@@ -34,7 +34,7 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def get_record(self, record_ids):
+    def get_records(self, record_ids):
         """
         Select and return a record(s).
         """
@@ -139,11 +139,24 @@ class TabularDataset(Dataset):
         """
         return TabularDataset(dataset=self.dataset.sample(n_samples), description=self.description)
 
-    def get_record(self, record_ids):
+    def get_records(self, record_ids):
         """
-        Select and return a record(s).
+        Get a record from the TabularDataset object
+
+        Parameters
+        ----------
+        record_ids (List[int]): List of indexes of records to retrieve
+
+        Returns
+        -------
+
+        A TabularDataset object with the record(s).
+
         """
-        pass
+
+        # TODO: what if the index is supposed to be a column? an identifier?
+        return TabularDataset(self.dataset.iloc[record_ids], self.description)
+
 
     def drop_record(self, record_ids):
         """

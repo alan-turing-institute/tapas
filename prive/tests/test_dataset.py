@@ -34,5 +34,16 @@ class TestTabularDataset(TestCase):
         self.assertEqual(data_1000.description, data_sample1.description)
         self.assertEqual(data_1000.dataset.shape[0], 1000)
 
+    def test_get_record(self):
+        data = TabularDataset.read('tests/data/texas')
+
+        # returns a subset of the records
+        index = [10,20]
+        record = data.get_record(index)
+
+        self.assertEqual(record.dataset.iloc[0]['DISCHARGE'], data.dataset.iloc[index[0]]['DISCHARGE'])
+        self.assertEqual(record.dataset.shape[0], len(index))
+
+
 if __name__ == '__main__':
     unittest.main()
