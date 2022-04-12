@@ -32,10 +32,6 @@ jobs:
       shell: bash
       run: poetry install
 
-    - name: Install local package
-      shell: bash
-      run: poetry install
-
     - name: Test with pytest
       run: |
         cd privE
