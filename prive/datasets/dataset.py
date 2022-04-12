@@ -77,15 +77,12 @@ class Dataset(ABC):
 class TabularDataset(Dataset):
 
     """Base class for data objects """
-    def __init__(self, input_path=None,dataset=None, description=None):
-        if input_path:
-            self.read(input_path)
-        else:
-            self.dataset = dataset
-            self.description = description
+    def __init__(self, dataset, description):
+        self.dataset = dataset
+        self.description = description
 
-
-    def read(self, input_path):
+    @classmethod
+    def read(cls, input_path):
         """
         Read csv and json files dataframe and and dictionary respectively.
 
@@ -93,14 +90,17 @@ class TabularDataset(Dataset):
         :return: A pandas dataframe and a dictionary with data description.
         """
         with open(f'{input_path}.json') as f:
-            self.description = json.load(f)
+            description = json.load(f)
 
 
         #TODO: something like this to determine types and columns to be read in the dataframe
         #dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
         #columns = self.description['columns']
 
-        self.dataset = pd.read_csv(f'{input_path}.csv')
+        dataset = pd.read_csv(f'{input_path}.csv')
+
+        return  cls(dataset,description)
+
 
 
     def write(self, output_path):
@@ -162,6 +162,6 @@ class TabularDataset(Dataset):
         """
         assert self.description == other.description, "Both datasets must have the same data description"
 
-        return TabularDataset(dataset=pd.concat([self.dataset,other.dataset]),description=self.description)
+        return TabularDataset(pd.concat([self.dataset,other.dataset]),self.description)
 
 

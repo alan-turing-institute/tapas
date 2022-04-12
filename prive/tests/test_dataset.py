@@ -10,11 +10,11 @@ from prive.datasets.dataset import TabularDataset
 
 class TestTabularDataset(TestCase):
     def test_read(self):
-        data = TabularDataset(input_path='tests/data/texas')
+        data = TabularDataset.read('tests/data/texas')
         self.assertEqual(data.dataset.shape[0], 999)
 
     def test_sample(self):
-        data = TabularDataset(input_path='tests/data/texas')
+        data = TabularDataset.read('tests/data/texas')
 
         # returns a subset of the samples
         data_sample = data.sample(500)
@@ -23,7 +23,7 @@ class TestTabularDataset(TestCase):
         self.assertEqual(data_sample.dataset.shape[0], 500)
 
     def test_add(self):
-        data = TabularDataset(input_path='tests/data/texas')
+        data = TabularDataset.read('tests/data/texas')
 
         # returns a subset of the samples
         data_sample1 = data.sample(500)
