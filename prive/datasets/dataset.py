@@ -3,11 +3,12 @@ from abc import ABC, abstractmethod
 import json
 import pandas as pd
 
+
 class Dataset(ABC):
+    """Base class for the dataset object
+    """
 
-    """Base class for the dataset object """
-
-    def __init__(self, dataset=None, description = None):
+    def __init__(self, dataset, description):
         self.dataset = dataset
         self.description = description
 
@@ -63,65 +64,80 @@ class Dataset(ABC):
     @abstractmethod
     def create_subsets(self, n, sample_size, record_drop=None):
         """ Create a number of training datasets (sub-samples from main dataset)
-         of a given sample size and with the option to remove a recotd"""
+         of a given sample size and with the option to remove a record"""
         pass
 
     def __add__(self, other):
         """
-        Adding two Dataset objects toguether
+        Adding two Dataset objects together
         """
         pass
 
 
-
 class TabularDataset(Dataset):
+    """
+    Class for tabular dataset object. The tabular data is a Pandas Dataframe
+    and the data description is a dictionary.
+    """
 
-    """Base class for data objects """
     def __init__(self, dataset, description):
-        self.dataset = dataset
-        self.description = description
+        super().__init__(dataset, description)
 
     @classmethod
-    def read(cls, input_path):
+    def read(cls, filepath):
         """
-        Read csv and json files dataframe and and dictionary respectively.
+        Read csv and json files for dataframe and description dictionary respectively.
 
-        :param input_path: A string with the path where the csv and json file are located
-        :return: A pandas dataframe and a dictionary with data description.
+        Parameters
+        ----------
+        filepath (str): Path where the csv and json file are located
+
+        Returns
+        -------
+        A TabularDataset instantiated object.
+
         """
-        with open(f'{input_path}.json') as f:
+        with open(f'{filepath}.json') as f:
             description = json.load(f)
 
+        # TODO: something like this to determine types and columns to be read in the dataframe
+        # dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
+        # columns = self.description['columns']
 
-        #TODO: something like this to determine types and columns to be read in the dataframe
-        #dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
-        #columns = self.description['columns']
+        dataset = pd.read_csv(f'{filepath}.csv')
 
-        dataset = pd.read_csv(f'{input_path}.csv')
+        return cls(dataset, description)
 
-        return  cls(dataset,description)
-
-
-
-    def write(self, output_path):
+    def write(self, filepath):
         """
         Write dataset and description to file
 
-        :param output_path: A string with the path where the csv and json file are going to be saved.
-        :return: None
+        Parameters
+        ----------
+        filepath (str): Path where the csv and json file are saved
         """
-        with open(f'{output_path}.csv', 'w') as fp:
+
+        with open(f'{filepath}.csv', 'w') as fp:
             json.dump(dict, fp)
 
-        self.dataset.to_csv(output_path)
-
+        self.dataset.to_csv(filepath)
 
     def sample(self, n_samples):
         """
-        Sample from dataframe a set of records.
+        Sample from a TabularDataset object a set of records.
+
+        Parameters
+        ----------
+        n_samples (int): Number of records to sample
+
+        Returns
+        -------
+
+        A TabularDataset object with a sample of the records of the original object.
+
+
         """
         return TabularDataset(dataset=self.dataset.sample(n_samples), description=self.description)
-
 
     def get_record(self, record_ids):
         """
@@ -156,12 +172,18 @@ class TabularDataset(Dataset):
         """
         Adding two TabularDataset objects with the same data description together
 
-        :param other: A TabularDataset object.
-        :return: A new TabularDataset object that contains both objects.
-        
+        Parameters
+        ----------
+        other (TabularDataset): A TabularDataset object .
+
+        Returns
+        -------
+
+        A TabularDataset object with the addition of two initial objects.
+
+
         """
+
         assert self.description == other.description, "Both datasets must have the same data description"
 
-        return TabularDataset(pd.concat([self.dataset,other.dataset]),self.description)
-
-
+        return TabularDataset(pd.concat([self.dataset, other.dataset]), self.description)
