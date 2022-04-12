@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import roc_curve
 
 from .base_classes import Attack
-from ..threat_models.mia import TargetedMembershipInference
+from ..threat_models.mia import TargetedMIA
 
 
 class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.

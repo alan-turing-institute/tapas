@@ -6,7 +6,7 @@ import pandas as pd
 from .base_classes import ThreatModel
 
 
-class TargetedMembershipInference(ThreatModel):
+class TargetedMIA(ThreatModel):
     """
     Abstract base class for a targeted MIA.
 
@@ -21,7 +21,7 @@ class TargetedMembershipInference(ThreatModel):
 
 
 
-class AuxiliaryDataMIA(TargetedMembershipInference):
+class AuxiliaryDataMIA(TargetedMIA):
     """
     This threat model assumes access to some data and some knowledge of
     the algorithm that will be used as generator, specified by passing a
