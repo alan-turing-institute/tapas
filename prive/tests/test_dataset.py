@@ -53,6 +53,11 @@ class TestTabularDataset(TestCase):
 
         self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0]-len(index))
 
+        # check is record is in new dataset
+        is_record_in_new_dataset = (
+                    new_dataset.dataset == data.get_records(index).dataset.iloc[2]).all().all()
+        self.assertEqual(is_record_in_new_dataset, False)
+
     def test_add_records(self):
         data = TabularDataset.read('tests/data/texas')
 
@@ -63,6 +68,38 @@ class TestTabularDataset(TestCase):
         new_dataset = data.add_records(record)
 
         self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0] + len(index))
+
+    def test_create_subsets(self):
+        data = TabularDataset.read('tests/data/texas')
+
+        # returns a subset of the records
+        index = [100]
+
+        rI, rO = data.create_subsets(10, 100, index)
+
+        self.assertEqual(len(rI), len(rO))
+        self.assertEqual(rI[0].dataset.shape[0],rO[0].dataset.shape[0]+1)
+
+    def test_replace(self):
+        data = TabularDataset.read('tests/data/texas')
+
+        # returns a subset of the records
+        index = [200,300]
+        records_in = data.get_records(index)
+
+        # returns a subset of the samples
+        data_sample100 = data.get_records([i for i in range(100)])
+
+        index_to_drop = [20,30]
+
+        replaced_sample = data_sample100.replace(records_in,index_to_drop)
+
+        self.assertEqual(data_sample100.dataset.shape[0], replaced_sample.dataset.shape[0])
+
+        # check is record is in dataset
+        is_record_in_replaced_dataset = (replaced_sample.dataset == data.get_records(index_to_drop).dataset.iloc[0]).all().all()
+        self.assertEqual(is_record_in_replaced_dataset,False)
+
 
 
 if __name__ == '__main__':
