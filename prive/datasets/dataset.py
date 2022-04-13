@@ -41,14 +41,14 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def drop_record(self, record_ids):
+    def drop_records(self, record_ids):
         """
         Drop a record(s) and return modified dataset.
         """
         pass
 
     @abstractmethod
-    def add_record(self, record):
+    def add_records(self, record):
         """
         Add record(s) to dataset and return modified dataset.
         """
@@ -158,13 +158,24 @@ class TabularDataset(Dataset):
         return TabularDataset(self.dataset.iloc[record_ids], self.description)
 
 
-    def drop_record(self, record_ids):
+    def drop_records(self, record_ids):
         """
-        Drop a record(s) and return modified dataset.
-        """
-        pass
+        Get a record from the TabularDataset object
 
-    def add_record(self, record):
+        Parameters
+        ----------
+        record_ids (List[int]): List of indexes of records to drop
+
+        Returns
+        -------
+
+        A TabularDataset object without the record(s).
+
+        """
+        # TODO: what if the index is supposed to be a column? an identifier?
+        return TabularDataset(self.dataset.drop(record_ids), self.description)
+
+    def add_records(self, record):
         """
         Add record(s) to dataset and return modified dataset.
         """
