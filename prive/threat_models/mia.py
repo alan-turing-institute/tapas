@@ -3,8 +3,10 @@
 import numpy as np
 import pandas as pd
 
-from .base_classes import ThreatModel
+from .base_classes import ThreatModel, StaticDataThreatModel
 from ..attacks import Attack # for typing
+from ..datasets import Dataset # for typing
+from ..generators import Generator # for typing
 
 
 class TargetedMIA(ThreatModel):
@@ -21,45 +23,88 @@ class TargetedMIA(ThreatModel):
     # Generating training and testing samples depends on the assumptions!
 
 
-
-class AuxiliaryDataMIA(TargetedMIA):
+class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
     """
     This threat model assumes access to some data and some knowledge of
     the algorithm that will be used as generator, specified by passing a
     shadow model. If no shadow model is passed, full access is assumed.
     """
 
-    def __init__(self, target_record, dataset=None, dataset_sampler=None,
-        generator=None, num_training_records=1000, num_synthetic_records=1000,
-        auxiliary_test_split=0.9, memoize_datasets=True):
-        """Create a MIA threat model with black-box access to the generator,
-            and where the attacker has access to an auxiliary dataset.
-
-        Args:
-            target_record (Dataset.Record): the target of the MIA.
-            dataset (Dataset): the complete dataset, from which the auxiliary
-                and testing datasets will be sampled.
-            dataset_sampler (callable): alternatively, a sampler for the datasets.
-                (not implemented yet).
-            generator (callable): the generating model, as a black-box.
-            num_training_records (int): number of training samples in the
-                private training dataset.
-            num_synthetic_records (int): number of synthetic samples to generate.
-            auxiliary_test_split (float in [0,1]): fraction of the dataset to
-                use as auxiliary information available to attacker.
-            memoize_datasets (bool): whether to remember datasets
+    def __init__(self,
+                 target_record: Dataset,
+                 dataset: Dataset,
+                 # dataset_sampler=None,
+                 generator: Generator,
+                 aux_data: Dataset = None,
+                 sample_real_frac: float = 0.,
+                 shadow_model: Generator = None,
+                 num_training_records: int = 1000,
+                 num_synthetic_records: int = 1000,
+                 memorise_datasets: bool = True):
         """
-        assert (aux_data is None) or (sample_real_fraction is None), \
-            'At least one of data or sample_real_fraction must be given'
-        assert (0 <= auxiliary_test_split <= 1), \
-            'Auxiliary dataset size must be in [0, 1].'
-        TargetedMembershipInference.__init__(self, target_record)
-        # Split the dataset between auxiliary and testing dataset.
-        self.auxiliary_test_split = auxiliary_test_split
+        Initialise threat model with ground truth target record, dataset and
+        generator. Additionally, either aux_data or sample_real_frac must be
+        provided in order to initialise the adverary's data knowledge. Optionally
+        a shadow_model can be provided to indicate that the adversary does not
+        have complete knowledge of the generator and chooses to model it as
+        shadow_model.
+
+        Parameters
+        ----------
+        target_record : Dataset
+            Record to be targeted by the attacks.
+        dataset : Dataset
+            Real dataset to use to generate test synthetic datasets from.
+        generator : Generator
+            Generator to use to generate test datasets.
+        aux_data : Dataset, optional
+            Dataset that the adversary is assumed to have access to. This or
+            sample_real_frac must be provided. The default is None.
+        sample_real_frac : float, optional
+            Fraction of real data to sample and assume adversary has access to.
+            Must be in [0, 1]. This must be > 0 or aux_data provided.
+            The default is 0.
+        shadow_model : Generator, optional
+            Adversary's model of the generator, if not provided, the adversary
+            is assumed to have full access to the generator. The default is None.
+        num_training_records : int, optional
+            Number of training records to use to train each copy of shadow_model,
+            when generating synthetic training datasets for the attack.
+            The default is 1000.
+        num_synthetic_records : int, optional
+            Number of synthetic records to generate in each synthetic dataset.
+            The default is 1000.
+        memorise_datasets : bool, optional
+            Whether to save generated datasets. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
+        assert (aux_data is not None) or (sample_real_fraction != 0.), \
+            'At least one of aux_data or sample_real_fraction must be given'
+        assert (0 <= sample_real_frac <= 1), \
+            f'sample_real_frac must be in [0, 1], got {sample_real_frac}'
+        if aux_data:
+            assert aux_data.description == dataset.description, \
+                'aux_data does not match the description of dataset'
+
+        ## Set up ground truth
+        self.target_record = target_record
+        self.dataset = dataset
+        self.generator = generator
+
+        ## Set up adversary's knowledge
+        self.adv_data_ = {'aux': aux_data or self.dataset.empty(), # TODO: Implement empty method on Dataset
+                          'real': self.dataset.sample(frac=sample_real_frac)} # TODO: Add frac kwarg to dataset.sample
+        # If no shadow model provided, assume full access to generator
+        self.shadow_model = shadow_model or generator
+
+        ## Set up hyperparameters for how the adversary will create shadow models
         self.num_training_records = num_training_records
         self.num_synthetic_records = num_synthetic_records
-        self.datasets = self._split_auxiliary_testing(dataset, auxiliary_test_split)
-        self.generator = generator
+        self.memorise_datasets = memorise_datasets
 
 
     def _split_auxiliary_testing(self, dataset, auxiliary_test_split):
@@ -119,7 +164,7 @@ class AuxiliaryDataMIA(TargetedMIA):
             synthetic_datasets.append(synthetic_dataset)
             # Replace the label for the dataset containing the target.
             labels[2*i+1] = 1
-        
+
         return synthetic_datasets, labels
 
     def generate_training_samples(self, num_samples, num_synthetic_records=None,
