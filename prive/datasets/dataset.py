@@ -175,11 +175,22 @@ class TabularDataset(Dataset):
         # TODO: what if the index is supposed to be a column? an identifier?
         return TabularDataset(self.dataset.drop(record_ids), self.description)
 
-    def add_records(self, record):
+    def add_records(self, records):
         """
         Add record(s) to dataset and return modified dataset.
+
+        Parameters
+        ----------
+        records (TabularDataset): A TabularDataset object with the record(s) to add.
+
+        Returns
+        -------
+
+        A new TabularDataset object with the record(s).
         """
-        pass
+
+        # this does the same as the __add__
+        return self.__add__(records)
 
     def replace(self, record_in, record_out):
         """

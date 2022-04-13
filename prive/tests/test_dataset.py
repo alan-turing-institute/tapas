@@ -53,6 +53,17 @@ class TestTabularDataset(TestCase):
 
         self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0]-len(index))
 
+    def test_add_records(self):
+        data = TabularDataset.read('tests/data/texas')
+
+        # returns a subset of the records
+        index = [100]
+        record = data.get_records(index)
+
+        new_dataset = data.add_records(record)
+
+        self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0] + len(index))
+
 
 if __name__ == '__main__':
     unittest.main()
