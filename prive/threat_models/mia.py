@@ -77,10 +77,6 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         memorise_datasets : bool, optional
             Whether to save generated datasets. The default is True.
 
-        Returns
-        -------
-        None.
-
         """
         assert (aux_data is not None) or (sample_real_fraction != 0.), \
             'At least one of aux_data or sample_real_fraction must be given'
@@ -96,7 +92,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         self.generator = generator
 
         ## Set up adversary's knowledge
-        self.adv_data_ = {'aux': aux_data or self.dataset.empty(), # TODO: Implement empty method on Dataset
+        self._adv_data = {'aux': aux_data or self.dataset.empty(), # TODO: Implement empty method on Dataset
                           'real': self.dataset.sample(frac=sample_real_frac)} # TODO: Add frac kwarg to dataset.sample
         # If no shadow model provided, assume full access to generator
         self.shadow_model = shadow_model or generator
@@ -107,39 +103,45 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         self.memorise_datasets = memorise_datasets
 
 
-    def _split_auxiliary_testing(self, dataset, auxiliary_test_split):
-        """Split a dataset between training and testing dataset."""
-        self.dataset = dataset.copy()               
-        # Remove the target from the dataset, if present.
-        self.dataset.drop(self.target_record)                          # TODO: define dataset.
-        # Split the dataset in parts.
-        auxiliary, testing = self.dataset.split(auxiliary_test_split)  # TODO: define dataset.
-        return {'auxiliary': auxiliary, 'testing': testing}
+    @property
+    def adv_data(self):
+        """
+        Dataset: The data the adversary has access to.
+        """
+        return self._adv_data['aux'] + self._adv_data['real']
 
+    def _generate_datasets(self,
+                           num_samples: int,
+                           num_synthetic_records: int = None,
+                           replace_target: bool = False,
+                           training: bool = True) -> tuple(list[Dataset], np.ndarray]):
+        """
+        Generate synthetic datasets and labels using self.shadow_model. Synthetic
+        datasets are generated in pairs, one from D, and one from D u {target},
+        where D is sampled without replacement from either self.adv_data or
+        self.dataset depending on whether or not training=True.
 
-    def _sample_datasets(self, num_samples, num_synthetic_records=None,
-        replace_target=False, training=True):
-        """Generate synthetic datasets and labels using self.shadow_model.
+        Parameters
+        ----------
+        num_samples : int
+            Number of training dataset *pairs* to generate.
+        num_synthetic_records : int, optional
+            Size of synthetic datasets to generate. If None, use
+            self.num_synthetic_records. The default is None.
+        replace_target : bool, optional
+            Indicates whether target is included by replacing a record or by
+            extending the training data. If True, a random record will be removed
+            before adding target. The default is False.
+        training : bool, optional
+            If True, D's will be sampled from the adversary's data (self.adv_data).
+            Otherwise, D's will be sampled from the real data (self.datasets).
+            The default is True.
 
-        Args:
-            num_samples (int): Number of training dataset *pairs* to generate
-                per target. The pairs are composed of a dataset D sampled without
-                replacement the auxiliary or testing data, and D u {target}.
-            num_synthetic_records (int): Size of synthetic datasets to generate.
-                If None (default), use self.num_synthetic_records.
-            targets (List[pd.DataFrame]): List of targets to generate datasets
-                for.
-            replace_target (bool): Indicates whether target is included by
-                replacing a row or by extending the training data. If True, a
-                data row will be removed before adding target. Default False.
-            training (bool): Whether to sample datasets from the auxiliary 
-                (True) or test (False) dataset.
+        Returns
+        -------
+        tuple(list[Dataset], np.ndarray)
+            List of generated synthetic datasets. Numpy array of labels.
 
-        Returns:
-            datasets (List[pd.DataFrame]): List of generated datasets
-            labels (List[np.array]): Numpy array of shape (N, len(targets))
-                where the (i,j)-th entry indicates whether or not target j
-                was in the training data that was used to generate dataset i.
         """
         synthetic_datasets = []
         labels = np.zeros((2*num_samples, 1))
@@ -169,9 +171,11 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
     def generate_training_samples(self, num_samples, num_synthetic_records=None,
                                   replace_targets=False):
-        """Generate samples according to the attacker's known information.
+        """
+        Generate samples according to the attacker's known information.
+        (see _sample_datasets for the specific arguments).
 
-            (see _sample_datasets for the specific arguments)."""
+        """
         return self._sample_datasets(num_samples, num_synthetic_records,
             training=True, replace_target=replace_targets)
 
