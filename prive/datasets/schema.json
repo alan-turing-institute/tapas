@@ -1,0 +1,23 @@
+{
+    "$schema":     "https://json-schema.org/draft/2020-12/schema",
+    "$id":         "https://github.com/alan-turing-institute/privacy-sdg-toolbox/tree/main/prive/datasets/schema.json",
+    "title":       "Tabular datasets",
+    "description": "A schema for describing the content of simple tabular data.",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "oneOf": [
+            { "properties": {
+                "name": { "type": "string" },
+                "type": { "const": "finite"},
+                "representation": { "type": "integer"}}
+            },
+            { "properties": {
+                "name": { "type": "string" },
+                "type": { "const": "finite/ordered" },
+                "representation": { "type": "array", "items": { "type": "string" }}}
+            }],
+        "required": ["name", "type", "representation"]
+    }
+    
+}
