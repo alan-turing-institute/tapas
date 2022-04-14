@@ -4,7 +4,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-#from utils.constants import *
+from .constants import *
 
 
 def get_num_features(meta_dict): # TODO: Write tests and refactor

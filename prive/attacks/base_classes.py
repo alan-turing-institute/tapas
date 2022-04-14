@@ -1,57 +1,52 @@
-"""Abstract base classes for various privacy attacks"""
+"""
+Abstract base classes for various privacy attacks.
+
+"""
+
 from abc import ABC, abstractmethod
+
 
 class Attack(ABC):
     """
-    Abstract base class for all privacy attacks
+    Abstract base class for all privacy attacks.
+
+    This class defines (only) three common elements of attacks:
+     - a .train method (that can be left empty), that selects parameters for
+         the attack to make decisions.
+     - a .attack method, that makes a binary decision for a (list of) dataset(s).
+     - a .attack_score method that can be ignored if not meaningful, but can be
+         useful for deeper analysis of attacks.
+
     """
+
     @abstractmethod
-    def train(self, *args):
-        """Train attack model"""
+    def train(self):
+        """
+        Train parameters of the attack.
+
+        """
         pass
 
     @abstractmethod
-    def attack(self, *args):
-        """Perform attack"""
-        pass
+    def attack(self, datasets):
+        """
+        Perform the attack on each dataset in a list and return a (discrete) decision.
 
-
-class MIAttack(Attack):
-    """
-    Abstract base class for membership inference attacks
-    """
-    @abstractmethod
-    def attack(self, target, priv_output, *args, **kwargs):
-        """Infer presence of target in (training data that generated) priv_output"""
-        pass
-
-
-class AIAttack(Attack):
-    """
-    Abstract base class for attribute inference attacks
-    """
-    @abstractmethod
-    def attack(self, target, priv_output, target_cols, *args, **kwargs):
-        pass
-
-
-class Classifier(ABC):
-    """
-    Abstract base class for a classifier
-    """
-    @abstractmethod
-    def fit(X, y, *args, **kwargs):
-        """Fit classifier to data"""
+        """
         pass
 
     @abstractmethod
-    def predict(X, *args, **kwargs):
-        """Predict classes from input data"""
+    def attack_score(self, datasets):
+        """
+        Perform the attack on each dataset in a list, but return a confidence
+        score (specifically for classification tasks).
+
+        """
         pass
 
 
-class GroundhogClassifier(Classifier):
-    """
-    Abstract base class for a classifier that can be used in the groundhog attack
-    """
-    pass
+# TODO(design)
+# For later discussion: not sure if we want to keep classes for different types
+#  of attacks. For instance, we can implement the Groundhog attack for MIAs and
+#  AIAs with the exact same code (since the sampling logic of train/test is in
+#  the threat model).
