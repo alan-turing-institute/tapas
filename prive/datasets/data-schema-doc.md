@@ -7,16 +7,18 @@ tabular datasets:
 - Any input to the user-supplied privacy-enhancing method;
 - Any output from the user-supplied privacy-enhancing method.
 
-A _table_ is:
+In order that prive can interpret the data given to it and to ensure that it
+produces data that is a valid input to the user-supplied privacy-enhancing
+method, we need a method of describing tabular data. 
 
-1. A tuple of _field names_ (sometimes called ‘column headers’);
-2. For each field name, a _type_ and a _representation_;
-3. A finite set of tuples (also called ‘rows’), each element of which is a
-   representation of the type in the coresponding field name.
-   
-In prive, the set of tuples must be given as a comma-separated-values file
-whilst the first two items are declared in a separate JSON file, called the
-‘table schema’ for short.
+The format for tabular data used by prive is a csv file, where each line is a
+comma-separated tuple of values, and the values in the corresponding position in
+different rows have the same ‘type’. 
+
+The main challenge is describing the `type' of each field in the data as well as
+how to interpret the representation of the type used in the table. This
+information is held in a separate json file (the "table schema", not to be
+confused with the JSON schema which describes the format of any table schema).
 
 This document describes the types of data understood by prive along with their
 representations.
@@ -28,7 +30,7 @@ match the order of columns in the csv file. (The csv file should _not_ include a
 header row.)
 
 A field description is an object with the following elements:
-- `name`
+- `name` (an arbitrary string)
 - `type`
 - `representation`
 
@@ -39,63 +41,62 @@ possibly some additional structure on the set. It is not entirely clear which
 types should be taken as primitive. The situation is most unclear for infinite
 types; for finite types we don't expect much disagreement.
 
-Broadly, types can be finite, countably-infinite, or continuous; and for each we
-might have the additional structure of a total order. If we do have a total
-order then, for the infinite types, there is a question of whether there is no
-upper or lower bound; a least element; or both a least and a greatest
-element. Finally one might ask whether the set is dense in the order (ie,
-whether for any two elements there is one lying between them) and one might also
-ask whether there order is complete (in the sense that every subset that is
-bounded above has a least upper bound).
+For most types, the additional structure is whether or not the set has a total
+order and, if it does, whether there is a least element, or both a least and a
+greatest element. 
+
+The distinction between `type` and `representation` is not quite right. For
+example, perhaps `date` ought to be its own type (which happens to be
+"isomorphic to" `countable/ordered`) with its own representation. For now, our
+schema makes `date` merely a way of representing `countable/ordered`. 
+
+Likewise, we've decided to call the continuous types "real", as there is
+additional structure, beyond simply the order, which is commonly assumed (ie,
+addition and multiplication). In addition, the integers (which are countable)
+have a notion of "next element", which is not true of strings (which are also
+countable) but we have ignored this structure. Our scheme is therefore somewhat
+inconsistent -- or, at least, incomplete -- in how it thinks of types.
 
 (One principled reason for choosing these particular types --- at least, the
-infinite, ordered ones --- is that they are _initial_ of their type. At least,
-it would be a good reason if it were true.)
-
-### Finite types
-
-#### `finite`
-
-A finite, unordered set. 
-
-There are two representations: either an integer or an array of string. If the
-representation is an integer, N, then the possible values are the integers
-from 0 to N inclusive. If an array, then the elements of the array enumerate
-the possible values.
-
-#### `finite/ordered`
-
-A finite, totally ordered set. The allowed representations are the same the
-`finite` type except that now the order is that given by the natural order on
-the integers between 0 and N or the order of the array of strings.
-
-### Countably-infinite types
-
-#### `countable`
-
-A countably-infinite, unordered set. The allowed values of `representation` are either
-`"integer"` or `"string"`. 
-
-#### `countable/ordered`
-
-A countably-infinite, totally-ordered set, with neither an upper nor a lower
-bound. There is only one allowed representation, which is the integers (positive
-and negative), so no `representation` field is required.
-
-#### `countable/ordered/least`
-
-A countably-infinite, totally-ordered set with a least element. 
+infinite, ordered ones --- is that they are _initial_ of their type, in the
+category-theory sense. At least, it would be a good reason if it were true.)
 
 
-### Uncountably-infinite types
+| `type`                    | `representation`    | Meaning                               |
+|---------------------------+---------------------+---------------------------------------|
+| `finite`                  | An integer, N       | 0, 1, 2, ..., N                       |
+|                           | An array of strings | The given strings                     |
+|---------------------------+---------------------+---------------------------------------|
+| `finite/ordered`          | An integer, N       | 0, 1, 2, ..., N                       |
+|                           | An array of strings | The given strings, in the given order |
+|---------------------------+---------------------+---------------------------------------|
+| `countable`               | `"integer"`         | 0, 1, 2, ...,                         |
+|                           | `"string"`          | Any string                            |
+|---------------------------+---------------------+---------------------------------------|
+| `countable/ordered`       | `"integer"`         | ..., -2, -1, 0, 1, 2, ...             |
+|                           | `"date"`            | YYYY-MM-DD or YYYYMMDD                |
+|---------------------------+---------------------+---------------------------------------|
+| `countable/ordered/least` | `"integer"`         | 0, 1, 2, ...                          |
+|                           | `"string"`          | Strings, with dictionary order        |
+|---------------------------+---------------------+---------------------------------------|
+| `real`                    | `"number"`          | Any decimal approximation             |
+|                           | `"datetime"`        | YYYY-MM-DDThh:mm:ss.sss, or           |
+|                           |                     | YYYYMNMDDThhmmss.sss                  |
+|---------------------------+---------------------+---------------------------------------|
+| `real/non-negative`       | `"number"`          | Any decimal approximation             |
+|---------------------------+---------------------+---------------------------------------|
+| `interval`                | `"number"`          | The closed interveal [0, 1].          |
+|---------------------------+---------------------+---------------------------------------|
 
 
 
+## Future extensions
+
+`countable/partial`? (Strings with prefix order!)
+`countable/ordered/dense` (Decimals)
+`countable/ordered/least/dense` (Decimals or strings with dictionary order)
 
 
-## Future extentions
-
-`countable/partial`? (Strings with prefix orderg!)
 
 
 
