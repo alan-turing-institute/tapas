@@ -9,10 +9,6 @@ class Dataset(ABC):
     """Base class for the dataset object
     """
 
-    def __init__(self, dataset, description):
-        self.dataset = dataset
-        self.description = description
-
     @abstractmethod
     def read(self, input_path):
         """
@@ -82,7 +78,8 @@ class TabularDataset(Dataset):
     """
 
     def __init__(self, dataset, description):
-        super().__init__(dataset, description)
+        self.dataset = dataset
+        self.description = description
 
     @classmethod
     def read(cls, filepath):
