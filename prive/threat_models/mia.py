@@ -44,7 +44,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
                  shadow_model: Generator = None,
                  num_training_records: int = 1000,
                  num_synthetic_records: int = 1000,
-                 memorise_datasets: bool = True):
+                 memorise_datasets: bool = True): # Not sure if we need this here
         """
         Initialise threat model with ground truth target record, dataset and
         generator. Additionally, either aux_data or sample_real_frac must be

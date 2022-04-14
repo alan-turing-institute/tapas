@@ -28,9 +28,6 @@ class Groundhog(Attack):
 
     Attributes
     ----------
-    threat_model : ThreatModel
-        Instance of a ThreatModel that will be used to generate training
-        samples for this attack.
     classifier : SetClassifier
         Instance of a SetClassifier that will be used as the classification
         model for this attack.
@@ -43,7 +40,6 @@ class Groundhog(Attack):
     """
 
     def __init__(self,
-                 threat_model: ThreatModel,
                  classifier: SetClassifier,
                  data_description: DataDescription):
         """
@@ -52,8 +48,6 @@ class Groundhog(Attack):
 
         Parameters
         ----------
-        threat_model : ThreatModel
-            ThreatModel to set for attack.
         classifier : SetClassifier
             SetClassifier to set for attack.
         data_description : DataDescription
@@ -69,19 +63,24 @@ class Groundhog(Attack):
         self.__name__ = f'{self.Classifier.__class__.__name__}Groundhog'
 
     def train(self,
+              threat_model: ThreatModel = None # TODO: should we specify targeted, static data?
               num_samples: int = 100,
               synthetic_datasets: list[Dataset] = None,
               labels: list[int] = None):
         """
-        Train the attack classifier on a labelled set of datasets.
+        Train the attack classifier on a labelled set of datasets. The datasets
+        will either be generated from threat_model or need to be provided.
 
         Parameters
         ----------
+        threat_model : ThreatModel
+            Threat model to use to generate training samples if synthetic_datasets
+            or labels are not given.
         num_samples : int, optional
-            Number of datasets to generate using self.threat_model if
+            Number of datasets to generate using threat_model if
             synthetic_datasets or labels are not given. The default is 100.
         synthetic_datasets : list[Dataset], optional
-            List of datasets.Dataset objects. If not provided, self.threat_model
+            List of datasets.Dataset objects. If not provided, threat_model
             will be used to generate a new batch of synthetic_datasets and labels.
             The default is None.
         labels : list[int], optional
@@ -89,11 +88,11 @@ class Groundhog(Attack):
             the target row is present in the data. The default is None.
 
         """
+        # Generate data from threat model if no data is provided
+        if synthetic_datasets is None or labels is None:
+            synthetic_datasets, labels = threat_model.generate_training_samples(num_samples)
 
         # Fit the classifier to the data
-        if synthetic_datasets is None or labels is None:
-            synthetic_datasets, labels = self.threat_model.generate_training_samples(num_samples)
-
         self.Classifier.fit(synthetic_datasets, labels)
 
         self.trained = True
@@ -110,7 +109,7 @@ class Groundhog(Attack):
 
         Returns
         -------
-        guesses : list[int]
+        list[int]
             Binary guesses for each dataset. A guess of 1 at index i indicates
             that the attack believes that the target was present in dataset i.
 
@@ -128,7 +127,7 @@ class Groundhog(Attack):
         Make a guess for a single dataset about the presence of the target in
         the training data that generated the dataset
         """
-        return np.round(self.Distinguisher.predict(dataset.data), 0).astype(int)[0]
+        return np.round(self.classifier.predict(dataset.data), 0).astype(int)[0]
 
     # TODO: Fix arg type, add type hints and reformat docstring
     def get_confidence(self, synT, secret):
