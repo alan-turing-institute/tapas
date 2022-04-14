@@ -65,7 +65,7 @@ class Dataset(ABC):
     @abstractmethod
     def create_subsets(self, n, sample_size, record_drop=None):
         """ Create a number of training datasets (sub-samples from main dataset)
-         of a given sample size and with the option to remove a record"""
+         of a given sample size and with the option to remove some records"""
         pass
 
     def __add__(self, other):
