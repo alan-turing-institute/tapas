@@ -176,7 +176,7 @@ class TabularDataset(Dataset):
 
     def drop_records(self, record_ids):
         """
-        Get a record from the TabularDataset object
+        Drop records from the TabularDataset object
 
         Parameters
         ----------
