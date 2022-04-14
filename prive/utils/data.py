@@ -101,3 +101,30 @@ def one_hot(col_data, categories):
     col_data_onehot[np.arange(len(col_data)), cidx] = 1
 
     return col_data_onehot
+
+def index_split(max_index, split_size, num_splits):
+    """
+    Generate training indices without replacement. If max_index is smaller than
+    is necessary to generate all splits without replacement, then multiple sets
+    of indices will be generated, each without replacement. Logic is not currently
+    implemented to ensure each index is in maximally many index splits.
+    Args:
+        max_index (int): Max index (size of dataset to split)
+        split_size (int): Number of indices per split
+        num_splits (int): Number of splits to make
+    Returns:
+        indices (List[np.ndarray]): List of numpy arrays of indices.
+    """
+    splits_per_repeat = max_index // split_size
+    num_repeats = num_splits // splits_per_repeat
+    remainder_splits = num_splits % splits_per_repeat
+    indices = []
+    for _ in range(num_repeats):
+        index_array = np.arange(max_index)
+        np.random.shuffle(index_array)
+        indices += [index_array[split_size*i : split_size*(i+1)] for i in range(splits_per_repeat)]
+    index_array = np.arange(max_index)
+    np.random.shuffle(index_array)
+    indices += [index_array[split_size*i : split_size*(i+1)] for i in range(remainder_splits)]
+
+    return indices
