@@ -1,5 +1,5 @@
 """Classes to represent the data object"""
-from sklearn.model_selection import ShuffleSplit
+from prive.utils.data import index_split
 from abc import ABC, abstractmethod
 import json
 import pandas as pd
@@ -241,7 +241,7 @@ class TabularDataset(Dataset):
 
         pass
 
-    def create_subsets(self, n, sample_size, target_records):
+    def create_subsets(self, n, sample_size):
         """
         Create a number of training datasets (sub-samples from main dataset)
         of a given sample size  with and without target records.
@@ -252,33 +252,21 @@ class TabularDataset(Dataset):
             Number of datasets to create.
         sample_size: int
             Size of the subset datasets to be created.
-        target_records: list(int)
-            List of indexes of the target records.
 
         Returns
         -------
         list(TabularDataset)
-            Two lists containing subsets of the data with and without the target record(s).
+            A lists containing subsets of the data with and without the target record(s).
 
         """
-        # remove target records
-        dataset_notarget = self.drop_records(target_records)
 
         # create splits
-        kf = ShuffleSplit(n_splits=n, train_size=sample_size)
+        splits = index_split(self.dataset.shape[0],sample_size,n)
 
         # list of TabularDataset without target record(s)
-        without_target = []
-        for train_index, _ in kf.split(dataset_notarget.dataset):
-            without_target.append(self.get_records(train_index))
+        subsamples = [self.get_records(train_index) for train_index in splits]
 
-        # list of TabularDataset with target record(s), the size of these subsets will be sample_size +1
-        # TODO: Do we want to replace instead of add?
-        with_target = []
-        for train_index, _ in kf.split(dataset_notarget.dataset):
-            with_target.append(self.get_records(train_index) + self.get_records(target_records))
-
-        return with_target, without_target
+        return subsamples
 
     def __add__(self, other):
         """

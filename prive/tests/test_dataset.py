@@ -74,10 +74,10 @@ class TestTabularDataset(TestCase):
         # returns a subset of the records
         index = [100]
 
-        rI, rO = self.data.create_subsets(10, 100, index)
+        rI= self.data.create_subsets(10, 100)
 
-        self.assertEqual(len(rI), len(rO))
-        self.assertEqual(rI[0].dataset.shape[0], rO[0].dataset.shape[0] + 1)
+        self.assertEqual(len(rI),10)
+        self.assertEqual(100, rI[0].dataset.shape[0])
 
     def test_replace(self):
         # returns a subset of the records
