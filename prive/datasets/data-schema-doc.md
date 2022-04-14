@@ -65,10 +65,10 @@ category-theory sense. At least, it would be a good reason if it were true.)
 
 | `type`                    | `representation`    | Meaning                               |
 |---------------------------+---------------------+---------------------------------------|
-| `finite`                  | An integer, N       | 0, 1, 2, ..., N                       |
+| `finite`                  | An integer, N       | 0, 1, 2, ..., N - 1                   |
 |                           | An array of strings | The given strings                     |
 |---------------------------+---------------------+---------------------------------------|
-| `finite/ordered`          | An integer, N       | 0, 1, 2, ..., N                       |
+| `finite/ordered`          | An integer, N       | 0, 1, 2, ..., N - 1                   |
 |                           | An array of strings | The given strings, in the given order |
 |---------------------------+---------------------+---------------------------------------|
 | `countable`               | `"integer"`         | 0, 1, 2, ...,                         |
