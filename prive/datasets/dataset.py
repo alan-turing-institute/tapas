@@ -6,20 +6,24 @@ import pandas as pd
 
 
 class Dataset(ABC):
-    """Base class for the dataset object
+    """
+    Base class for the dataset object.
+
     """
 
     @abstractmethod
     def read(self, input_path):
         """
-        Read dataset and description file
+        Read dataset and description file.
+
         """
         pass
 
     @abstractmethod
     def write(self, output_path):
         """
-        Write dataset and description to file
+        Write dataset and description to file.
+
         """
         pass
 
@@ -27,6 +31,7 @@ class Dataset(ABC):
     def sample(self, n_samples):
         """
         Sample from dataset a set of records.
+
         """
         pass
 
@@ -34,6 +39,7 @@ class Dataset(ABC):
     def get_records(self, record_ids):
         """
         Select and return a record(s).
+
         """
         pass
 
@@ -41,6 +47,7 @@ class Dataset(ABC):
     def drop_records(self, record_ids):
         """
         Drop a record(s) and return modified dataset.
+
         """
         pass
 
@@ -48,6 +55,7 @@ class Dataset(ABC):
     def add_records(self, records):
         """
         Add record(s) to dataset and return modified dataset.
+
         """
         pass
 
@@ -55,18 +63,23 @@ class Dataset(ABC):
     def replace(self, record_in, record_out):
         """
         Replace a row with a given row.
+
         """
         pass
 
     @abstractmethod
     def create_subsets(self, n, sample_size, drop_records=None):
-        """ Create a number of training datasets (sub-samples from main dataset)
-         of a given sample size and with the option to remove some records"""
+        """
+        Create a number of training datasets (sub-samples from main dataset)
+        of a given sample size and with the option to remove some records.
+
+        """
         pass
 
     def __add__(self, other):
         """
-        Adding two Dataset objects together
+        Adding two Dataset objects together.
+
         """
         pass
 
@@ -75,8 +88,8 @@ class TabularDataset(Dataset):
     """
     Class for tabular dataset object. The tabular data is a Pandas Dataframe
     and the data description is a dictionary.
-    """
 
+    """
     def __init__(self, dataset, description):
         self.dataset = dataset
         self.description = description
@@ -88,11 +101,13 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        filepath (str): Path where the csv and json file are located
+        filepath: str
+            Path where the csv and json file are located.
 
         Returns
         -------
-        A TabularDataset instantiated object.
+        TabularDataset
+            A TabularDataset instantiated object.
 
         """
         with open(f'{filepath}.json') as f:
@@ -113,7 +128,9 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        filepath (str): Path where the csv and json file are saved
+        filepath: str
+            Path where the csv and json file are saved.
+
         """
 
         with open(f'{filepath}.csv', 'w') as fp:
@@ -127,13 +144,13 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        n_samples (int): Number of records to sample
+        n_samples: int
+            Number of records to sample.
 
         Returns
         -------
-
-        A TabularDataset object with a sample of the records of the original object.
-
+        TabularDataset
+            A TabularDataset object with a sample of the records of the original object.
 
         """
         return TabularDataset(dataset=self.dataset.sample(n_samples), description=self.description)
@@ -144,12 +161,13 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        record_ids (List[int]): List of indexes of records to retrieve
+        record_ids: list[int]
+            List of indexes of records to retrieve.
 
         Returns
         -------
-
-        A TabularDataset object with the record(s).
+        TabularDataset
+            A TabularDataset object with the record(s).
 
         """
 
@@ -162,12 +180,13 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        record_ids (List[int]): List of indexes of records to drop
+        record_ids: list[int]
+            List of indexes of records to drop.
 
         Returns
         -------
-
-        A TabularDataset object without the record(s).
+        TabularDataset
+            A TabularDataset object without the record(s).
 
         """
         # TODO: what if the index is supposed to be a column? an identifier?
@@ -179,12 +198,14 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        records (TabularDataset): A TabularDataset object with the record(s) to add.
+        records: TabularDataset
+            A TabularDataset object with the record(s) to add.
 
         Returns
         -------
+        TabularDataset
+            A new TabularDataset object with the record(s).
 
-        A new TabularDataset object with the record(s).
         """
 
         # this does the same as the __add__
@@ -197,14 +218,15 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        records_in (TabularDataset): A TabularDataset object with the record(s) to add.
-        records_out (List(int)): List of indexes of records to drop
+        records_in: TabularDataset
+            A TabularDataset object with the record(s) to add.
+        records_out: list(int)
+            List of indexes of records to drop.
 
         Returns
         -------
-
-        A modified TabularDataset object with the replaced record(s).
-
+        TabularDataset
+            A modified TabularDataset object with the replaced record(s).
 
         """
 
@@ -217,18 +239,21 @@ class TabularDataset(Dataset):
     def create_subsets(self, n, sample_size, target_records):
         """
         Create a number of training datasets (sub-samples from main dataset)
-         of a given sample size  with and without target records.
+        of a given sample size  with and without target records.
 
         Parameters
         ----------
-        n (int): Number of datasets to create.
-        sample_size (int) : Size of the subset datasets to be created
-        target_records (List(int)): List of indexes of the target records.
+        n: int
+            Number of datasets to create.
+        sample_size: int
+            Size of the subset datasets to be created.
+        target_records: list(int)
+            List of indexes of the target records.
 
         Returns
         -------
-
-        Two List(TabularDataset) containing subsets of the data with and without the target record(s).
+        list(TabularDataset)
+            Two lists containing subsets of the data with and without the target record(s).
 
         """
         # remove target records
@@ -256,12 +281,13 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        other (TabularDataset): A TabularDataset object .
+        other: (TabularDataset)
+            A TabularDataset object .
 
         Returns
         -------
-
-        A TabularDataset object with the addition of two initial objects.
+        TabularDataset
+            A TabularDataset object with the addition of two initial objects.
 
 
         """
