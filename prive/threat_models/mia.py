@@ -1,5 +1,6 @@
 """
 Threat models for Membership Inference Attacks.
+
 """
 
 import numpy as np
@@ -98,8 +99,8 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
         ## Set up adversary's knowledge
         self._adv_data = {
-            'aux': aux_data.drop_records([target_record.id] or self.dataset.empty(), # TODO: Implement empty method on Dataset
-            'real': self.dataset.sample(frac=sample_real_frac), # TODO: Add frac kwarg to dataset.sample
+            'aux': (aux_data or self.dataset.empty()).drop_records([target_record.id]), # TODO: Implement empty method on Dataset
+            'real': self.dataset.sample(frac=sample_real_frac), # TODO: Add frac kwarg to dataset sample
             'target': self.target_record}
         # If no shadow model provided, assume full access to generator
         self.shadow_model = shadow_model or generator
