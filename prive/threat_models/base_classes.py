@@ -1,4 +1,5 @@
-"""Threat Models describe the assumptions under which an attack takes place.
+"""
+Threat Models describe the assumptions under which an attack takes place.
 
 Threat Models are composed of three elements:
  1. What the attacker aims to infer (e.g., membership, attribute).
@@ -12,6 +13,7 @@ the attacker is able to run the generator on datasets samples from the
 auxiliary data, which may or may not contain a target record. The evaluation
 of the attack is performed on datasets from a disjoint dataset (test set),
 from which training datasets are sampled, with or without the target record.
+
 """
 
 from abc import ABC, abstractmethod

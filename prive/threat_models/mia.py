@@ -1,4 +1,6 @@
-"""Threat models for Membership Inference Attacks."""
+"""
+Threat models for Membership Inference Attacks.
+"""
 
 import numpy as np
 import pandas as pd
@@ -15,6 +17,7 @@ class TargetedMIA(ThreatModel):
 
     A MIA (membership inference attack) aims at identifying whether a given
     target record is in the training dataset.
+
     """
 
     def __init__(self, target_record):
@@ -28,6 +31,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
     This threat model assumes access to some data and some knowledge of
     the algorithm that will be used as generator, specified by passing a
     shadow model. If no shadow model is passed, full access is assumed.
+
     """
 
     def __init__(self,
@@ -113,6 +117,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
     def adv_data(self):
         """
         Dataset: The data the adversary has access to.
+
         """
         return self._adv_data['aux'] + self._adv_data['real']
 
