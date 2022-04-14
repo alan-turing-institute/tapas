@@ -49,7 +49,7 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def add_records(self, record):
+    def add_records(self, records):
         """
         Add record(s) to dataset and return modified dataset.
         """
@@ -63,7 +63,7 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def create_subsets(self, n, sample_size, record_drop=None):
+    def create_subsets(self, n, sample_size, drop_records=None):
         """ Create a number of training datasets (sub-samples from main dataset)
          of a given sample size and with the option to remove some records"""
         pass
