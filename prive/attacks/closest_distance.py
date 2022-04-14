@@ -60,12 +60,14 @@ class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.
 
 
 	def attack(self, datasets):
+		"""Perform the attack, as self.attack_score(datasets) <= self.threshold."""
 		if self.threshold is None:
 			raise Exception('Please train this attack.')
 		return [score <= self.threshold for score in self.score(datasets)]
 
 
-	def score(self, datasets):
+	def attack_score(self, datasets):
+		"""Compute the decision score for this attack: the minimum distance."""
 		scores = []
 		for ds in datasets:
 			scores.append(min([self.distance_function(record, self.target_record) \
@@ -75,4 +77,4 @@ class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.
 
 	def _default_distance(self, x, y):
 		""""""
-		return 0
+		return 0  # TODO: implement L2 distance (?).
