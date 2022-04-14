@@ -91,8 +91,9 @@ class TabularDataset(Dataset):
     and the data description is a dictionary.
 
     """
-    def __init__(self, dataset, description):
-        self.dataset = dataset
+
+    def __init__(self, data, description):
+        self.data = data
         self.description = description
 
     @classmethod
@@ -114,18 +115,17 @@ class TabularDataset(Dataset):
         with open(f'{filepath}.json') as f:
             description = json.load(f)
 
-        # TODO: something like this to determine types
-        #  and columns to be read in the dataframe once we ha a defined json
+        # TODO: once we have settled on the description file, implement type.
         # dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
-        # columns = self.description['columns']
+        columns = [column['name'] for column in description['columns']]
 
-        dataset = pd.read_csv(f'{filepath}.csv')
+        data = pd.read_csv(f'{filepath}.csv', usecols=columns)
 
-        return cls(dataset, description)
+        return cls(data, description)
 
     def write(self, filepath):
         """
-        Write dataset and description to file
+        Write data and description to file
 
         Parameters
         ----------
@@ -137,7 +137,7 @@ class TabularDataset(Dataset):
         with open(f'{filepath}.csv', 'w') as fp:
             json.dump(dict, fp)
 
-        self.dataset.to_csv(filepath)
+        self.data.to_csv(filepath)
 
     def sample(self, n_samples):
         """
@@ -154,7 +154,7 @@ class TabularDataset(Dataset):
             A TabularDataset object with a sample of the records of the original object.
 
         """
-        return TabularDataset(dataset=self.dataset.sample(n_samples), description=self.description)
+        return TabularDataset(data=self.data.sample(n_samples), description=self.description)
 
     def get_records(self, record_ids):
         """
@@ -173,7 +173,7 @@ class TabularDataset(Dataset):
         """
 
         # TODO: what if the index is supposed to be a column? an identifier?
-        return TabularDataset(self.dataset.iloc[record_ids], self.description)
+        return TabularDataset(self.data.iloc[record_ids], self.description)
 
     def drop_records(self, record_ids=[]):
         """
@@ -190,12 +190,11 @@ class TabularDataset(Dataset):
             A TabularDataset object without the record(s).
 
         """
-        if len(record_ids)==0:
+        if len(record_ids) == 0:
             # drop a random record
-            return TabularDataset(self.dataset.drop(np.random.randint(self.dataset.shape[0], size=1)), self.description)
+            return TabularDataset(self.data.drop(np.random.randint(self.data.shape[0], size=1)), self.description)
 
-
-        return TabularDataset(self.dataset.drop(record_ids), self.description)
+        return TabularDataset(self.data.drop(record_ids), self.description)
 
     def add_records(self, records):
         """
@@ -261,7 +260,7 @@ class TabularDataset(Dataset):
         """
 
         # create splits
-        splits = index_split(self.dataset.shape[0],sample_size,n)
+        splits = index_split(self.data.shape[0], sample_size, n)
 
         # list of TabularDataset without target record(s)
         subsamples = [self.get_records(train_index) for train_index in splits]
@@ -287,4 +286,4 @@ class TabularDataset(Dataset):
 
         assert self.description == other.description, "Both datasets must have the same data description"
 
-        return TabularDataset(pd.concat([self.dataset, other.dataset]), self.description)
+        return TabularDataset(pd.concat([self.data, other.data]), self.description)
