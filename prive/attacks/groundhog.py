@@ -54,7 +54,6 @@ class Groundhog(Attack):
             DataDescription to set for attack.
 
         """
-        Attack.__init__(self, threat_model)
         self.classifier = classifier
         self.data_description = data_description
 
@@ -126,23 +125,31 @@ class Groundhog(Attack):
         """
         Make a guess for a single dataset about the presence of the target in
         the training data that generated the dataset
+
         """
         return np.round(self.classifier.predict(dataset.data), 0).astype(int)[0]
 
     # TODO: Fix arg type, add type hints and reformat docstring
-    def get_confidence(self, synT, secret):
+    def get_confidence(self, synT: list[Dataset], secret: list[int]) -> list[float]:
         """
         Calculate classifier's raw probability about the presence of the target.
         Output is a probability in [0, 1].
 
-        Args:
-            synT (List[pd.DataFrame]) : List of dataframes to predict
-            secret (List[int]) : List indicating the truth of target's presence
-                in (training data of) corresponding dataset in synT
+        Parameters
+        ----------
+        synT : list[Dataset]
+            List of (synthetic) datasets to make a guess for.
+        secret : list[int]
+            List indicating the truth about the target's presence in the
+            (training data of) the corresponding dataset in synT.
 
-        Returns:
-            List of probabilities corresponding to attacker's guess about the truth
+        Returns
+        -------
+        list[float]
+            List of probabilities corresponding to attacker's guess about the truth.
+
         """
+        # None of this will work
         assert self.trained, 'Attack must first be trained.'
         if self.FeatureSet is not None:
             synT = np.stack([self.FeatureSet.extract(s) for s in synT])
