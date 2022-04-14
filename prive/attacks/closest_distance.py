@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import roc_curve
 
 from .base_classes import Attack
-from ..threat_models.mia import TargetedMIA
+from ..threat_models import TargetedMIA
 
 
 class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.
@@ -32,7 +32,7 @@ class ClosestDistanceAttack(Attack):  # or, honestly, just Attack.
 		"""
 		assert isinstance(threat_model, TargetedMIA), \
 			 "Incompatible attack model: needs targeted MIA."
-		MIAttack.__init__(self, threat_model)
+		self.threat_model = threat_model
 		self.target_record = self.threat_model.target_record
 		self.distance_function = distance_function or self._default_distance
 		self.threshold = threshold
