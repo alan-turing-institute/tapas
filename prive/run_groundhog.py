@@ -2,11 +2,11 @@ from datetime import datetime
 import os
 
 from prive.attacks.set_classifiers import LRClassifier, SetReprClassifier, NaiveRep
-from prive.threat_models.mia import AuxiliaryDataMIA
+from prive.threat_models.mia import TargetedAuxiliaryDataMIA
 from prive.attacks import Groundhog, ClosestDistanceAttack
 from prive.datasets import TabularDataset
 
-from prive.generative_models import ReturnRaw
+from prive.generators import ReturnRaw
 
 
 # Set some parameters
@@ -33,7 +33,8 @@ target = dataset.sample(1)
 
 # The threat model describes the attack for this target user.
 # TODO: this is probably not the right name here, come to think of it.
-threat_model = AuxiliaryDataMIA(target, dataset = dataset, generator = sdg_model,
+threat_model = TargetedAuxiliaryDataMIA(
+    target, dataset = dataset, generator = sdg_model,
     auxiliary_test_split = 0.9, num_training_samples = train_data_size,
     num_synthetic_samples = synthetic_data_size)
 
