@@ -49,7 +49,7 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def add_records(self, record):
+    def add_records(self, records):
         """
         Add record(s) to dataset and return modified dataset.
         """
