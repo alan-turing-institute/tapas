@@ -3,6 +3,7 @@ from sklearn.model_selection import ShuffleSplit
 from abc import ABC, abstractmethod
 import json
 import pandas as pd
+import numpy as np
 
 
 class Dataset(ABC):
@@ -174,9 +175,9 @@ class TabularDataset(Dataset):
         # TODO: what if the index is supposed to be a column? an identifier?
         return TabularDataset(self.dataset.iloc[record_ids], self.description)
 
-    def drop_records(self, record_ids):
+    def drop_records(self, record_ids=[]):
         """
-        Drop records from the TabularDataset object
+        Drop records from the TabularDataset object, if record_ids is empty it will drop a random record.
 
         Parameters
         ----------
@@ -189,7 +190,11 @@ class TabularDataset(Dataset):
             A TabularDataset object without the record(s).
 
         """
-        # TODO: what if the index is supposed to be a column? an identifier?
+        if len(record_ids)==0:
+            # drop a random record
+            return TabularDataset(self.dataset.drop(np.random.randint(self.dataset.shape[0], size=1)), self.description)
+
+
         return TabularDataset(self.dataset.drop(record_ids), self.description)
 
     def add_records(self, records):
@@ -211,10 +216,10 @@ class TabularDataset(Dataset):
         # this does the same as the __add__
         return self.__add__(records)
 
-    def replace(self, records_in, records_out):
+    def replace(self, records_in, records_out=[]):
         """
 
-        Replace a record with another one in the dataset.
+        Replace a record with another one in the dataset, if records_out is empty it will remove a random record.
 
         Parameters
         ----------

@@ -58,6 +58,10 @@ class TestTabularDataset(TestCase):
                     new_dataset.dataset == data.get_records(index).dataset.iloc[2]).all().all()
         self.assertEqual(is_record_in_new_dataset, False)
 
+        # drop random record
+        new_dataset = data.drop_records()
+        self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0] - 1)
+
     def test_add_records(self):
         data = TabularDataset.read('tests/data/texas')
 
@@ -68,6 +72,8 @@ class TestTabularDataset(TestCase):
         new_dataset = data.add_records(record)
 
         self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0] + len(index))
+
+
 
     def test_create_subsets(self):
         data = TabularDataset.read('tests/data/texas')
@@ -99,6 +105,14 @@ class TestTabularDataset(TestCase):
         # check is record is in dataset
         is_record_in_replaced_dataset = (replaced_sample.dataset == data.get_records(index_to_drop).dataset.iloc[0]).all().all()
         self.assertEqual(is_record_in_replaced_dataset,False)
+
+        # check removing random record
+        replaced_sample = data_sample100.replace(records_in)
+        self.assertEqual(data_sample100.dataset.shape[0]+1, replaced_sample.dataset.shape[0])
+
+
+
+
 
 
 
