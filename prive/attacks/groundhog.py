@@ -2,16 +2,21 @@
 Parent class for launching a membership inference attack on the output of a 
 generative model.
 """
+# Type checking stuff
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..datasets import DataDescription # for typing # TODO: define this class
+    from ..threat_models import ThreatModel # for typing
+    from .set_classifiers import SetClassifier # for typing
+
+# Real imports
 from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
 
-from ..datasets import DataDescription # for typing # TODO: define this class
-from ..threat_models import ThreatModel # for typing
-
 from .base_classes import Attack
-from .set_classifiers import SetClassifier # for typing
 
 # TODO: Remove this import potentially?
 from warnings import simplefilter
@@ -62,7 +67,7 @@ class Groundhog(Attack):
         self.__name__ = f'{self.Classifier.__class__.__name__}Groundhog'
 
     def train(self,
-              threat_model: ThreatModel = None # TODO: should we specify targeted, static data?
+              threat_model: ThreatModel = None, # TODO: should we specify targeted, static data?
               num_samples: int = 100,
               synthetic_datasets: list[Dataset] = None,
               labels: list[int] = None):
