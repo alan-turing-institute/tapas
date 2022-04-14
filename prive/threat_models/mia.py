@@ -2,14 +2,18 @@
 Threat models for Membership Inference Attacks.
 
 """
+# Type checking stuff
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..attacks import Attack # for typing
+    from ..datasets import Dataset # for typing
+    from ..generators import Generator # for typing
 
 import numpy as np
 import pandas as pd
 
 from .base_classes import ThreatModel, StaticDataThreatModel
-from ..attacks import Attack # for typing
-from ..datasets import Dataset # for typing
-from ..generators import Generator # for typing
 
 
 class TargetedMIA(ThreatModel):
@@ -126,7 +130,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
                            num_samples: int,
                            num_synthetic_records: int = None,
                            replace_target: bool = False,
-                           training: bool = True) -> tuple(list[Dataset], list(int)]):
+                           training: bool = True) -> tuple[list[Dataset], list[int]]:
         """
         Generate synthetic datasets and labels using self.shadow_model. Synthetic
         datasets are generated in pairs, one from D, and one from D u {target},
@@ -187,7 +191,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
     def generate_training_samples(self,
                                   num_samples: int,
                                   num_synthetic_records: int = None,
-                                  replace_targets: bool = False) -> tuple(list[Dataset], list[int]):
+                                  replace_targets: bool = False) -> tuple[list[Dataset], list[int]]:
         """
         Generate samples according to the attacker's known information.
         (See _generate_datasets for the specific arguments.) This is just
@@ -203,7 +207,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
              num_samples: int,
              num_synthetic_records: int = None,
              replace_targets: bool = False,
-             save_datasets: bool = False) -> tuple(list(int), list(int)):
+             save_datasets: bool = False) -> tuple[list[int], list[int]]:
         """
         Test an attack against this threat model. First, random subsets of size
         self.num_training_records are sampled from self.dataset (the real dataset)
@@ -241,7 +245,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
             num_extra_samples = max(0, num_samples - len(self.test_sets['datasets']))
 
             # If we don't need any more samples, return the existing ones
-            if num_extra_samples = 0:
+            if num_extra_samples == 0:
                 return self.test_sets['datasets'][:num_samples], self.test_sets['labels'][:num_samples]
 
         else:
