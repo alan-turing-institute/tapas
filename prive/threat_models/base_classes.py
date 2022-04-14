@@ -40,8 +40,9 @@ class ThreatModel(ABC):
 
 class StaticDataThreatModel(ThreatModel):
     """
-    Abstract base class for threat models in which training samples are generated
-    for attacks to train on.
+    Abstract base class for threat models in which attackers are assumed to
+    leverage their knowledge by generating a fixed set of training samples to
+    train their attacks on.
 
     """
 
