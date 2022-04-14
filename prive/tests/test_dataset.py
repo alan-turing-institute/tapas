@@ -54,9 +54,8 @@ class TestTabularDataset(TestCase):
         self.assertEqual(new_dataset.dataset.shape[0], data.dataset.shape[0]-len(index))
 
         # check is record is in new dataset
-        is_record_in_new_dataset = (
-                    new_dataset.dataset == data.get_records(index).dataset.iloc[2]).all().all()
-        self.assertEqual(is_record_in_new_dataset, False)
+        self.assertFalse((
+                    new_dataset.dataset == data.get_records(index).dataset.iloc[2]).all().all())
 
         # drop random record
         new_dataset = data.drop_records()
@@ -103,8 +102,7 @@ class TestTabularDataset(TestCase):
         self.assertEqual(data_sample100.dataset.shape[0], replaced_sample.dataset.shape[0])
 
         # check is record is in dataset
-        is_record_in_replaced_dataset = (replaced_sample.dataset == data.get_records(index_to_drop).dataset.iloc[0]).all().all()
-        self.assertEqual(is_record_in_replaced_dataset,False)
+        self.assertFalse((replaced_sample.dataset == data.get_records(index_to_drop).dataset.iloc[0]).all().all())
 
         # check removing random record
         replaced_sample = data_sample100.replace(records_in)
