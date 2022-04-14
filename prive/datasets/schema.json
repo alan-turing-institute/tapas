@@ -8,16 +8,54 @@
         "type": "object",
         "oneOf": [
             { "properties": {
-                "name": { "type": "string" },
                 "type": { "const": "finite"},
-                "representation": { "type": "integer"}}
-            },
-            { "properties": {
                 "name": { "type": "string" },
+                "representation": {
+                    "oneOf": [
+                        { "type": "array", "items": { "type": "string" }},
+                        { "type": "integer"}]}}
+            },
+            
+            { "properties": {
                 "type": { "const": "finite/ordered" },
-                "representation": { "type": "array", "items": { "type": "string" }}}
-            }],
-        "required": ["name", "type", "representation"]
+                "name": { "type": "string" },
+                "representation": {
+                    "oneOf": [
+                        { "type": "array", "items": { "type": "string" }},
+                        { "type": "integer"}]}}
+            },
+            
+            { "properties": {
+                "type": { "const": "countable" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["integer", "string"] }}},
+            
+            { "properties": {
+                "type": { "const": "countable/ordered" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["integer", "date"] }}},
+            
+            { "properties": {
+                "type": { "const": "countable/ordered/least" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["integer", "string"] }}},
+            
+            { "properties": {
+                "type": { "const": "real" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["number", "datetime"] }}},
+
+             { "properties": {
+                "type": { "const": "real/non-negative" },
+                "name": { "type": "string" },
+                "representation": { "const": "number"} }},
+
+             { "properties": {
+                "type": { "const": "interval" },
+                "name": { "type": "string" },
+                "representation": { "const": "number"} }}
+        ],
+        "required": ["type", "representation"]
     }
     
 }

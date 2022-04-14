@@ -11,14 +11,15 @@ In order that prive can interpret the data given to it and to ensure that it
 produces data that is a valid input to the user-supplied privacy-enhancing
 method, we need a method of describing tabular data. 
 
-The format for tabular data used by prive is a csv file, where each line is a
+The _format_ for tabular data used by prive is a csv file, where each line is a
 comma-separated tuple of values, and the values in the corresponding position in
-different rows have the same ‘type’. 
+different rows have the same ‘type’. The main challenge is describing the `type'
+of each field in the data as well as how to interpret the representation of the
+type used in the table. 
 
-The main challenge is describing the `type' of each field in the data as well as
-how to interpret the representation of the type used in the table. This
-information is held in a separate json file (the "table schema", not to be
-confused with the JSON schema which describes the format of any table schema).
+The format we have chosen for storing this metadata is a separate json file, the
+"table schema" (not to be confused with the JSON schema which describes the
+format of any table schema).
 
 This document describes the types of data understood by prive along with their
 representations.
