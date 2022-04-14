@@ -2,10 +2,12 @@ from datetime import datetime
 import os
 
 from prive.attacks.set_classifiers import LRClassifier, SetReprClassifier, NaiveRep
-from attack_models import Groundhog
-from datasets import TabularDataset
+from prive.threat_models.mia import AuxiliaryDataMIA
+from prive.attacks import Groundhog, ClosestDistanceAttack
+from prive.datasets import TabularDataset
 
-from generative_models import ReturnRaw
+from prive.generative_models import ReturnRaw
+
 
 # Set some parameters
 num_train_samples = 20
@@ -29,54 +31,36 @@ sdg_model = ReturnRaw() # instance of generators.Generator
 target = dataset.sample(1)
 
 
-# Create training datasets
-# TODO: Find home
-def create_synthetic_from_neighbouring(generator,
-                                       dataset,
-                                       target,
-                                       num_samples,
-                                       train_size,
-                                       syn_size):
-    """
-    Generate synthetic datasets from pairs of neighbouring training datasets
-    """
-    # Split dataset
-    datasets = dataset.split(num_splits=num_samples,
-                             split_size=train_size,
-                             drop=target)
+# The threat model describes the attack for this target user.
+# TODO: this is probably not the right name here, come to think of it.
+threat_model = AuxiliaryDataMIA(target, dataset = dataset, generator = sdg_model,
+    auxiliary_test_split = 0.9, num_training_samples = train_data_size,
+    num_synthetic_samples = synthetic_data_size)
 
-    synthetic_datasets_no_T = []
-    synthetic_datasets_with_T = []
+# If we give the threat model to the .train method, we can remove this.
+# train_datasets, train_labels = threat_model.generate_training_samples(num_train_samples)
 
-    for dataset in datasets_without_T:
-        synthetic_datasets_no_T.append(generator(dataset, syn_size))
-
-        dataset.add(target)
-        synthetic_datasets_with_T.append(generator(dataset, syn_size))
-
-    labels = ([0] * num_samples) + ([1] * num_samples)
-    synthetic_datasets = synthetic_datasets_no_T + synthetic_datasets_with_T
-
-    return synthetic_datasets, labels
-
-train_datasets, train_labels = create_synthetic_from_neighbouring(
-    sdg_model, dataset, target, num_train_samples, train_data_size, synthetic_data_size
-)
-
-# Initialise attack model
+# Initialise attack.
+# NOTE: the threat_model contains dataset, and thus a dataset description.
 classifier = SetReprClassifier(NaiveRep, LRClassifier, dataset.description)
-attack = Groundhog(classifier, dataset.description)
+attack = Groundhog(threat_model, classifier, dataset.description)
 
-# Train attack model
-attack.train(train_datasets, train_labels)
+# Train attack.
+# attack.train(train_datasets, train_labels)
+attack.train(num_samples=num_train_samples)
 
-# Generate test data
-test_datasets, test_labels = create_synthetic_from_neighbouring(
-    sdg_model, dataset, target, num_test_samples, train_data_size, synthetic_data_size
-)
+# Generate test data.
+test_datasets, test_labels = threat_model.generate_testing_samples(num_test_samples)
 
-# Predict with attack
+# Predict with attack.
 predictions = attack.attack(test_datasets)
 
-# Do something with predictions
-print(f'Accuracy: {np.mean(np.array(predictions) == np.array(test_labels))}')
+# We can also define a second attack, which will reuse memoized datasets.
+attack_cd = ClosestDistanceAttack(threat_model)
+attack_cd.train(num_samples = 100)
+predictions_cd = attack.attack(test_datasets)
+
+# Do something with predictions.
+# TODO: have some reporting mechanism to streamline this.
+print(f'Accuracy (GH): {np.mean(np.array(predictions) == np.array(test_labels))}')
+print(f'Accuracy (CD): {np.mean(np.array(predictions_cd) == np.array(test_labels))}')
