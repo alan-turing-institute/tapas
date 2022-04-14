@@ -6,16 +6,25 @@ from sklearn.linear_model import LogisticRegression
 from prive.utils.data import encode_data, get_num_features
 
 class SetClassifier(ABC):
-    """Abstract base class for set classifiers"""
+    """
+    Abstract base class for set classifiers
+
+    """
 
     @abstractmethod
     def fit(datasets, labels, *args, **kwargs):
-        """Fit classifier to datasets-data"""
+        """
+        Fit classifier to datasets-data
+
+        """
         pass
 
     @abstractmethod
     def predict(datasets, *args, **kwargs):
-        """Predict labels of datasets"""
+        """
+        Predict labels of datasets
+
+        """
         pass
 
     # Map __call__ to predict
@@ -27,6 +36,7 @@ class SetReprClassifier(SetClassifier):
     """
     Classifier that first computes a representation of the dataset and then
     uses 'traditional' (vector-based) classification techniques
+
     """
     def __init__(self, SetRep, Classifier, data_description):
         self.SetRep = SetRep(data_description)
@@ -43,7 +53,10 @@ class SetReprClassifier(SetClassifier):
 
 
 class LRClassifier:
-    """Logistic regresison classifier"""
+    """
+    Logistic regresison classifier
+
+    """
     def __init__(self, data_description):
         self.num_features = data_description['num_features']
         self.Classifier = LogisticRegression()
@@ -60,6 +73,7 @@ class NaiveRep: # TODO: Write tests
     """
     Naive feature set from Stadler et al. paper. Mean, median, and variance 
     of each column is computed.
+
     """
     def __init__(self, data_description):
         self.data_description = data_description
