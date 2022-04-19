@@ -2,7 +2,7 @@
 
 # privacy-sdg-toolbox
 
-Evaluating the privacy of synthetic data with an adversarial toolobox.
+Evaluating the privacy of synthetic data with an adversarial toolobox. [Documentation.](https://privacy-sdg-toolbox.readthedocs.io/en/latest/index.html#)
 
 ## Direct Installation
 
