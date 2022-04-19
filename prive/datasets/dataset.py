@@ -92,6 +92,7 @@ class Dataset(ABC):
         """
         pass
 
+
 class TabularDataset(Dataset):
     """
     Class for tabular dataset object. The tabular data is a Pandas Dataframe
@@ -169,7 +170,7 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        record_ids: list[int]
+        record_ids : list[int]
             List of indexes of records to retrieve.
 
         Returns
@@ -182,14 +183,17 @@ class TabularDataset(Dataset):
         # TODO: what if the index is supposed to be a column? an identifier?
         return TabularDataset(self.data.iloc[record_ids], self.description)
 
-    def drop_records(self, record_ids=[]):
+    def drop_records(self, record_ids=[], in_place=False):
         """
         Drop records from the TabularDataset object, if record_ids is empty it will drop a random record.
 
         Parameters
         ----------
-        record_ids: list[int]
+        record_ids : list[int]
             List of indexes of records to drop.
+        in_place : bool
+            Bool indicating whether or not to change the dataset in-place or return
+            a copy. If True, the dataset is changed in-place. The default is False.
 
         Returns
         -------
@@ -199,9 +203,15 @@ class TabularDataset(Dataset):
         """
         if len(record_ids) == 0:
             # drop a random record
-            return TabularDataset(self.data.drop(np.random.randint(self.data.shape[0], size=1)), self.description)
+            record_ids = np.random.randint(self.data.shape[0], size=1).tolist()
 
-        return TabularDataset(self.data.drop(record_ids), self.description)
+        new_data = self.data.drop(record_ids)
+
+        if in_place:
+            self.data = new_data
+            return
+
+        return TabularDataset(new_data, self.description)
 
     def add_records(self, records):
         """
