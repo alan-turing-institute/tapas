@@ -156,9 +156,9 @@ def get_dtype(representation, column_type):
         return pd.datetime
     elif isinstance(representation, (list, str)):
         ordered = True if 'ordered' in column_type else False
-        return 'category' # pd.CategoricalDtype(categories=representation, ordered=ordered)
+        return pd.CategoricalDtype(categories=representation, ordered=ordered)
     elif isinstance(representation, (int)):
         ordered = True if 'ordered' in column_type else False
-        return np.object# pd.CategoricalDtype(categories=range(representation), ordered=ordered)
+        return pd.CategoricalDtype(categories=range(representation), ordered=ordered)
     else:
         np.object
