@@ -304,7 +304,12 @@ class TabularDataset(Dataset):
         iterator
             An iterator object that iterates over individual records, as TabularDatasets.
         """
-        convert_record = lambda idx_and_rec: TabularDataset(data=idx_and_rec[1], description=self.description)
+        # iterrows() returns tuples (index, record), and map applies a 1-argument
+        # function to the iterable it is given, hence why we have idx_and_rec
+        # instead of the cleaner (idx, rec).
+        convert_record = lambda idx_and_rec: TabularDataset(
+            # iterrows() outputs pd.Series rather than .DataFrame, so we convert here:
+            data=idx_and_rec[1].to_frame().T, description=self.description)
         return map(convert_record, self.data.iterrows())
 
     def __len__(self):
