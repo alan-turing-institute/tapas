@@ -88,7 +88,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
             Whether to save generated datasets. The default is True.
 
         """
-        assert (aux_data is not None) or (sample_real_fraction != 0.), \
+        assert (aux_data is not None) or (sample_real_frac != 0.), \
             'At least one of aux_data or sample_real_fraction must be given'
         assert (0 <= sample_real_frac <= 1), \
             f'sample_real_frac must be in [0, 1], got {sample_real_frac}'
@@ -99,7 +99,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         ## Set up ground truth
         self.target_record = target_record
         self.dataset = dataset
-        self.dataset.drop_records([target_record.id], in_place=True) # Remove target
+        self.dataset = self.dataset.drop_records([target_record.data.index[0]])#, in_place=True) # Remove target
         self.generator = generator
 
         ## Set up adversary's knowledge

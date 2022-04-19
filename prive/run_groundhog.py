@@ -33,10 +33,13 @@ target = dataset.sample(1)
 
 # The threat model describes the attack for this target user.
 # TODO: this is probably not the right name here, come to think of it.
-threat_model = TargetedAuxiliaryDataMIA(
-    target, dataset = dataset, generator = sdg_model,
-    auxiliary_test_split = 0.9, num_training_samples = train_data_size,
-    num_synthetic_samples = synthetic_data_size)
+threat_model = TargetedAuxiliaryDataMIA(target,
+                                        dataset,
+                                        sdg_model,
+                                        aux_data = None,
+                                        sample_real_frac = 0.5,
+                                        num_training_records = train_data_size,
+                                        num_synthetic_records = synthetic_data_size)
 
 # If we give the threat model to the .train method, we can remove this.
 # train_datasets, train_labels = threat_model.generate_training_samples(num_train_samples)
