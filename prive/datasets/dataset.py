@@ -213,14 +213,17 @@ class TabularDataset(Dataset):
 
         return TabularDataset(new_data, self.description)
 
-    def add_records(self, records):
+    def add_records(self, records, in_place=False):
         """
         Add record(s) to dataset and return modified dataset.
 
         Parameters
         ----------
-        records: TabularDataset
+        records : TabularDataset
             A TabularDataset object with the record(s) to add.
+        in_place : bool
+            Bool indicating whether or not to change the dataset in-place or return
+            a copy. If True, the dataset is changed in-place. The default is False.
 
         Returns
         -------
@@ -229,12 +232,17 @@ class TabularDataset(Dataset):
 
         """
 
-        # this does the same as the __add__
+        if in_place:
+            assert self.description == records.description, "Both datasets must have the same data description"
+
+            self.data = pd.concat([self.data, records.data])
+            return
+
+        # if not in_place this does the same as the __add__
         return self.__add__(records)
 
     def replace(self, records_in, records_out=[]):
         """
-
         Replace a record with another one in the dataset, if records_out is empty it will remove a random record.
 
         Parameters
@@ -291,13 +299,12 @@ class TabularDataset(Dataset):
         Parameters
         ----------
         other: (TabularDataset)
-            A TabularDataset object .
+            A TabularDataset object.
 
         Returns
         -------
         TabularDataset
             A TabularDataset object with the addition of two initial objects.
-
 
         """
 
@@ -313,6 +320,7 @@ class TabularDataset(Dataset):
         -------
         iterator
             An iterator object that iterates over individual records, as TabularDatasets.
+
         """
         # iterrows() returns tuples (index, record), and map applies a 1-argument
         # function to the iterable it is given, hence why we have idx_and_rec
@@ -330,5 +338,6 @@ class TabularDataset(Dataset):
         -------
         integer
             length: number of records in this dataset.
+
         """
         return self.data.shape[0]

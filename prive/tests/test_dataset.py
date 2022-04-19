@@ -83,6 +83,15 @@ class TestTabularDataset(TestCase):
 
         self.assertEqual(new_dataset.data.shape[0], self.dataset.data.shape[0] + len(index))
 
+        # test in-place flag
+        new_dataset = copy.copy(self.dataset) # Don't want to modify self.dataset
+        new_dataset.add_records(record, in_place=True)
+        # check length
+        self.assertEqual(len(new_dataset), len(self.dataset) + len(index))
+        # check records are in
+        for idx in index:
+            self.assertIn(idx, new_dataset.data.index)
+
     def test_create_subsets(self):
         # returns a subset of the records
         index = [100]
