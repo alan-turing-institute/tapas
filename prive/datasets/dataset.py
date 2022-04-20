@@ -1,10 +1,11 @@
 """Classes to represent the data object"""
-from prive.utils.data import index_split
 from abc import ABC, abstractmethod
 import json
-import pandas as pd
-import numpy as np
 
+import numpy as np
+import pandas as pd
+
+from prive.utils.data import index_split
 
 class Dataset(ABC):
     """
@@ -142,10 +143,10 @@ class TabularDataset(Dataset):
 
         """
 
-        with open(f'{filepath}.csv', 'w') as fp:
-            json.dump(dict, fp)
+        with open(f'{filepath}.json', 'w') as fp:
+            json.dump(self.description, fp)
 
-        self.data.to_csv(filepath)
+        self.data.to_csv(filepath+'.csv')
 
     def sample(self, n_samples):
         """
@@ -183,7 +184,7 @@ class TabularDataset(Dataset):
         # TODO: what if the index is supposed to be a column? an identifier?
         return TabularDataset(self.data.iloc[record_ids], self.description)
 
-    def drop_records(self, record_ids=[], in_place=False):
+    def drop_records(self, record_ids=[], n=1, in_place=False):
         """
         Drop records from the TabularDataset object, if record_ids is empty it will drop a random record.
 
@@ -202,8 +203,8 @@ class TabularDataset(Dataset):
 
         """
         if len(record_ids) == 0:
-            # drop a random record
-            record_ids = np.random.randint(self.data.shape[0], size=1).tolist()
+            # drop n random records if none provided
+            record_ids = np.random.randint(self.data.shape[0], size=n).tolist()
 
         new_data = self.data.drop(record_ids)
 
@@ -241,7 +242,7 @@ class TabularDataset(Dataset):
         # if not in_place this does the same as the __add__
         return self.__add__(records)
 
-    def replace(self, records_in, records_out=[]):
+    def replace(self, records_in, records_out=[], in_place=False):
         """
         Replace a record with another one in the dataset, if records_out is empty it will remove a random record.
 
@@ -251,6 +252,9 @@ class TabularDataset(Dataset):
             A TabularDataset object with the record(s) to add.
         records_out: list(int)
             List of indexes of records to drop.
+        in_place : bool
+            Bool indicating whether or not to change the dataset in-place or return
+            a copy. If True, the dataset is changed in-place. The default is False.
 
         Returns
         -------
@@ -258,12 +262,16 @@ class TabularDataset(Dataset):
             A modified TabularDataset object with the replaced record(s).
 
         """
+        # TODO: Should multiple records_in with no records_out be supported?
+        if in_place:
+            self.drop_records(records_out, in_place=in_place)
+            self.add_records(records_in, in_place=in_place)
+            return
 
-        reduced_dataset = self.drop_records(records_out)
+        # pass n as a back-up in case records_out=[]
+        reduced_dataset = self.drop_records(records_out, n=len(records_in))
 
         return reduced_dataset.add_records(records_in)
-
-        pass
 
     def create_subsets(self, n, sample_size):
         """
@@ -341,3 +349,26 @@ class TabularDataset(Dataset):
 
         """
         return self.data.shape[0]
+
+    def __contains__(self, item):
+        """
+        Determines the truth value of `item in self`. The only items considered
+        to be in a TabularDataset are the rows, treated as 1-row TabularDatasets.
+
+        Parameters
+        ----------
+        item : Object
+            Object to check membership of.
+
+        Returns
+        -------
+        bool
+            Whether or not item is considered to be contained in self.
+
+        """
+        if not isinstance(item, TabularDataset):
+            raise ValueError(f'Only TabularDatasets can be checked for containment, not {type(item)}')
+        if len(item) != 1:
+            raise ValueError(f'Only length-1 TabularDatasets can be checked for containment, got length {len(item)})')
+
+        return (self.data == item.data.iloc[0]).all(axis=1).any()

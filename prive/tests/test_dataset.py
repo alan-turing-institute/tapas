@@ -13,9 +13,12 @@ from prive.datasets import TabularDataset
 class TestTabularDataset(TestCase):
     def setUp(self):
         self.dataset = TabularDataset.read('tests/data/texas')
+        self.row_in = TabularDataset.read('tests/data/row_in_texas')
+        self.row_out = TabularDataset.read('tests/data/row_out_texas')
+
     def test_read(self):
 
-        self.assertEqual(self.dataset.data.shape[0], 999)
+        self.assertEqual(len(self.dataset), 999)
 
         with open('tests/data/texas.json') as f:
             description = json.load(f)
@@ -27,7 +30,7 @@ class TestTabularDataset(TestCase):
         data_sample = self.dataset.sample(500)
 
         self.assertEqual(data_sample.description, self.dataset.description)
-        self.assertEqual(data_sample.data.shape[0], 500)
+        self.assertEqual(len(data_sample), 500)
 
     def test_add(self):
         # returns a subset of the samples
@@ -56,14 +59,21 @@ class TestTabularDataset(TestCase):
         index = [10, 20, 50, 100]
         new_dataset = self.dataset.drop_records(index)
 
-        self.assertEqual(new_dataset.data.shape[0], self.dataset.data.shape[0] - len(index))
+        self.assertEqual(len(new_dataset), len(self.dataset) - len(index))
 
-        # check if record is in new dataset
-        self.assertFalse((new_dataset.data == self.dataset.get_records(index).data.iloc[2]).all().all())
+        # check that the records have been removed
+        for idx in index:
+            self.assertNotIn(self.dataset.get_records([idx]), new_dataset)
+
+        # check that the index has been properly maintained
+        self.assertEqual(new_dataset.data.index[index[0]], index[0] + 1)
 
         # drop random record
         new_dataset = self.dataset.drop_records()
-        self.assertEqual(new_dataset.data.shape[0], self.dataset.data.shape[0] - 1)
+        self.assertEqual(len(new_dataset), len(self.dataset) - 1)
+
+        new_dataset = self.dataset.drop_records(n=4)
+        self.assertEqual(len(new_dataset), len(self.dataset) - 4)
 
         # test in-place flag
         new_dataset = copy.copy(self.dataset) # Don't want to modify self.dataset
@@ -84,7 +94,7 @@ class TestTabularDataset(TestCase):
         self.assertEqual(new_dataset.data.shape[0], self.dataset.data.shape[0] + len(index))
 
         # test in-place flag
-        new_dataset = copy.copy(self.dataset) # Don't want to modify self.dataset
+        new_dataset = copy.copy(self.dataset) # don't want to modify self.dataset
         new_dataset.add_records(record, in_place=True)
         # check length
         self.assertEqual(len(new_dataset), len(self.dataset) + len(index))
@@ -113,14 +123,18 @@ class TestTabularDataset(TestCase):
 
         replaced_sample = data_sample100.replace(records_in, index_to_drop)
 
-        self.assertEqual(data_sample100.data.shape[0], replaced_sample.data.shape[0])
+        self.assertEqual(len(data_sample100), len(replaced_sample))
 
-        # check is record is in dataset
+        # check if record is in dataset
         self.assertFalse((replaced_sample.data == self.dataset.get_records(index_to_drop).data.iloc[0]).all().all())
 
         # check removing random record
         replaced_sample = data_sample100.replace(records_in)
-        self.assertEqual(data_sample100.data.shape[0] + 1, replaced_sample.data.shape[0])
+        self.assertEqual(len(data_sample100), len(replaced_sample))
+
+        # check in-place flag
+        new_dataset = copy.copy(self.dataset) # don't want to modify self.dataset
+        new_dataset.replace(records_in, index_to_drop)
 
     def test_iter(self):
         record_count = 0
@@ -130,6 +144,14 @@ class TestTabularDataset(TestCase):
             self.assertEqual(record.data.shape[0], 1)
             record_count += 1
         self.assertEqual(record_count, len(self.dataset))
+
+    def test_contains(self):
+        indices = [15, 30]
+        rows = self.dataset.get_records(indices)
+        for row in rows:
+            self.assertIn(row, self.dataset)
+
+        self.assertNotIn(self.row_out, self.dataset)
 
 
 if __name__ == '__main__':
