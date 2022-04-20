@@ -19,7 +19,7 @@ Contents
    :recursive:
 
    prive
-
+   dataset-schema
 
 
 
