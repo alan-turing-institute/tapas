@@ -12,15 +12,15 @@ from prive.datasets import TabularDataset
 
 class TestTabularDataset(TestCase):
     def setUp(self):
-        self.dataset = TabularDataset.read('tests/data/texas')
+        self.dataset = TabularDataset.read('tests/data/test_texas')
         self.row_in = TabularDataset.read('tests/data/row_in_texas')
         self.row_out = TabularDataset.read('tests/data/row_out_texas')
 
     def test_read(self):
 
-        self.assertEqual(len(self.dataset), 999)
+        self.assertEqual(len(self.dataset), 998)
 
-        with open('tests/data/texas.json') as f:
+        with open('tests/data/test_texas.json') as f:
             description = json.load(f)
 
         self.assertEqual(self.dataset.description, description)
@@ -49,11 +49,11 @@ class TestTabularDataset(TestCase):
     def test_get_records(self):
         # returns a subset of the records
         index = [10, 20]
-        record = self.dataset.get_records(index)
+        records = self.dataset.get_records(index)
 
-        self.assertEqual(record.data.iloc[0][0], self.data.data.iloc[index[0]][0])
+        self.assertEqual(records.data.iloc[0][0], self.dataset.data.iloc[index[0]][0])
 
-        self.assertEqual(record.data.shape[0], len(index))
+        self.assertEqual(len(records), len(index))
 
     def test_drop_records(self):
         # returns a subset of the records

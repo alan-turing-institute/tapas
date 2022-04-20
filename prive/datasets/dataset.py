@@ -145,7 +145,8 @@ class TabularDataset(Dataset):
         with open(f'{filepath}.json', 'w') as fp:
             json.dump(self.description, fp)
 
-        self.data.to_csv(filepath+'.csv')
+        # TODO: Make sure this writes it exactly as needed
+        self.data.to_csv(filepath+'.csv', header=False, index=False)
 
     def sample(self, n_samples):
         """

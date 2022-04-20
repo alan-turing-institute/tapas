@@ -149,9 +149,9 @@ def get_dtype(representation, column_type):
 
     """
     if representation == 'integer':
-        return np.int
+        return int
     elif representation == 'number':
-        return np.float
+        return float
     elif representation == 'date':
         return pd.datetime
     elif isinstance(representation, (list, str)):
