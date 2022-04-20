@@ -11,11 +11,12 @@ class Attack(ABC):
     Abstract base class for all privacy attacks.
 
     This class defines (only) three common elements of attacks:
-     - a .train method (that can be left empty), that selects parameters for
-         the attack to make decisions.
-     - a .attack method, that makes a binary decision for a (list of) dataset(s).
-     - a .attack_score method that can be ignored if not meaningful, but can be
-         useful for deeper analysis of attacks.
+
+    * a .train method (that can be left empty), that selects parameters for
+      the attack to make decisions.
+    * a .attack method, that makes a binary decision for a (list of) dataset(s).
+    * a .attack_score method that can be ignored if not meaningful, but can be
+      useful for deeper analysis of attacks.
 
     """
 

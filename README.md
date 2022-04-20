@@ -1,6 +1,8 @@
+![tests](https://github.com/alan-turing-institute/privacy-sdg-toolbox/actions/workflows/ci.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/privacy-sdg-toolbox/badge/?version=latest)](https://privacy-sdg-toolbox.readthedocs.io/en/latest/?badge=latest)
+
 # privacy-sdg-toolbox
 
-Evaluating the privacy of synthetic data with an adversarial toolobox.
+Evaluating the privacy of synthetic data with an adversarial toolobox. [Documentation.](https://privacy-sdg-toolbox.readthedocs.io/en/latest/index.html#)
 
 ## Direct Installation
 

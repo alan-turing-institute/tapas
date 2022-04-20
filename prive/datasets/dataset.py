@@ -77,6 +77,7 @@ class Dataset(ABC):
         """
         pass
 
+    @abstractmethod
     def __add__(self, other):
         """
         Adding two Dataset objects together.
@@ -84,6 +85,12 @@ class Dataset(ABC):
         """
         pass
 
+    @abstractmethod
+    def __iter__(self):
+        """
+        Returns an iterator over records in the dataset.
+        """
+        pass
 
 class TabularDataset(Dataset):
     """
@@ -285,3 +292,31 @@ class TabularDataset(Dataset):
         assert self.description == other.description, "Both datasets must have the same data description"
 
         return TabularDataset(pd.concat([self.data, other.data]), self.description)
+
+    def __iter__(self):
+        """
+        Returns an iterator over records in this dataset,
+
+        Returns
+        -------
+        iterator
+            An iterator object that iterates over individual records, as TabularDatasets.
+        """
+        # iterrows() returns tuples (index, record), and map applies a 1-argument
+        # function to the iterable it is given, hence why we have idx_and_rec
+        # instead of the cleaner (idx, rec).
+        convert_record = lambda idx_and_rec: TabularDataset(
+            # iterrows() outputs pd.Series rather than .DataFrame, so we convert here:
+            data=idx_and_rec[1].to_frame().T, description=self.description)
+        return map(convert_record, self.data.iterrows())
+
+    def __len__(self):
+        """
+        Returns the number of records in this dataset.
+
+        Returns
+        -------
+        integer
+            length: number of records in this dataset.
+        """
+        return self.data.shape[0]

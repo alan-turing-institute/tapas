@@ -100,6 +100,15 @@ class TestTabularDataset(TestCase):
         replaced_sample = data_sample100.replace(records_in)
         self.assertEqual(data_sample100.data.shape[0] + 1, replaced_sample.data.shape[0])
 
+    def test_iter(self):
+        record_count = 0
+        for record in self.data:
+            self.assertEqual(type(record), TabularDataset)
+            self.assertEqual(record.description, self.data.description)
+            self.assertEqual(record.data.shape[0], 1)
+            record_count += 1
+        self.assertEqual(record_count, len(self.data))
+
 
 if __name__ == '__main__':
     unittest.main()
