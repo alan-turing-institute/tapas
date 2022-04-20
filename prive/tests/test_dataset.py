@@ -146,12 +146,13 @@ class TestTabularDataset(TestCase):
         self.assertEqual(record_count, len(self.dataset))
 
     def test_contains(self):
+        self.assertNotIn(self.row_out, self.dataset)
+        self.assertIn(self.row_in, self.dataset)
+
         indices = [15, 30]
         rows = self.dataset.get_records(indices)
         for row in rows:
             self.assertIn(row, self.dataset)
-
-        self.assertNotIn(self.row_out, self.dataset)
 
 
 if __name__ == '__main__':
