@@ -133,8 +133,16 @@ class TestTabularDataset(TestCase):
         self.assertEqual(len(data_sample100), len(replaced_sample))
 
         # check in-place flag
-        new_dataset = copy.copy(self.dataset) # don't want to modify self.dataset
-        new_dataset.replace(records_in, index_to_drop)
+        new_dataset = copy.copy(data_sample100) # don't want to modify self.dataset
+        new_dataset.replace(records_in, index_to_drop, in_place=True)
+
+        self.assertEqual(len(new_dataset), len(data_sample100))
+        # check records were removed
+        for idx in index_to_drop:
+            self.assertNotIn(data_sample100.get_records([idx]), new_dataset)
+        # check records were added
+        for idx in index:
+            self.assertIn(self.dataset.get_records([idx]), new_dataset)
 
     def test_iter(self):
         record_count = 0

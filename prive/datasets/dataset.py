@@ -262,6 +262,10 @@ class TabularDataset(Dataset):
             A modified TabularDataset object with the replaced record(s).
 
         """
+        if len(records_out) > 0:
+            assert len(records_out) == len(records_in), \
+                f'Number of records out must equal number of records in, got {len(records_out)}, {len(records_in)}'
+
         # TODO: Should multiple records_in with no records_out be supported?
         if in_place:
             self.drop_records(records_out, in_place=in_place)
