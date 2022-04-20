@@ -1,0 +1,61 @@
+{
+    "$schema":     "https://json-schema.org/draft/2020-12/schema",
+    "$id":         "https://github.com/alan-turing-institute/privacy-sdg-toolbox/tree/main/prive/datasets/schema.json",
+    "title":       "Tabular datasets",
+    "description": "A schema for describing the content of simple tabular data.",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "oneOf": [
+            { "properties": {
+                "type": { "const": "finite"},
+                "name": { "type": "string" },
+                "representation": {
+                    "oneOf": [
+                        { "type": "array", "items": { "type": "string" }},
+                        { "type": "integer"}]}}
+            },
+            
+            { "properties": {
+                "type": { "const": "finite/ordered" },
+                "name": { "type": "string" },
+                "representation": {
+                    "oneOf": [
+                        { "type": "array", "items": { "type": "string" }},
+                        { "type": "integer"}]}}
+            },
+            
+            { "properties": {
+                "type": { "const": "countable" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["integer", "string"] }}},
+            
+            { "properties": {
+                "type": { "const": "countable/ordered" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["integer", "date"] }}},
+            
+            { "properties": {
+                "type": { "const": "countable/ordered/least" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["integer", "string"] }}},
+            
+            { "properties": {
+                "type": { "const": "real" },
+                "name": { "type": "string" },
+                "representation": { "enum": ["number", "datetime"] }}},
+
+             { "properties": {
+                "type": { "const": "real/non-negative" },
+                "name": { "type": "string" },
+                "representation": { "const": "number"} }},
+
+             { "properties": {
+                "type": { "const": "interval" },
+                "name": { "type": "string" },
+                "representation": { "const": "number"} }}
+        ],
+        "required": ["type", "representation"]
+    }
+    
+}

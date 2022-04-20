@@ -1,4 +1,5 @@
 """Classes to represent the data object"""
+from prive.utils.data import index_split, get_dtype
 from abc import ABC, abstractmethod
 import json
 
@@ -124,11 +125,9 @@ class TabularDataset(Dataset):
         with open(f'{filepath}.json') as f:
             description = json.load(f)
 
-        # TODO: once we have settled on the description file, implement type.
-        # dtypes = {cd['name']: _get_dtype(cd) for cd in self.description['columns']}
-        columns = [column['name'] for column in description['columns']]
+        dtypes = {i: get_dtype(cd['representation'], cd['type']) for i, cd in enumerate(description)}
 
-        data = pd.read_csv(f'{filepath}.csv', usecols=columns)
+        data = pd.read_csv(f'{filepath}.csv', header=None, dtype=dtypes, index_col=None)
 
         return cls(data, description)
 
