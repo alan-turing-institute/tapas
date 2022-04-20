@@ -145,6 +145,11 @@ class TestTabularDataset(TestCase):
         for idx in index:
             self.assertIn(self.dataset.get_records([idx]), new_dataset)
 
+    def test_empty(self):
+        empty_dataset = self.dataset.empty()
+        self.assertEqual(len(empty_dataset), 0)
+        self.assertEqual(empty_dataset.description, self.dataset.description)
+
     def test_iter(self):
         record_count = 0
         for record in self.dataset:

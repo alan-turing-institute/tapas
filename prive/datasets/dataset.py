@@ -304,6 +304,19 @@ class TabularDataset(Dataset):
 
         return subsamples
 
+    def empty(self):
+        """
+        Create an empty TabularDataset with the same description as the current one.
+        Short-hand for TabularDataset.get_records([]).
+
+        Returns
+        -------
+        TabularDataset
+            Empty tabular dataset.
+
+        """
+        return self.get_records([])
+
     def __add__(self, other):
         """
         Adding two TabularDataset objects with the same data description together
