@@ -1,12 +1,12 @@
 """Classes to represent the data object"""
-from prive.utils.data import index_split, get_dtype
 from abc import ABC, abstractmethod
 import json
 
 import numpy as np
 import pandas as pd
 
-from prive.utils.data import index_split
+from prive.utils.data import index_split, get_dtype
+
 
 class Dataset(ABC):
     """
@@ -113,7 +113,7 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        filepath: str
+        filepath : str
             Path where the csv and json file are located.
 
         Returns
@@ -137,7 +137,7 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        filepath: str
+        filepath : str
             Path where the csv and json file are saved.
 
         """
@@ -154,7 +154,7 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        n_samples: int
+        n_samples : int
             Number of records to sample.
 
         Returns
@@ -248,9 +248,9 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        records_in: TabularDataset
+        records_in : TabularDataset
             A TabularDataset object with the record(s) to add.
-        records_out: list(int)
+        records_out : list(int)
             List of indexes of records to drop.
         in_place : bool
             Bool indicating whether or not to change the dataset in-place or return
@@ -284,9 +284,9 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        n: int
+        n : int
             Number of datasets to create.
-        sample_size: int
+        sample_size : int
             Size of the subset datasets to be created.
 
         Returns
@@ -310,7 +310,7 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        other: (TabularDataset)
+        other : (TabularDataset)
             A TabularDataset object.
 
         Returns
