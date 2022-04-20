@@ -143,7 +143,7 @@ class TabularDataset(Dataset):
         """
 
         with open(f'{filepath}.json', 'w') as fp:
-            json.dump(self.description, fp)
+            json.dump(self.description, fp, indent=4)
 
         # TODO: Make sure this writes it exactly as needed
         self.data.to_csv(filepath+'.csv', header=False, index=False)
