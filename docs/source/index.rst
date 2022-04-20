@@ -19,6 +19,8 @@ Contents
    :recursive:
 
    prive
+
+.. toctree::
    dataset-schema
 
 
