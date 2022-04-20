@@ -1,4 +1,5 @@
 """Classes to represent the data object"""
+
 from prive.utils.data import index_split, get_dtype
 from abc import ABC, abstractmethod
 import json
@@ -111,7 +112,8 @@ class TabularDataset(Dataset):
         Parameters
         ----------
         filepath: str
-            Path where the csv and json file are located.
+            Full path to the csv and json, excluding the ``.csv`` or ``.json`` extension.
+            Both files should have the same name. 
 
         Returns
         -------
