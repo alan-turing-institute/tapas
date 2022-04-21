@@ -201,8 +201,8 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset
-            A TabularDataset object without the record(s).
+        TabularDataset or None
+            A new TabularDataset object without the record(s) or None is in_place=True.
 
         """
         if len(record_ids) == 0:
@@ -231,8 +231,8 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset
-            A new TabularDataset object with the record(s).
+        TabularDataset or None
+            A new TabularDataset object with the record(s) or None is inplace=True.
 
         """
 
@@ -261,8 +261,8 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset
-            A modified TabularDataset object with the replaced record(s).
+        TabularDataset or None
+            A modified TabularDataset object with the replaced record(s) or None is inplace=True..
 
         """
         if len(records_out) > 0:
