@@ -20,6 +20,8 @@ Contents
 
    prive
 
+.. toctree::
+   dataset-schema
 
 
 

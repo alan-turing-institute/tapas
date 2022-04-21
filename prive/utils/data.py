@@ -128,3 +128,38 @@ def index_split(max_index, split_size, num_splits):
     indices += [index_array[split_size*i : split_size*(i+1)] for i in range(remainder_splits)]
 
     return indices
+
+def get_dtype(representation, column_type):
+    """
+
+    Return the pandas type of a column based on the json schema for the dataset.
+
+    Parameters
+    ----------
+    representation: object
+        Either a string, an integer, or a list of string.
+        The meaning depends upon ``column_type``.
+    column_type: str
+        The abstract type of the data column (e.g. ``"finite"``,
+        ``"countable/ordered"``, etc).
+
+    Returns
+    -------
+    dtype
+        A type for the given column.
+
+    """
+    if representation == 'integer':
+        return np.int
+    elif representation == 'number':
+        return np.float
+    elif representation == 'date':
+        return pd.datetime
+    elif isinstance(representation, list):
+        ordered = True if 'ordered' in column_type else False
+        return pd.CategoricalDtype(categories=representation, ordered=ordered)
+    elif isinstance(representation, (int)):
+        ordered = True if 'ordered' in column_type else False
+        return pd.CategoricalDtype(categories=range(representation), ordered=ordered)
+    else:
+        np.object

@@ -42,7 +42,7 @@ class TestTabularDataset(TestCase):
         index = [10, 20]
         record = self.data.get_records(index)
 
-        self.assertEqual(record.data.iloc[0]['DISCHARGE'], self.data.data.iloc[index[0]]['DISCHARGE'])
+        self.assertEqual(record.data.iloc[0][0], self.data.data.iloc[index[0]][0])
         self.assertEqual(record.data.shape[0], len(index))
 
     def test_drop_records(self):
