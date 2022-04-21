@@ -15,9 +15,10 @@ class DataDescription:
     @property
     def encoded_dim(self):
         """
-        int : Number of dimensions the data would have if encoded. Continuous
-        variables will require one dimension, whereas categorical and ordinal
-        variables require one dimension per category.
+        int : Number of dimensions the data would have if encoded. This assumes
+        ordered and infinite variables will have one dimension, and only finite,
+        unordered variables would be one-hot encoded, where they will require
+        one dimension per category.
 
         """
         nfeatures = 0
@@ -74,3 +75,6 @@ class DataDescription:
 
         else:
             raise KeyError(f'Key must be an int or str, got {type(key)}')
+
+    def __repr__(self):
+        return 'Data Description\n' + f'Columns: {list(cdict["name"] for cdict in self)}'
