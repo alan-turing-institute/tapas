@@ -97,34 +97,34 @@ class Dataset(ABC):
 
 class TabularDataset(Dataset):
     """
-    Class for tabular dataset object. The tabular data is a Pandas Dataframe
-    and the data description is a dictionary.
+    Class to represent tabular data as a Dataset. Internally, the tabular data
+    is stored as a Pandas Dataframe and the schema is an array of types.
 
     """
 
-    def __init__(self, data, description):
+    def __init__(self, data, schema):
         self.data = data
-        self.description = description
+        self.description = schema
 
     @classmethod
     def read(cls, filepath):
         """
-        Read csv and json files for dataframe and description dictionary respectively.
+        Read csv and json files for dataframe and schema respectively.
 
         Parameters
         ----------
         filepath: str
             Full path to the csv and json, excluding the ``.csv`` or ``.json`` extension.
-            Both files should have the same name.
+            Both files should have the same root name.
 
         Returns
         -------
         TabularDataset
-            A TabularDataset instantiated object.
+            A TabularDataset.
 
         """
         with open(f'{filepath}.json') as f:
-            description = json.load(f)
+            schema = json.load(f)
 
         dtypes = {i: get_dtype(cd['representation'], cd['type']) for i, cd in enumerate(description)}
 
