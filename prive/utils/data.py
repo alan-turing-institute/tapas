@@ -132,15 +132,16 @@ def index_split(max_index, split_size, num_splits):
 def get_dtype(representation, column_type):
     """
 
-    Based on the json file schema from the dataset module map type/representation to pandas types.
-    See data-schema-doc.rst documentation for more details.
+    Return the pandas type of a column based on the json schema for the dataset.
 
     Parameters
     ----------
     representation: object
-        Representation of column based on the schema this can be a string, and integer, or a list
+        Either a string, an integer, or a list of string.
+        The meaning depends upon ``column_type``.
     column_type: str
-        String referring to abstract type of the data column (e.g. countable/ordered, finite, etc).
+        The abstract type of the data column (e.g. ``"finite"``,
+        ``"countable/ordered"``, etc).
 
     Returns
     -------

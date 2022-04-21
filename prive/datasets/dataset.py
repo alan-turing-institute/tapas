@@ -113,8 +113,9 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        filepath : str
-            Path where the csv and json file are located.
+        filepath: str
+            Full path to the csv and json, excluding the ``.csv`` or ``.json`` extension.
+            Both files should have the same name.
 
         Returns
         -------
