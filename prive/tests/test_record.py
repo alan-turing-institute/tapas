@@ -6,7 +6,7 @@ class TestTabularRecord(unittest.TestCase):
     def setUp(self):
         self.dataset = TabularDataset.read('tests/data/test_texas')
         self.row = self.dataset.get_records([0])
-        self.record = TabularRecord(self.row)
+        self.record = TabularRecord.from_dataset(self.row)
 
     def test_something(self):
         self.assertEqual(self.record.data.shape[0], 1)  # add assertion here
