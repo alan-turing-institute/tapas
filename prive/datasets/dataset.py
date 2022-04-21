@@ -192,6 +192,8 @@ class TabularDataset(Dataset):
         ----------
         record_ids : list[int]
             List of indexes of records to drop.
+        n : int
+            Number of random records to drop if record_ids is empty.
         in_place : bool
             Bool indicating whether or not to change the dataset in-place or return
             a copy. If True, the dataset is changed in-place. The default is False.
