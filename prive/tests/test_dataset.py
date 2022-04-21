@@ -8,6 +8,7 @@ from warnings import filterwarnings
 filterwarnings('ignore')
 
 from prive.datasets import TabularDataset
+from prive.datasets.data_description import DataDescription
 
 
 class TestTabularDataset(TestCase):
@@ -23,7 +24,7 @@ class TestTabularDataset(TestCase):
         with open('tests/data/test_texas.json') as f:
             description = json.load(f)
 
-        self.assertEqual(self.dataset.description, description)
+        self.assertEqual(self.dataset.description.schema, description)
 
     def test_sample(self):
         # returns a subset of the samples

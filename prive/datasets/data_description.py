@@ -2,7 +2,7 @@
 
 class DataDescription:
     def __init__(self, description):
-        self.description = description
+        self.schema = description
 
     @property
     def num_features(self):
@@ -10,7 +10,7 @@ class DataDescription:
         int : Number of columns.
 
         """
-        return len(self.description)
+        return len(self.schema)
 
     @property
     def encoded_dim(self):
@@ -65,10 +65,10 @@ class DataDescription:
 
         """
         if isinstance(key, int):
-            return self.description[key]
+            return self.schema[key]
 
         elif isinstance(key, str):
-            for cdict in self.description:
+            for cdict in self.schema:
                 if cdict['name'] == key:
                     return cdict
             raise KeyError(f'No column named {key}')
