@@ -270,7 +270,7 @@ class TabularDataset(Dataset):
 
         # TODO: Should multiple records_in with no records_out be supported?
         if in_place:
-            self.drop_records(records_out, in_place=in_place)
+            self.drop_records(records_out, n=len(records_in), in_place=in_place)
             self.add_records(records_in, in_place=in_place)
             return
 
