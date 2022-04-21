@@ -5,6 +5,7 @@ import json
 import numpy as np
 import pandas as pd
 
+from prive.datasets.data_description import DataDescription
 from prive.utils.data import index_split, get_dtype
 
 
@@ -130,6 +131,8 @@ class TabularDataset(Dataset):
 
         data = pd.read_csv(f'{filepath}.csv', header=None, dtype=dtypes, index_col=None)
 
+        description = DataDescription(description)
+
         return cls(data, description)
 
     def write(self, filepath):
@@ -149,7 +152,7 @@ class TabularDataset(Dataset):
         # TODO: Make sure this writes it exactly as needed
         self.data.to_csv(filepath+'.csv', header=False, index=False)
 
-    def sample(self, n_samples):
+    def sample(self, n_samples=1, frac=None):
         """
         Sample from a TabularDataset object a set of records.
 
@@ -164,6 +167,9 @@ class TabularDataset(Dataset):
             A TabularDataset object with a sample of the records of the original object.
 
         """
+        if frac:
+            n_samples = int(frac * len(self))
+
         return TabularDataset(data=self.data.sample(n_samples), description=self.description)
 
     def get_records(self, record_ids):
@@ -298,6 +304,8 @@ class TabularDataset(Dataset):
             A lists containing subsets of the data with and without the target record(s).
 
         """
+        assert sample_size <= len(self), \
+            f'Cannot create subsets larger than original dataset, sample_size max: {len(self)} got {sample_size}'
 
         # create splits
         splits = index_split(self.data.shape[0], sample_size, n)
