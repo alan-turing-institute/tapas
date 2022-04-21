@@ -9,5 +9,4 @@ class TabularRecord(TabularDataset):
      """
 
     def __init__(self, data, description):
-        self.data = data
-        self.description = description
+        super().__init__(data, description)
