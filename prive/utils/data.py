@@ -155,7 +155,7 @@ def get_dtype(representation, column_type):
         return float
     elif representation == 'date':
         return pd.datetime
-    elif isinstance(representation, (list, str)):
+    elif isinstance(representation, list):
         ordered = True if 'ordered' in column_type else False
         return pd.CategoricalDtype(categories=representation, ordered=ordered)
     elif isinstance(representation, (int)):
