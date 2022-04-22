@@ -104,7 +104,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
         ## Set up adversary's knowledge
         self._adv_data = {
-            'aux': (aux_data or self.dataset.empty()).drop_records([target_record.id]), # TODO: Implement empty method on Dataset
+            'aux': (aux_data or self.dataset.empty()),#.drop_records([target_record.data.index[0]]),
             'real': self.dataset.sample(frac=sample_real_frac), # TODO: Add frac kwarg to dataset sample
             'target': self.target_record}
         # If no shadow model provided, assume full access to generator
@@ -162,27 +162,27 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         """
         # If training, sample datasets from the adversary's data. Otherwise,
         # sample datasets from the real dataset.
-        dataset = (self.adv_data if training else self.dataset).copy()
+        dataset = (self.adv_data if training else self.dataset)#.copy()
 
         # TODO: the interface should include some number of synthetic records to produce.
         num_synthetic_records = num_synthetic_records or self.num_synthetic_records
 
         # Split the data into subsets
-        datasets = dataset.create_subsets(num_samples, num_synthetic_records)
+        datasets = dataset.create_subsets(num_samples, self.num_training_records)
 
         synthetic_without_target = []
         synthetic_with_target = []
 
         for training_dataset in datasets:
             # Compute generator(D)
-            synthetic_without_target.append(self.generator(training_dataset))
+            synthetic_without_target.append(self.generator(training_dataset, num_synthetic_records))
 
             # Then, add  - or replace a record by - the target the record.
             if replace_target:
                 training_dataset = training_dataset.replace(self.target_record)  # TODO: define dataset.
             else:
-                training_dataset = training_dataset.add(self.target_record)
-            synthetic_with_target.append(self.generator(training_dataset))
+                training_dataset = training_dataset.add_records(self.target_record)
+            synthetic_with_target.append(self.generator(training_dataset, num_synthetic_records))
 
         synthetic_datasets = synthetic_without_target + synthetic_with_target
         labels = ([0] * num_samples) + ([1] * num_samples)
@@ -192,7 +192,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
     def generate_training_samples(self,
                                   num_samples: int,
                                   num_synthetic_records: int = None,
-                                  replace_targets: bool = False) -> tuple[list[Dataset], list[int]]:
+                                  replace_target: bool = False) -> tuple[list[Dataset], list[int]]:
         """
         Generate samples according to the attacker's known information.
         (See _generate_datasets for the specific arguments.) This is just
@@ -200,14 +200,14 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
         """
         return self._generate_datasets(num_samples, num_synthetic_records,
-            training=True, replace_target=replace_targets)
+            training=True, replace_target=replace_target)
 
     # TODO: Better docstring description
     def test(self,
              attack: Attack,
              num_samples: int,
              num_synthetic_records: int = None,
-             replace_targets: bool = False,
+             replace_target: bool = False,
              save_datasets: bool = False) -> tuple[list[int], list[int]]:
         """
         Test an attack against this threat model. First, random subsets of size
@@ -226,7 +226,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         num_synthetic_records : int, optional
             Number of synthetic records to generate per synthetic dataset.
             The default is None.
-        replace_targets : bool, optional
+        replace_target : bool, optional
             Whether or not to remove a row before adding the target in each dataset.
             The default is False.
         save_datasets : bool, optional
@@ -254,7 +254,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
         # Generate test samples
         test_datasets, test_labels = self._generate_datasets(
-            num_extra_samples, num_synthetic_records, replace_targets=replace_targets, training=False)
+            num_extra_samples, num_synthetic_records, replace_target=replace_target, training=False)
 
         # Save datasets if required
         if save_datasets:

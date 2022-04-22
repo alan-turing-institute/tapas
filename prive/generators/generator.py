@@ -16,9 +16,10 @@ class Generator(ABC):
         """Fit generator to real data."""
         pass
 
-    # For convenience, we also map the __call__ function to .generate.
+    # The call method should map a dataset to a synthetic dataset
     def __call__(self, *args, **kwargs):
-        return self.generate(*args, **kwargs)
+        pass
+        #return self.generate(*args, **kwargs)
 
 
 # We can implement some generators that extend this file.
@@ -34,6 +35,10 @@ class ReturnRaw(Generator):
 
     def generate(self, num_samples):
         return self.dataset.sample(num_samples)
+
+    def __call__(self, dataset, num_samples):
+        self.fit(dataset)
+        return self.generate(num_samples)
 
 
 # And importantly, import generators from disk executables.

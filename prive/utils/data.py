@@ -39,58 +39,59 @@ def get_num_features(meta_dict): # TODO: Write tests and refactor
     return nfeatures
 
 
-def encode_data(data, meta_dict, infer_ranges=False): # TODO: Write tests
+def encode_data(dataset, infer_ranges=False): # TODO: Write tests
     """
     Convert raw data to an np.ndarray with continuous features normalised and
     categorical features one-hot encoded.
 
-    Args:
-        data (pd.DataFrame) : Raw data to convert.
-        meta_dict (dict) : Metadata dictionary containing information about
-            each column of the data: type of each column, range of continuous
-            variables, range of categories for cateogrical variables.
-        infer_ranges (bool) : If false, will use ranges provided in metadata,
+    Parameters
+    ----------
+        dataset : TabularDataset
+            Tabular dataset to encode.
+        infer_ranges : bool
+            If false, will use ranges provided in metadata,
             otherwise, will use input data to infer ranges of the continuous
             variables and will update metadata in-place with the new ranges.
 
-    Returns:
-        encoded_data (np.ndarray) : Encoded data (normalised and one-hot encoded).
+    Returns
+    -------
+        encoded_data : np.ndarray
+            Encoded data (normalised and one-hot encoded).
+
     """
-    n_samples = len(data)
-    nfeatures = get_num_features(meta_dict)
+    n_samples = len(dataset)
+    nfeatures = dataset.description.encoded_dim
     encoded_data = np.empty((n_samples, nfeatures))
     cidx = 0
 
-    for attr_name, cdict in meta_dict.items():
-        data_type = cdict['type']
-        col_data = data[attr_name]
+    for i, cdict in enumerate(dataset.description):
+        name = cdict['name']
+        d_type = cdict['type']
+        d_repr = cdict['representation']
+        col_data = dataset.data[i]
 
-        if data_type == FLOAT or data_type == INTEGER:
-            # Normalise continuous data
-            if infer_ranges:
-                col_max = max(col_data)
-                col_min = min(col_data)
-
-                meta_dict[attr_name]['max'] = col_max
-                meta_dict[attr_name]['min'] = col_min
-
+        if d_type == 'finite':
+            if isinstance(d_repr, int):
+                col_cats = list(range(d_repr))
             else:
-                col_max = cdict['max']
-                col_min = cdict['min']
+                col_cats = d_repr
 
-            encoded_data[:, cidx] = np.array(
-                np.true_divide(col_data - col_min, col_max + ZERO_TOL)
-            )
-
-            cidx += 1
-
-        elif data_type == CATEGORICAL or data_type == ORDINAL:
-            # One-hot encoded categorical columns
-            col_cats = cdict['categories']
             col_data_onehot = one_hot(col_data, col_cats)
             encoded_data[:, cidx : cidx + len(col_cats)] = col_data_onehot
 
             cidx += len(col_cats)
+
+        elif d_type == 'finite/ordered' and not isinstance(d_repr, int):
+            def f(val):
+                return d_repr.index(val)
+            col_data_numeric = col_data.apply(f)
+            encoded_data[:, cidx] = col_data_numeric
+
+            cidx += 1
+
+        else:
+            encoded_data[:, cidx] = col_data
+            cidx += 1
 
     return encoded_data
 
