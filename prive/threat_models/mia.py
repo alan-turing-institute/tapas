@@ -231,7 +231,8 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
             The default is False.
         save_datasets : bool, optional
             Whether or not to save the generated test datasets into the threat
-            model to be used for other attacks.
+            model to be used for other attacks. Also whether or not to use existing
+            datasets to test the current attack. The default is False.
 
         Returns
         -------
@@ -242,27 +243,32 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
         """
         # Check for existing datasets
-        if self.test_sets:
-            num_extra_samples = max(0, num_samples - len(self.test_sets['datasets']))
-
-            # If we don't need any more samples, return the existing ones
-            if num_extra_samples == 0:
-                return self.test_sets['datasets'][:num_samples], self.test_sets['labels'][:num_samples]
+        if self.test_sets and save_datasets:
+            # Make sure we load in pairs
+            n = len(self.test_sets) // 2
+            test_datasets = self.test_sets['datasets'][:num_samples] + self.test_sets['datasets'][n:n+num_samples]
+            test_labels = self.test_sets['labels'][:num_samples] + self.test_sets['labels'][n:n+num_samples]
 
         else:
-            num_extra_samples = num_samples
+            test_datasets = []
+            test_labels = []
+
+        num_extra_samples = num_samples - (len(test_datasets)//2)
 
         # Generate test samples
-        test_datasets, test_labels = self._generate_datasets(
+        new_datasets, new_labels = self._generate_datasets(
             num_extra_samples, num_synthetic_records, replace_target=replace_target, training=False)
+
+        test_datasets.extend(new_datasets)
+        test_labels.extend(new_labels)
 
         # Save datasets if required
         if save_datasets:
             if not self.test_sets:
                 self.test_sets = {'datasets': test_datasets, 'labels': test_labels}
             else:
-                self.test_sets['datasets'] += test_datasets
-                self.test_sets['labels'] += test_labels
+                self.test_sets['datasets'] += new_datasets
+                self.test_sets['labels'] += new_labels
 
         # Attack makes guesses about test samples
         guesses = attack.attack(test_datasets)

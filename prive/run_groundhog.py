@@ -44,23 +44,17 @@ threat_model = TargetedAuxiliaryDataMIA(target,
                                         num_training_records = train_data_size,
                                         num_synthetic_records = synthetic_data_size)
 
-# If we give the threat model to the .train method, we can remove this.
-# train_datasets, train_labels = threat_model.generate_training_samples(num_train_samples)
-
 # Initialise attack.
 # NOTE: the threat_model contains dataset, and thus a dataset description.
 classifier = SetReprClassifier(NaiveRep, RFClassifier, dataset.description)
 attack = Groundhog(classifier, dataset.description)
 
 # Train attack.
-# attack.train(train_datasets, train_labels)
 attack.train(threat_model, num_samples=num_train_samples)
 
-
-test_datasets, test_labels = threat_model._generate_datasets(
-    num_test_samples, synthetic_data_size, replace_target=False, training=False)
 # Generate test data (implicitly through .test).
-test_labels, predictions = threat_model.test(attack, num_test_samples, replace_target=True)
+test_labels, predictions = threat_model.test(attack, num_test_samples,
+                                             replace_target=True, save_datasets=True)
 
 # We can also define a second attack, which will reuse memoized datasets.
 #attack_cd = ClosestDistanceAttack(threat_model)
