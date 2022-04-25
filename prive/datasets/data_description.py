@@ -33,7 +33,7 @@ class DataDescription:
         nfeatures = 0
 
         for cdict in self:
-            # If its ordered it will be encoded as a single int
+            # If it's ordered it will be encoded as a single int
             if 'ordered' in cdict['type']:
                 nfeatures += 1
 
@@ -47,7 +47,7 @@ class DataDescription:
             elif isinstance(cdict['representation'], int):
                 nfeatures += cdict['representation']
 
-            # If its not ordered and not one of the above, it must be a list
+            # If it's not ordered and not one of the above, it must be a list
             # of possible values. The length indicates how many dimensions
             # one-hot encoding it will require.
             else:
