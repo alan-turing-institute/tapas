@@ -129,37 +129,42 @@ def index_split(max_index, split_size, num_splits):
 
     return indices
 
-def get_dtype(representation, column_type):
+def get_dtype(col_type, col_repr):
     """
 
     Return the pandas type of a column based on the json schema for the dataset.
 
     Parameters
     ----------
-    representation: object
-        Either a string, an integer, or a list of string.
-        The meaning depends upon ``column_type``.
-    column_type: str
+    col_type: str
         The abstract type of the data column (e.g. ``"finite"``,
         ``"countable/ordered"``, etc).
+    col_repr: object
+        Either a string, an integer, or a list of string.
+        The interpretation depends upon ``col_type``.
+
 
     Returns
     -------
     dtype
-        A type for the given column.
+        A type for the given column. Currently either int, float, or str.
 
     """
-    if representation == 'integer':
+    ## All types that have some subset of the integers or the reals as their representation
+    ## are stored as int or float. Applications should look at the schema to determine whether
+    ## what subset it is and whether the type is ordered
+    if col_repr == 'integer':
         return int
-    elif representation == 'number':
+    elif col_repr == 'number':
         return float
-    elif representation == 'date':
-        return pd.datetime
-    elif isinstance(representation, list):
-        ordered = True if 'ordered' in column_type else False
-        return pd.CategoricalDtype(categories=representation, ordered=ordered)
-    elif isinstance(representation, (int)):
-        ordered = True if 'ordered' in column_type else False
-        return pd.CategoricalDtype(categories=range(representation), ordered=ordered)
+    elif col_repr == 'string':
+        return str
+    elif col_repr == 'date' or col_repr == 'datetime':
+        return str         
+    elif col_type == 'finite' or col_type == 'finite/ordered':
+        if isinstance(col_repr, list):
+            return str
+        elif isinstance(col_repr, int):
+            return int
     else:
-        np.object
+        raise RuntimeError("Unknown type/representation when parsing data")

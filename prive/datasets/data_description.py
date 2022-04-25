@@ -1,8 +1,17 @@
-
+"""
+A represention of the metadata describing a dataset.
+"""
 
 class DataDescription:
-    def __init__(self, description):
-        self.schema = description
+    def __init__(self, schema):
+        """
+        Parameters
+        ----------
+        schema: list[dict]
+            A list of metadata about each column. Each column is represented by an dictionary whose
+            values are the ``name``, ``type``, and on-disk ``representation`` of the column.
+        """
+        self.schema = schema
 
     @property
     def num_features(self):
@@ -24,21 +33,21 @@ class DataDescription:
         nfeatures = 0
 
         for cdict in self:
-            # If it's ordered it will be encoded as a single int
+            # If its ordered it will be encoded as a single int
             if 'ordered' in cdict['type']:
                 nfeatures += 1
 
-            # If it's representation is a string, it's not finite, so can't be one-hot encoded
+            # If its representation is a string, it's not finite, so can't be one-hot encoded
             elif isinstance(cdict['representation'], str):
                 nfeatures += 1
 
-            # If it's representation is an int, then the int represents how many
+            # If its representation is an int, then the int represents how many
             # categories there are, and we already checked that it's not ordered
             # so it must be categorical, and therefore will be one-hot encoded
             elif isinstance(cdict['representation'], int):
                 nfeatures += cdict['representation']
 
-            # If it's not ordered and not one of the above, it must be a list
+            # If its not ordered and not one of the above, it must be a list
             # of possible values. The length indicates how many dimensions
             # one-hot encoding it will require.
             else:
@@ -60,8 +69,9 @@ class DataDescription:
 
     def __getitem__(self, key):
         """
-        Can be indexed either by an int, indicating the index of the column, or
-        by a string, indicating the name of the column.
+        Can be indexed either by an int, indicating the index of the column, or by a string,
+        indicating the name of the column. If a string, returns the first item whose ``name`` matches
+        ``key``.
 
         """
         if isinstance(key, int):

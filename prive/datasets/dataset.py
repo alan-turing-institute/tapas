@@ -103,9 +103,16 @@ class TabularDataset(Dataset):
 
     """
 
-    def __init__(self, data, schema):
+    def __init__(self, data, description):
+        """
+        Parameters
+        ----------
+        data: pandas.DataFrame
+
+        description: prive.datasets.data_description.DataDescription
+        """
         self.data = data
-        self.description = schema
+        self.description = description
 
     @classmethod
     def read(cls, filepath):
@@ -127,11 +134,18 @@ class TabularDataset(Dataset):
         with open(f'{filepath}.json') as f:
             schema = json.load(f)
 
-        dtypes = {i: get_dtype(cd['representation'], cd['type']) for i, cd in enumerate(description)}
+        ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
+        ## then convert them
+        dtypes = {i: get_dtype(col['type'], col['representation']) for i, col in enumerate(schema)}
 
         data = pd.read_csv(f'{filepath}.csv', header=None, dtype=dtypes, index_col=None)
 
-        description = DataDescription(description)
+        ## Convert any date or datetime fields to datetime
+        for c in [i for i, col in enumerate(schema)
+                  if col['representation'] == 'date' or col['representation'] == 'datetime']:
+            data[i] = pd.to_datetime(data[i])
+
+        description = DataDescription(schema)
 
         return cls(data, description)
 
@@ -147,7 +161,7 @@ class TabularDataset(Dataset):
         """
 
         with open(f'{filepath}.json', 'w') as fp:
-            json.dump(self.description, fp, indent=4)
+            json.dump(self.description.schema, fp, indent=4)
 
         # TODO: Make sure this writes it exactly as needed
         self.data.to_csv(filepath+'.csv', header=False, index=False)
