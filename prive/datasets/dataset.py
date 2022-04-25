@@ -98,40 +98,54 @@ class Dataset(ABC):
 
 class TabularDataset(Dataset):
     """
-    Class for tabular dataset object. The tabular data is a Pandas Dataframe
-    and the data description is a dictionary.
+    Class to represent tabular data as a Dataset. Internally, the tabular data
+    is stored as a Pandas Dataframe and the schema is an array of types.
 
     """
 
     def __init__(self, data, description):
+        """
+        Parameters
+        ----------
+        data: pandas.DataFrame
+
+        description: prive.datasets.data_description.DataDescription
+        """
         self.data = data
         self.description = description
 
     @classmethod
     def read(cls, filepath):
         """
-        Read csv and json files for dataframe and description dictionary respectively.
+        Read csv and json files for dataframe and schema respectively.
 
         Parameters
         ----------
         filepath: str
             Full path to the csv and json, excluding the ``.csv`` or ``.json`` extension.
-            Both files should have the same name.
+            Both files should have the same root name.
 
         Returns
         -------
         TabularDataset
-            A TabularDataset instantiated object.
+            A TabularDataset.
 
         """
         with open(f'{filepath}.json') as f:
-            description = json.load(f)
+            schema = json.load(f)
 
-        dtypes = {i: get_dtype(cd['representation'], cd['type']) for i, cd in enumerate(description)}
+        ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
+        ## then convert them
+        dtypes = {i: get_dtype(col['type'], col['representation']) for i, col in enumerate(schema)}
 
         data = pd.read_csv(f'{filepath}.csv', header=None, dtype=dtypes, index_col=None)
 
-        description = DataDescription(description)
+        ## Convert any date or datetime fields to datetime
+        for c in [i for i, col in enumerate(schema)
+                  if col['representation'] == 'date' or col['representation'] == 'datetime']:
+            data[i] = pd.to_datetime(data[i])
+
+        description = DataDescription(schema)
 
         return cls(data, description)
 
@@ -147,7 +161,7 @@ class TabularDataset(Dataset):
         """
 
         with open(f'{filepath}.json', 'w') as fp:
-            json.dump(self.description, fp, indent=4)
+            json.dump(self.description.schema, fp, indent=4)
 
         # TODO: Make sure this writes it exactly as needed
         self.data.to_csv(filepath+'.csv', header=False, index=False)
