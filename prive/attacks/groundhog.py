@@ -64,7 +64,7 @@ class Groundhog(Attack):
 
         self.trained = False
 
-        self.__name__ = f'{self.Classifier.__class__.__name__}Groundhog'
+        self.__name__ = f'{self.classifier.__class__.__name__}Groundhog'
 
     def train(self,
               threat_model: ThreatModel = None, # TODO: should we specify targeted, static data?
@@ -97,7 +97,7 @@ class Groundhog(Attack):
             synthetic_datasets, labels = threat_model.generate_training_samples(num_samples)
 
         # Fit the classifier to the data
-        self.Classifier.fit(synthetic_datasets, labels)
+        self.classifier.fit(synthetic_datasets, labels)
 
         self.trained = True
 
@@ -120,22 +120,18 @@ class Groundhog(Attack):
         """
         assert self.trained, 'Attack must first be trained.'
 
-        guesses = []
-        for dataset in datasets:
-            guess = self._make_guess(dataset)
-            guesses.append(guess)
-        return guesses
+        return np.round(self.classifier.predict(datasets), 0)
 
-    def _make_guess(self, dataset: Dataset) -> int:
+    def _make_guess(self, datasets: list[Dataset]) -> int:
         """
         Make a guess for a single dataset about the presence of the target in
         the training data that generated the dataset
 
         """
-        return np.round(self.classifier.predict(dataset.data), 0).astype(int)[0]
+        return np.round(self.classifier.predict(datasets), 0).astype(int)[0]
 
     # TODO: Fix arg type, add type hints and reformat docstring
-    def get_confidence(self, synT: list[Dataset], secret: list[int]) -> list[float]:
+    def attack_score(self, synT: list[Dataset], secret: list[int]) -> list[float]:
         """
         Calculate classifier's raw probability about the presence of the target.
         Output is a probability in [0, 1].

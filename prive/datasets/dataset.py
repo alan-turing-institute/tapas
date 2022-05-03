@@ -227,7 +227,7 @@ class TabularDataset(Dataset):
         """
         if len(record_ids) == 0:
             # drop n random records if none provided
-            record_ids = np.random.randint(len(self), size=n).tolist()
+            record_ids = np.random.choice(self.data.index, size=n).tolist()
 
         new_data = self.data.drop(record_ids)
 
