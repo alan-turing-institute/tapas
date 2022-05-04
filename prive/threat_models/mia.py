@@ -99,7 +99,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         ## Set up ground truth
         self.target_record = target_record
         self.dataset = dataset
-        self.dataset = self.dataset.drop_records([target_record.data.index[0]])#, in_place=True) # Remove target
+        self.dataset.drop_records([target_record.id], in_place=True) # Remove target
         self.generator = generator
 
         ## Set up adversary's knowledge

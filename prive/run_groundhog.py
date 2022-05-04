@@ -7,7 +7,7 @@ from prive.attacks.set_classifiers import LRClassifier, RFClassifier, \
     SetReprClassifier, NaiveRep
 from prive.threat_models.mia import TargetedAuxiliaryDataMIA
 from prive.attacks import Groundhog, ClosestDistanceAttack
-from prive.datasets import TabularDataset
+from prive.datasets import TabularDataset, TabularRecord
 
 from prive.generators import ReturnRaw
 
@@ -31,7 +31,7 @@ sdg_model = ReturnRaw() # instance of generators.Generator
 # Set target
 # TODO: What should target be? DF? Dataset instance?
 # Should there be a separate sample_row method on Dataset?
-target = dataset.sample(1)
+target = TabularRecord.from_dataset(dataset.sample(1))
 
 
 # The threat model describes the attack for this target user.
