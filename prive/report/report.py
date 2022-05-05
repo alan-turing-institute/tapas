@@ -22,7 +22,7 @@ class AttackSummary(ABC):
         pass
 
 
-class MiAttackSummary(AttackSummary):
+class MIAttackSummary(AttackSummary):
 
     def __init__(self, labels, predictions, generator_info, attack_info):
         """
