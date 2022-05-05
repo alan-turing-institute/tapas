@@ -1,5 +1,8 @@
 """Abstract base classes to represent synthetic data generators."""
 from abc import ABC, abstractmethod
+import shutil
+import os
+import subprocess
 
 class Generator(ABC):
     """Base class for generators"""
@@ -34,8 +37,11 @@ class ReturnRaw(Generator):
         self.trained = True
 
     def generate(self, num_samples):
-        return self.dataset.sample(num_samples)
-
+        if self.trained: 
+            return self.dataset.sample(num_samples)
+        else:
+            raise RuntimeError("No dataset provided to generator")
+        
     def __call__(self, dataset, num_samples):
         self.fit(dataset)
         return self.generate(num_samples)
@@ -44,4 +50,38 @@ class ReturnRaw(Generator):
 # And importantly, import generators from disk executables.
 
 class GeneratorFromExecutable(Generator):
-	"""This class interfaces with a generator as executable on disk."""
+    """
+    A class which wraps an external executable as a generator. Currently supports
+    only tabular datasets.
+    """
+    def __init__(self, exe):
+        """
+        Parameters
+        ----------
+        exe : The path to the executable as a string.
+        """
+        actual_exe = shutil.which(exe)
+        if actual_exe is not None:
+            self.exe = actual_exe
+        else: 
+            actual_exe = shutil.which(exe, path = os.getcwd())
+            if actual_exe is not None:
+                self.exe = actual_exe
+            else:
+                raise RuntimeError("Can't find user-supplied executable")
+        super().__init__()
+
+    def fit(self, dataset):
+        self.dataset = dataset
+        self.trained = True
+
+    def generate(self, num_samples):
+        if self.trained:
+            proc = subprocess.run(self.exe, stdin = PIPE, stdout = PIPE)
+            input = 
+            output, _ = proc.communicate(input = input)
+            return output
+        else:
+            raise RuntimeError("No dataset provided to generator")
+        
+    
