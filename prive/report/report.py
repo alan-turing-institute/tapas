@@ -1,12 +1,14 @@
 """Classes to summarise an attacks"""
+import os
 from abc import ABC, abstractmethod
 import numpy as np
+import pandas as pd
 
 
 class AttackSummary(ABC):
 
     @abstractmethod
-    def calculate_metrics(self):
+    def get_metrics(self):
         """
         Calculate metrics relevant for an attack
 
@@ -14,7 +16,7 @@ class AttackSummary(ABC):
         pass
 
     @abstractmethod
-    def write(self, output_path):
+    def write_metrics(self, output_path):
         """
         Write metrics to file.
 
@@ -24,8 +26,10 @@ class AttackSummary(ABC):
 
 class MIAttackSummary(AttackSummary):
 
-    def __init__(self, labels, predictions, generator_info, attack_info):
+    def __init__(self, labels, predictions, generator_info, attack_info, target_id):
         """
+
+        Initialise the MIAttackSummary Class.
 
         Parameters
         ----------
@@ -39,6 +43,7 @@ class MIAttackSummary(AttackSummary):
         self.predictions = np.array(predictions)
         self.generator_info = generator_info
         self.attack_info = attack_info
+        self.target_id = target_id
 
     @property
     def accuracy(self):
@@ -64,7 +69,7 @@ class MIAttackSummary(AttackSummary):
 
         """
         targetin = np.where(self.labels == 1)[0]
-        return np.sum(self.predictions[targetin] == 1)/len(targetin)
+        return np.sum(self.predictions[targetin] == 1) / len(targetin)
 
     @property
     def fp(self):
@@ -80,8 +85,65 @@ class MIAttackSummary(AttackSummary):
         targetout = np.where(self.labels == 0)[0]
         return np.sum(self.predictions[targetout] == 1) / len(targetout)
 
-    def calculate_metrics(self, labels, predictions):
-        pass
+    @property
+    def mia_advantage(self):
+        """
+        MIA attack advantage as defined by Stadler et al.
 
-    def write(self):
-        pass
+        Returns
+        -------
+        float
+
+        """
+        return self.tp - self.fp
+
+    @property
+    def privacy_gain(self):
+        """
+        Privacy gain as defined by Stadler et al.
+
+        Returns
+        -------
+        float
+
+        """
+        return 1 - self.mia_advantage
+
+    def get_metrics(self):
+        """
+        Calculates all MIA relevant metrics and returns it as a dataframe.
+
+        Returns
+        -------
+        A dataframe
+            A dataframe with attack info and metrics
+
+        """
+
+        return pd.DataFrame([[self.target_id, self.generator_info,
+                              self.attack_info, self.accuracy, self.tp,
+                              self.fp, self.mia_advantage, self.privacy_gain]],
+                            columns=['target_id', 'generator_info', 'attack_info', 'accuracy',
+                                     'true_positive_rate', 'false_positive_rate',
+                                     'mia_advantage', 'privacy_gain'])
+
+    def write_metrics(self, filepath, attack_iter):
+        """
+        Write metrics to a CSV file
+
+        Parameters
+        ----------
+        filepath: str
+            Path where the CSV is to be saved.
+        attack_iter: int
+            id of the iteration of the attack (to distinguish file from others).
+
+        Returns
+        -------
+        None
+
+        """
+
+        file_name = f'result_{self.attack_info}_{self.generator_info}_target{self.target_id}_{attack_iter}.csv'
+
+        self.get_metrics().to_csv(os.path.join(filepath, file_name), index=False)
