@@ -11,7 +11,7 @@ import numpy as np
 
 from prive.attacks import load_attack
 from prive.datasets import TabularDataset, TabularRecord
-from prive.generators import generator_from_executable
+from prive.generators import GeneratorFromExecutable, ReturnRaw
 from prive.threat_models import TargetedAuxiliaryDataMIA
 
 
@@ -20,9 +20,10 @@ def main():
     parser.add_argument('--genpath', '-G', type=str, help='Path to generator executable')
     parser.add_argument('--datapath', '-D', type=str,
                         help='Path to directory containing both csv and json of the test data')
-    parser.add_argument('--auxdatapath', '-AD', type=str, default=None,
+    parser.add_argument('--auxdatapath', '-A', type=str, default=None,
                         help='Path to directory containing both csv and json of the auxiliary data, defaults to none')
-    parser.add_argument('--runconfig', '-RC', type=str, help='Path to config json file')
+    parser.add_argument('--runconfig', '-C', type=str, default='prive/configs/config.json',
+                        help='Path to config json file')
     parser.add_argument('--outdir', '-O', type=str, default='runs',
                         help='Output directory to save results to')
 
@@ -31,6 +32,9 @@ def main():
     # Set output directory
     curr_time = datetime.now().strftime('%d%m_%H%M%S')
     save_dir = os.path.join(args.outdir, curr_time)
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     # Load data
     dataset = TabularDataset.read(args.datapath)
@@ -41,7 +45,7 @@ def main():
 
     # Initialise synthetic data generator
     # TODO: Implement generator_from_executable (probably as a function)
-    sdg_model = generator_from_executable(args.genpath) # instance of generators.Generator
+    sdg_model = ReturnRaw()#GeneratorFromExecutable(args.genpath) # instance of generators.Generator
 
     # Load runconfig
     with open(args.runconfig) as f:
@@ -74,8 +78,8 @@ def main():
     # Generate test data (implicitly through .test).
     results = {}
     for atk_name, attack in attacks.items():
-        test_labels, predictions = threat_model.test(attack, num_test_samples,
-                                                 replace_target=True, save_datasets=True)
+        test_labels, predictions = threat_model.test(
+            attack, runconfig['num_test_samples'], replace_target=True, save_datasets=True)
         results[atk_name] = {'test_labels': test_labels, 'predictions': predictions}
 
     # Save the results

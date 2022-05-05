@@ -44,4 +44,13 @@ class ReturnRaw(Generator):
 # And importantly, import generators from disk executables.
 
 class GeneratorFromExecutable(Generator):
-	"""This class interfaces with a generator as executable on disk."""
+    """
+    This class interfaces with a generator as executable on disk.
+    """
+    def __init__(self, path):
+        self.path = path
+
+    def __call__(self, dataset, num_samples):
+        # This needs to be mapped to something that calls the exe with appropriate inputs
+        # and reads the output, mapping it back into a python object to be used. # TODO
+        pass
