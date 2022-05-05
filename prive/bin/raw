@@ -1,0 +1,5 @@
+#!/bin/sh
+# Emit n random lines from standard input
+# Example:
+#  raw 25 < input.csv
+sort -R | head -n$1
