@@ -168,7 +168,7 @@ class TabularDataset(Dataset):
 
     def sample(self, n_samples=1, frac=None):
         """
-        Sample from a TabularDataset object a set of records.
+        Sample a set of records from a TabularDataset object.
 
         Parameters
         ----------
