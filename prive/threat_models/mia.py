@@ -271,6 +271,6 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
                 self.test_sets['labels'] += new_labels
 
         # Attack makes guesses about test samples
-        guesses = attack.attack(test_datasets)
+        guesses = attack.attack(test_datasets).tolist()
 
         return test_labels, guesses
