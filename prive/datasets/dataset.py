@@ -1,6 +1,7 @@
 """Classes to represent the data object"""
 from abc import ABC, abstractmethod
 import json
+import io
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,36 @@ import pandas as pd
 from prive.datasets.data_description import DataDescription
 from prive.utils.data import index_split, get_dtype
 
+# Helper function for parsing file-like objects
+def _parse_csv(fp, schema):
+    """
+    Parse fp into a TabularDataset using schema
+    
+    Parameters
+    ----------
+    fp: A file-type object
+    schema: A json schema
+
+    Returns
+    -------
+    TabularDataset
+
+    """
+    ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
+    ## then convert them
+    dtypes = {i: get_dtype(col['type'], col['representation']) for i, col in enumerate(schema)}
+    
+    data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None)
+    
+    ## Convert any date or datetime fields to datetime
+    for c in [i for i, col in enumerate(schema) if col['representation'] == 'date' or col['representation'] == 'datetime']:
+        data[i] = pd.to_datetime(data[i])
+        
+    description = DataDescription(schema)
+    return TabularDataset(data, description)
+
+## Classes
+## -------
 
 class Dataset(ABC):
     """
@@ -31,6 +62,20 @@ class Dataset(ABC):
         """
         pass
 
+    @abstractmethod
+    def read_from_string(self, data, schema):
+        """
+        Read from dataset and description as strings.
+        """
+        pass
+    
+    @abstractmethod
+    def write_to_string(self):
+        """
+        Write dataset to a string.
+        """
+        pass
+    
     @abstractmethod
     def sample(self, n_samples):
         """
@@ -114,6 +159,24 @@ class TabularDataset(Dataset):
         self.data = data
         self.description = description
 
+        
+    @classmethod
+    def read_from_string(cls, data, description):
+        """
+        Parameters
+        ----------
+        data: A string, holding a csv version of the data
+
+        description: A DataDescription, holding a json version of the schema
+
+        Returns
+        -------
+        TabularDataset
+        """
+        parsed_schema = json.loads(schema)
+
+        return _parse_csv(io.StringIO(data, schema))
+                
     @classmethod
     def read(cls, filepath):
         """
@@ -134,20 +197,17 @@ class TabularDataset(Dataset):
         with open(f'{filepath}.json') as f:
             schema = json.load(f)
 
-        ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
-        ## then convert them
-        dtypes = {i: get_dtype(col['type'], col['representation']) for i, col in enumerate(schema)}
+        return _parse_csv(f'{filepath}.csv', schema)
 
-        data = pd.read_csv(f'{filepath}.csv', header=None, dtype=dtypes, index_col=None)
+        
+    def write_to_string(self):
+        """
+        Return a string holding the dataset (as a csv).
 
-        ## Convert any date or datetime fields to datetime
-        for c in [i for i, col in enumerate(schema)
-                  if col['representation'] == 'date' or col['representation'] == 'datetime']:
-            data[i] = pd.to_datetime(data[i])
-
-        description = DataDescription(schema)
-
-        return cls(data, description)
+        """
+        # Passing None to to_csv returns the csv as a string
+        return self.data.to_csv(None, header = False, index = False) 
+                   
 
     def write(self, filepath):
         """
