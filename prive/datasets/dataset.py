@@ -167,15 +167,13 @@ class TabularDataset(Dataset):
         ----------
         data: A string, holding a csv version of the data
 
-        description: A DataDescription, holding a json version of the schema
+        description: A DataDescription
 
         Returns
         -------
         TabularDataset
         """
-        parsed_schema = json.loads(schema)
-
-        return _parse_csv(io.StringIO(data, schema))
+        return _parse_csv(io.StringIO(data, description.schema))
                 
     @classmethod
     def read(cls, filepath):

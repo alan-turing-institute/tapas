@@ -78,9 +78,9 @@ class GeneratorFromExecutable(Generator):
     def generate(self, num_samples):
         if self.trained:
             proc = subprocess.run(self.exe, stdin = PIPE, stdout = PIPE)
-            input = 
-            output, _ = proc.communicate(input = input)
-            return output
+            input = self.dataset.write_to_string()
+            output = proc.communicate(input = input)
+            return TabularDataset.read_from_string(output, self.description)
         else:
             raise RuntimeError("No dataset provided to generator")
         
