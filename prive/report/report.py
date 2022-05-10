@@ -1,149 +1,98 @@
-"""Classes to summarise an attacks"""
-import os
+"""Classes to report summary of attacks"""
 from abc import ABC, abstractmethod
-import numpy as np
+from prive.report import MIAttackSummary
 import pandas as pd
 
 
-class AttackSummary(ABC):
+class Report(ABC):
+    @classmethod
+    def get_summary_statistics(self):
+        """
+        Load attacks data, calculate summary statistics and initialise object.
+
+        """
+        pass
 
     @abstractmethod
-    def get_metrics(self):
+    def compare_generators(self, output_path):
         """
-        Calculate metrics relevant for an attack
+        Plot different generators for same attack-data.
 
         """
         pass
 
     @abstractmethod
-    def write_metrics(self, output_path):
+    def compare_attacks(self, output_path):
         """
-        Write metrics to file.
+        Plot different attacks for same generator-data.
+
+        """
+        pass
+
+    @abstractmethod
+    def compare_datasets(self, output_path):
+        """
+        Plot different datasets for same generator-attacks.
 
         """
         pass
 
 
-class MIAttackSummary(AttackSummary):
-
-    def __init__(self, labels, predictions, generator_info, attack_info, target_id):
+class MIAttackReport(Report):
+    def __init__(self, df):
         """
-
-        Initialise the MIAttackSummary Class.
+        Initialise class
 
         Parameters
         ----------
-        labels
-        predictions
-        generator_info
-        attack_info
-        """
+        df: dataframe
+            Dataframe where each row is the result of a given attack.
 
-        self.labels = np.array(labels)
-        self.predictions = np.array(predictions)
-        self.generator_info = generator_info
-        self.attack_info = attack_info
-        self.target_id = target_id
-
-    @property
-    def accuracy(self):
-        """
-        Accuracy of the attacks based on the rate of correct predictions.
-
-        Returns
-        -------
-        float
 
         """
-        return np.mean(self.predictions == self.labels)
+        self.attacks_data = df
 
-    @property
-    def tp(self):
+    @classmethod
+    def load_summary_statistics(cls, attacks):
         """
-        True positives based on rate of attacks where the target is correctly inferred
-        as being in the sample.
-
-        Returns
-        -------
-        float
-
-        """
-        targetin = np.where(self.labels == 1)[0]
-        return np.sum(self.predictions[targetin] == 1) / len(targetin)
-
-    @property
-    def fp(self):
-        """
-        False positives based on rate of attacks where the target is incorrectly inferred
-        as being in the sample.
-
-        Returns
-        -------
-        float
-
-        """
-        targetout = np.where(self.labels == 0)[0]
-        return np.sum(self.predictions[targetout] == 1) / len(targetout)
-
-    @property
-    def mia_advantage(self):
-        """
-        MIA attack advantage as defined by Stadler et al.
-
-        Returns
-        -------
-        float
-
-        """
-        return self.tp - self.fp
-
-    @property
-    def privacy_gain(self):
-        """
-        Privacy gain as defined by Stadler et al.
-
-        Returns
-        -------
-        float
-
-        """
-        return 1 - self.mia_advantage
-
-    def get_metrics(self):
-        """
-        Calculates all MIA relevant metrics and returns it as a dataframe.
-
-        Returns
-        -------
-        A dataframe
-            A dataframe with attack info and metrics
-
-        """
-
-        return pd.DataFrame([[self.target_id, self.generator_info,
-                              self.attack_info, self.accuracy, self.tp,
-                              self.fp, self.mia_advantage, self.privacy_gain]],
-                            columns=['target_id', 'generator_info', 'attack_info', 'accuracy',
-                                     'true_positive_rate', 'false_positive_rate',
-                                     'mia_advantage', 'privacy_gain'])
-
-    def write_metrics(self, filepath, attack_iter):
-        """
-        Write metrics to a CSV file
+        Load attacks data, calculate summary statistics, merge into a single dataframe and initialise object.
 
         Parameters
         ----------
-        filepath: str
-            Path where the CSV is to be saved.
-        attack_iter: int
-            id of the iteration of the attack (to distinguish file from others).
+        attacks: list[dicts]
+            List of dictionaries with results of attacks
 
         Returns
         -------
-        None
+        MIAReport class
 
         """
 
-        file_name = f'result_{self.attack_info}_{self.generator_info}_target{self.target_id}_{attack_iter}.csv'
+        df_list = []
 
-        self.get_metrics().to_csv(os.path.join(filepath, file_name), index=False)
+        for attack in attacks:
+
+            mia_summary = MIAttackSummary(
+                attack["labels"],
+                attack["predictions"],
+                attack["generator_info"],
+                attack["attack_info"],
+                attack["dataset_info"],
+                attack["target_id"],
+            ).get_metrics()
+
+            df_list.append(mia_summary)
+
+        return cls(pd.concat(df_list))
+
+    def compare_generators(self, output_path):
+
+        pass
+
+    def compare_attacks(self, output_path):
+
+        pass
+
+    def compare_datasets(self, output_path):
+
+        pass
