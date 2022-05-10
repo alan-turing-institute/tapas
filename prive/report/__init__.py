@@ -1,1 +1,1 @@
-from .report import MIAttackSummary
+from .attack_summary import MIAttackSummary
