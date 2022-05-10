@@ -9,7 +9,7 @@ class MiAttackSummaryTest(unittest.TestCase):
         np.random.seed(0)
         self.predictions = (np.random.randint(2, size=100))
         self.labels = (np.random.randint(2, size=100))
-        self.attack_summary = MIAttackSummary(self.labels, self.predictions, 'Random', 'Groundhog', 1)
+        self.attack_summary = MIAttackSummary(self.labels, self.predictions, 'Random', 'Groundhog', 'Test', 1)
 
     def test_accuracy(self):
         self.assertEqual(self.attack_summary.accuracy, np.mean(self.predictions == self.labels))
@@ -33,8 +33,10 @@ class MiAttackSummaryTest(unittest.TestCase):
         self.assertFalse(df.empty)
 
     def test_write_metrics(self):
-        self.attack_summary.write_metrics(os.path.dirname(__file__), 10)
 
-        file_name = f'result_Groundhog_Random_target1_10.csv'
+        path_dirname = os.path.dirname(__file__)
+        self.attack_summary.write_metrics(path_dirname, 10)
+
+        file_name = os.path.join(path_dirname, f'result_Test_Groundhog_Random_Target1_10.csv')
 
         self.assertTrue(os.path.exists(file_name))
