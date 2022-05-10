@@ -6,7 +6,6 @@ import pandas as pd
 
 
 class AttackSummary(ABC):
-
     @abstractmethod
     def get_metrics(self):
         """
@@ -25,8 +24,9 @@ class AttackSummary(ABC):
 
 
 class MIAttackSummary(AttackSummary):
-
-    def __init__(self, labels, predictions, generator_info, attack_info, dataset_info,target_id):
+    def __init__(
+        self, labels, predictions, generator_info, attack_info, dataset_info, target_id
+    ):
         """
 
         Initialise the MIAttackSummary Class.
@@ -123,12 +123,32 @@ class MIAttackSummary(AttackSummary):
 
         """
 
-        return pd.DataFrame([[self.dataset_info, self.target_id, self.generator_info,
-                              self.attack_info, self.accuracy, self.tp,
-                              self.fp, self.mia_advantage, self.privacy_gain]],
-                            columns=['dataset','target_id', 'generator_info', 'attack_info', 'accuracy',
-                                     'true_positive_rate', 'false_positive_rate',
-                                     'mia_advantage', 'privacy_gain'])
+        return pd.DataFrame(
+            [
+                [
+                    self.dataset_info,
+                    self.target_id,
+                    self.generator_info,
+                    self.attack_info,
+                    self.accuracy,
+                    self.tp,
+                    self.fp,
+                    self.mia_advantage,
+                    self.privacy_gain,
+                ]
+            ],
+            columns=[
+                "dataset",
+                "target_id",
+                "generator_info",
+                "attack_info",
+                "accuracy",
+                "true_positive_rate",
+                "false_positive_rate",
+                "mia_advantage",
+                "privacy_gain",
+            ],
+        )
 
     def write_metrics(self, filepath, attack_iter):
         """
@@ -147,6 +167,6 @@ class MIAttackSummary(AttackSummary):
 
         """
 
-        file_name = f'result_{self.dataset_info}_{self.attack_info}_{self.generator_info}_Target{self.target_id}_{attack_iter}.csv'
+        file_name = f"result_{self.dataset_info}_{self.attack_info}_{self.generator_info}_Target{self.target_id}_{attack_iter}.csv"
 
         self.get_metrics().to_csv(os.path.join(filepath, file_name), index=False)
