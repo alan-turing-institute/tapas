@@ -140,8 +140,8 @@ class MIAttackSummary(AttackSummary):
             columns=[
                 "dataset",
                 "target_id",
-                "generator_info",
-                "attack_info",
+                "generator",
+                "attack",
                 "accuracy",
                 "true_positive_rate",
                 "false_positive_rate",
