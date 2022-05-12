@@ -43,9 +43,9 @@ class MIAttackSummary(AttackSummary):
 
         self.labels = np.array(labels)
         self.predictions = np.array(predictions)
-        self.generator_info = generator_info
-        self.attack_info = attack_info
-        self.dataset_info = dataset_info
+        self.generator = generator_info
+        self.attack = attack_info
+        self.dataset = dataset_info
         self.target_id = target_id
 
     @property
@@ -126,10 +126,10 @@ class MIAttackSummary(AttackSummary):
         return pd.DataFrame(
             [
                 [
-                    self.dataset_info,
+                    self.dataset,
                     self.target_id,
-                    self.generator_info,
-                    self.attack_info,
+                    self.generator,
+                    self.attack,
                     self.accuracy,
                     self.tp,
                     self.fp,
@@ -167,6 +167,6 @@ class MIAttackSummary(AttackSummary):
 
         """
 
-        file_name = f"result_{self.dataset_info}_{self.attack_info}_{self.generator_info}_Target{self.target_id}_{attack_iter}.csv"
+        file_name = f"result_{self.dataset}_{self.attack}_{self.generator}_Target{self.target_id}_{attack_iter}.csv"
 
         self.get_metrics().to_csv(os.path.join(filepath, file_name), index=False)
