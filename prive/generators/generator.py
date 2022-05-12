@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import shutil
 import os
 import subprocess
+from subprocess import PIPE
 
 class Generator(ABC):
     """Base class for generators"""
@@ -83,5 +84,7 @@ class GeneratorFromExecutable(Generator):
             return TabularDataset.read_from_string(output, self.description)
         else:
             raise RuntimeError("No dataset provided to generator")
-        
-    
+
+    def __call__(self, dataset, num_samples):
+        self.fit(dataset)
+        return self.generate(num_samples)
