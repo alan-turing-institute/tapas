@@ -224,14 +224,20 @@ class TabularDataset(Dataset):
         # TODO: Make sure this writes it exactly as needed
         self.data.to_csv(filepath+'.csv', header=False, index=False)
 
-    def sample(self, n_samples=1, frac=None):
+    def sample(self, n_samples=1, frac=None, random_state=None):
         """
         Sample a set of records from a TabularDataset object.
 
         Parameters
         ----------
         n_samples : int
-            Number of records to sample.
+            Number of records to sample. If frac is not None, this parameter is ignored.
+
+        frac : float
+            Fraction of records to sample.
+
+        random_state : optional
+            Passed to `pandas.DataFrame.sample()`
 
         Returns
         -------
@@ -242,7 +248,7 @@ class TabularDataset(Dataset):
         if frac:
             n_samples = int(frac * len(self))
 
-        return TabularDataset(data=self.data.sample(n_samples), description=self.description)
+        return TabularDataset(data=self.data.sample(n_samples, random_state = random_state), description=self.description)
 
     def get_records(self, record_ids):
         """

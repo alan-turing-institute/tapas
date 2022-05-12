@@ -10,7 +10,7 @@ class Generator(ABC):
         self.trained = False
 
     @abstractmethod
-    def generate(self, num_samples):
+    def generate(self, num_samples, random_state):
         """Given an input dataset, output a synthetic dataset with given number of samples."""
         pass
 
@@ -27,7 +27,7 @@ class Generator(ABC):
 
 # We can implement some generators that extend this file.
 
-class ReturnRaw(Generator):
+class Raw(Generator):
     """This generator simply samples from the real data."""
     def __init__(self):
         super().__init__()
@@ -36,15 +36,15 @@ class ReturnRaw(Generator):
         self.dataset = dataset
         self.trained = True
 
-    def generate(self, num_samples):
+    def generate(self, num_samples, random_state = None):
         if self.trained: 
-            return self.dataset.sample(num_samples)
+            return self.dataset.sample(num_samples, random_state = random_state)
         else:
             raise RuntimeError("No dataset provided to generator")
         
-    def __call__(self, dataset, num_samples):
+    def __call__(self, dataset, num_samples, random_state = None):
         self.fit(dataset)
-        return self.generate(num_samples)
+        return self.generate(num_samples, randon_state = random_state)
 
 
 # And importantly, import generators from disk executables.
@@ -77,7 +77,7 @@ class GeneratorFromExecutable(Generator):
 
     def generate(self, num_samples):
         if self.trained:
-            proc = subprocess.run(self.exe, stdin = PIPE, stdout = PIPE)
+            proc = subprocess.run(self.exe, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
             input = self.dataset.write_to_string()
             output = proc.communicate(input = input)
             return TabularDataset.read_from_string(output, self.description)
