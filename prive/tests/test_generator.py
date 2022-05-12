@@ -26,13 +26,9 @@ class TestGenerator(TestCase):
         ## A previously-saved dataset generated as above
         baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
 
-        print("Baseline")
-        print(baseline_dataset.data)
-        print("Sample")
-        print(ds.data)
-
         pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
 
+        
 
 
 if __name__ == "__main__":
