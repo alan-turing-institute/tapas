@@ -40,7 +40,11 @@ class TestGenerator(TestCase):
         ## A previously-saved dataset generated as above
         baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
 
-        pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
+        # Check all generated rows are in the original data
+        for row in ds:
+            self.assertIn(row, self.dataset)
+
+        #pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
        
 
 
