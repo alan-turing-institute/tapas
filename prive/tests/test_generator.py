@@ -36,7 +36,6 @@ class TestGenerator(TestCase):
         ds = exe.generate(5) ## TODO: Figure out how to make reproducible call 
         print(ds.data)
 
-        
         ## A previously-saved dataset generated as above
         baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
 
@@ -44,6 +43,7 @@ class TestGenerator(TestCase):
         for row in ds:
             self.assertIn(row, self.dataset)
 
+        # TODO: reproducible call should uncomment this
         #pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
        
 
