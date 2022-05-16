@@ -2,8 +2,10 @@
 from abc import ABC, abstractmethod
 import shutil
 import os
+from io import StringIO
 import subprocess
 from subprocess import PIPE
+from prive.datasets import TabularDataset
 
 class Generator(ABC):
     """Base class for generators"""
@@ -78,10 +80,12 @@ class GeneratorFromExecutable(Generator):
 
     def generate(self, num_samples):
         if self.trained:
-            proc = subprocess.run(self.exe, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
-            input = self.dataset.write_to_string()
-            output = proc.communicate(input = input)
-            return TabularDataset.read_from_string(output, self.description)
+            proc = subprocess.Popen([self.exe, f"{num_samples}"], stdin = PIPE, stdout = PIPE)
+            input = bytes(self.dataset.write_to_string(), 'utf-8')
+            output = proc.communicate(input = input)[0].decode()
+            print("Output:")
+            print(output)
+            return TabularDataset.read_from_string(output, self.dataset.description)
         else:
             raise RuntimeError("No dataset provided to generator")
 

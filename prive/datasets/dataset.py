@@ -165,15 +165,16 @@ class TabularDataset(Dataset):
         """
         Parameters
         ----------
-        data: A string, holding a csv version of the data
+        data: str
+          The csv version of the data
 
-        description: A DataDescription
+        description: DataDescription
 
         Returns
         -------
         TabularDataset
         """
-        return _parse_csv(io.StringIO(data, description.schema))
+        return _parse_csv(io.StringIO(data), description.schema)
                 
     @classmethod
     def read(cls, filepath):

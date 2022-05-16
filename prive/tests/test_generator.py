@@ -28,7 +28,20 @@ class TestGenerator(TestCase):
 
         pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
 
+    def test_generator_from_exe(self):
+        exe = generators.GeneratorFromExecutable("bin/raw")
+
+        ## The following is identical to test_generate_raw
+        exe.fit(self.dataset)
+        ds = exe.generate(5) ## TODO: Figure out how to make reproducible call 
+        print(ds.data)
+
         
+        ## A previously-saved dataset generated as above
+        baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
+
+        pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
+       
 
 
 if __name__ == "__main__":
