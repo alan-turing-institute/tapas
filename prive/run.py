@@ -11,7 +11,7 @@ import numpy as np
 
 from prive.attacks import load_attack
 from prive.datasets import TabularDataset, TabularRecord
-from prive.generators import GeneratorFromExecutable, ReturnRaw
+from prive.generators import GeneratorFromExecutable, Raw
 from prive.threat_models import TargetedAuxiliaryDataMIA
 
 
@@ -45,7 +45,7 @@ def main():
 
     # Initialise synthetic data generator
     # TODO: Implement generator_from_executable (probably as a function)
-    sdg_model = ReturnRaw()#GeneratorFromExecutable(args.genpath) # instance of generators.Generator
+    sdg_model = GeneratorFromExecutable(args.genpath) # instance of generators.Generator
 
     # Load runconfig
     with open(args.runconfig) as f:

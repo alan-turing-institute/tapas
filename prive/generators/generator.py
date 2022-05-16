@@ -83,8 +83,7 @@ class GeneratorFromExecutable(Generator):
             proc = subprocess.Popen([self.exe, f"{num_samples}"], stdin = PIPE, stdout = PIPE)
             input = bytes(self.dataset.write_to_string(), 'utf-8')
             output = proc.communicate(input = input)[0].decode()
-            print("Output:")
-            print(output)
+
             return TabularDataset.read_from_string(output, self.dataset.description)
         else:
             raise RuntimeError("No dataset provided to generator")
