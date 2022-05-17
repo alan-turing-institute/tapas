@@ -130,7 +130,19 @@ class MIAttackSummary(AttackSummary):
         Returns
         -------
         A dataframe
-            A dataframe with attack info and metrics
+            A dataframe with attack info and metrics.  The dataframe has the following structure.
+            Index:
+                RangeIndex
+            Columns:
+                dataset: str
+                target_id: str
+                generator: str
+                attack: str
+                accuracy: float
+                true_positive_rate: float
+                false_positive_rate: float
+                mia_advantage: float
+                privacy_gain: float
 
         """
 

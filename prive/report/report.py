@@ -46,8 +46,24 @@ class MIAttackReport(Report):
 
         Parameters
         ----------
-        df: dataframe
-            Dataframe where each row is the result of a given attack.
+        df: dataframe Dataframe where each row is the result of a given attack as obtained from
+        the MIASummaryAttack class. The dataframe must have the following structure.
+            Index:
+                RangeIndex
+            Columns:
+                dataset: str
+                target_id: str
+                generator: str
+                attack: str
+                accuracy: float
+                true_positive_rate: float
+                false_positive_rate: float
+                mia_advantage: float
+                privacy_gain: float
+
+        metrics = list[str]
+            List of metrics to be used in the report, these can be any of the following:
+        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
 
 
         """
