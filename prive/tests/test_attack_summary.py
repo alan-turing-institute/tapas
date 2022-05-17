@@ -9,7 +9,7 @@ class MiAttackSummaryTest(unittest.TestCase):
         np.random.seed(0)
         self.predictions = (np.random.randint(2, size=100))
         self.labels = (np.random.randint(2, size=100))
-        self.attack_summary = MIAttackSummary(self.labels, self.predictions, 'Random', 'Groundhog', 'Test', 1)
+        self.attack_summary = MIAttackSummary(self.labels, self.predictions, 'Random', 'Groundhog', 'Test', "1")
 
     def test_accuracy(self):
         self.assertEqual(self.attack_summary.accuracy, np.mean(self.predictions == self.labels))
