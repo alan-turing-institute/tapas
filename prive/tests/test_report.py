@@ -37,4 +37,4 @@ class MIAReport(unittest.TestCase):
         n_figures = len(
             [f for f in os.listdir(filepath_timestamp) if os.path.isfile(os.path.join(filepath_timestamp, f))])
 
-        self.assertEqual(n_figures, 11)
+        self.assertEqual(n_figures, 16)

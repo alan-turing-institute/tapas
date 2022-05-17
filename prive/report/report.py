@@ -10,25 +10,9 @@ from prive.utils.plots import metric_comparison_plots
 class Report(ABC):
 
     @abstractmethod
-    def compare_generators(self, output_path):
+    def compare(self, output_path):
         """
         Plot different generators for same attack-data.
-
-        """
-        pass
-
-    @abstractmethod
-    def compare_attacks(self, output_path):
-        """
-        Plot different attacks for same generator-data.
-
-        """
-        pass
-
-    @abstractmethod
-    def compare_datasets(self, output_path):
-        """
-        Plot different datasets for same generator-attacks.
 
         """
         pass
@@ -123,35 +107,22 @@ class MIAttackReport(Report):
 
         return cls(pd.concat(df_list), metrics)
 
-    def compare_generators(self, filepath):
+    def compare(self, comparison_column, fixed_pair_columns, marker_column, filepath):
         """
-        For each pair of datasets-attacks available in the data make a figure comparing performance between
-        different generators and metrics. Figures are saved to disk.
+        For a fixed pair of datasets-attacks-generators-target available in the data make a figure comparing
+        performance between metrics. Options configure which dimension to compare against. Figures are saved to disk.
 
         Parameters
         ----------
-        filepath: str
-            Path where the figure is to be saved.
-
-        Returns
-        -------
-        None
-        """
-
-        metric_comparison_plots(data=self.attacks_data, comparison_label='generator', pairs_label=['dataset', 'attack'],
-                                metrics=self.metrics, targets_label='target_id',
-                                output_path=filepath)
-
-        return None
-
-    def compare_attacks(self, filepath):
-
-        """
-        For each pair of datasets-generators available in the data make a figure comparing performance between
-        different attacks and metrics. Figures are saved to disk.
-
-       Parameters
-        ----------
+        comparison_column: str
+            Column in dataframe that be used to make point plot comparison in the x axis. It can be either: 'generator',
+        'dataset', 'attack' or 'target_id'.
+        fixed_pair_columns: list[str]
+             Columns in dataframe to fix for a given figure in order to make meaningful comparisons. It can be any pair
+        of the following:'generator', 'dataset', 'attack' or 'target_id'.
+        marker_column: str
+            Column in dataframe that be used to as marker in a point plot comparison. It can be either: 'generator',
+        'attack' or 'target_id'.
         filepath: str
             Path where the figure is to be saved.
 
@@ -161,32 +132,9 @@ class MIAttackReport(Report):
 
         """
 
-        metric_comparison_plots(data=self.attacks_data, comparison_label='attack', pairs_label=['dataset', 'generator'],
-                                metrics=self.metrics, targets_label='target_id',
-                                output_path=filepath)
-
-        return None
-
-    def compare_datasets(self, filepath):
-
-        """
-
-        For each pair of attacks-generators available in the data make a figure comparing performance between
-        different datasets and metrics. Figures are saved to disk.
-
-        Parameters
-        ----------
-        filepath: str
-            Path where the figure is to be saved.
-
-        Returns
-        -------
-        None
-
-        """
-
-        metric_comparison_plots(data=self.attacks_data, comparison_label='dataset', pairs_label=['attack', 'generator'],
-                                metrics=self.metrics, targets_label='target_id',
+        metric_comparison_plots(data=self.attacks_data, comparison_label=comparison_column,
+                                fixed_pair_label=fixed_pair_columns,
+                                metrics=self.metrics, marker_label=marker_column,
                                 output_path=filepath)
 
         return None
@@ -206,8 +154,19 @@ class MIAttackReport(Report):
 
         """
 
-        self.compare_generators(filepath)
-        self.compare_attacks(filepath)
-        self.compare_datasets(filepath)
+        # compare generators and target ids for fixed dataset-atacks
+        self.compare('generator', ['dataset', 'attack'], 'target_id', filepath)
+
+        # compare attacks and target ids for fixed dataset-generators
+        self.compare('attack', ['dataset', 'generator'], 'target_id', filepath)
+
+        # compare datasets and target ids for fixed attacks-generators
+        self.compare('dataset', ['attack', 'generator'], 'target_id', filepath)
+
+        # compare targets and generators ids for fixed attacks-dataset
+        self.compare('target_id', ['dataset', 'attack'], 'generator', filepath)
+
+        # compare targets and attacks ids for fixed dataset-generators
+        self.compare('target_id', ['dataset', 'generator'], 'attack', filepath)
 
         print(f'All figures saved to directory {filepath}')
