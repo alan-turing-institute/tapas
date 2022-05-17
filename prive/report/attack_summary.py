@@ -24,6 +24,10 @@ class AttackSummary(ABC):
 
 
 class MIAttackSummary(AttackSummary):
+    """
+    Class summarising main performance metrics of a memberhsip inference attack.
+
+    """
     def __init__(
         self, labels, predictions, generator_info, attack_info, dataset_info, target_id
     ):
@@ -33,12 +37,19 @@ class MIAttackSummary(AttackSummary):
 
         Parameters
         ----------
-        labels
-        predictions
-        generator_info
-        attack_info
-        dataset_info
-        target_id
+        labels: list[int]
+            List with true labels of the target membership in the dataset.
+        predictions: list[int]
+            List with the predicted labels of the target membership in the dataset.
+        generator_info: str
+            Metadata with information about the method used to generate the dataset.
+        attack_info: str
+            Metadata with information about the attacked used to infer membership of the target on the dataset.
+        dataset_info: str
+            Metadata with information about the original raw dataset.
+        target_id: str
+            Metadata with information about the target record used on the attack.
+
         """
 
         self.labels = np.array(labels)
