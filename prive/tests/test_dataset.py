@@ -7,7 +7,7 @@ from warnings import filterwarnings
 
 filterwarnings('ignore')
 
-from prive.datasets import TabularDataset
+from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 
 
@@ -154,7 +154,7 @@ class TestTabularDataset(TestCase):
     def test_iter(self):
         record_count = 0
         for record in self.dataset:
-            self.assertEqual(type(record), TabularDataset)
+            self.assertEqual(type(record), TabularRecord)
             self.assertEqual(record.description, self.dataset.description)
             self.assertEqual(record.data.shape[0], 1)
             record_count += 1

@@ -1,1 +1,1 @@
-from .generator import Generator, ReturnRaw
+from .generator import Generator, Raw, GeneratorFromExecutable

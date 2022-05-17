@@ -1,0 +1,150 @@
+[
+    {
+        "name": "DISCHARGE",
+        "type": "countable/ordered",
+        "representation": "integer"
+    },
+    {
+        "name": "TYPE_OF_ADMISSION",
+        "type": "finite",
+        "representation": [
+            "3",
+            "4",
+            "1",
+            "2",
+            "9",
+            "5",
+            "INVALID"
+        ]
+    },
+    {
+        "name": "PAT_STATE",
+        "type": "finite",
+        "representation": [
+            "TX",
+            "NM",
+            "AR",
+            "ZZ",
+            "OK",
+            "FC",
+            "LA",
+            "XX",
+            "INVALID"
+        ]
+    },
+    {
+        "name": "PAT_STATUS",
+        "type": "finite",
+        "representation": [
+            "6",
+            "1",
+            "3",
+            "2",
+            "51",
+            "62",
+            "50",
+            "20",
+            "65",
+            "5",
+            "63",
+            "7",
+            "9",
+            "4",
+            "INVALID",
+            "66",
+            "61",
+            "64",
+            "30",
+            "43",
+            "8",
+            "41",
+            "40"
+        ]
+    },
+    {
+        "name": "SEX_CODE",
+        "type": "finite",
+        "representation": [
+            "F",
+            "M",
+            "U",
+            "INVALID"
+        ]
+    },
+    {
+        "name": "RACE",
+        "type": "finite",
+        "representation": [
+            "4",
+            "5",
+            "3",
+            "2",
+            "INVALID",
+            "1"
+        ]
+    },
+    {
+        "name": "ETHNICITY",
+        "type": "finite",
+        "representation": [
+            "2",
+            "1",
+            "INVALID"
+        ]
+    },
+    {
+        "name": "ADMIT_WEEKDAY",
+        "type": "finite",
+        "representation": 7
+    },
+    {
+        "name": "PAT_AGE",
+        "type": "countable/ordered/least",
+        "representation": "integer"
+    },
+    {
+        "name": "RISK_MORTALITY",
+        "type": "finite/ordered",
+        "representation": 5
+    },
+    {
+        "name": "ILLNESS_SEVERITY",
+        "type": "finite/ordered",
+        "representation": 5
+    },
+    {
+        "name": "LENGTH_OF_STAY",
+        "type": "countable/ordered",
+        "representation": "integer"
+    },
+    {
+        "name": "TOTAL_CHARGES",
+        "type": "real/non-negative",
+        "representation": "number"
+    },
+    {
+        "name": "TOTAL_NON_COV_CHARGES",
+        "type": "real/non-negative",
+        "representation": "number"
+    },
+    {
+        "name": "TOTAL_CHARGES_ACCOMM",
+        "type": "real/non-negative",
+        "representation": "number"
+    },
+    {
+        "name": "TOTAL_NON_COV_CHARGES_ACCOMM",
+        "type": "real/non-negative",
+        "representation": "number"
+    },
+    {
+        "name": "TOTAL_CHARGES_ANCIL",
+        "type": "real/non-negative",
+        "representation": "number"
+    },
+    {
+        "name": "TOTAL_NON_COV_CHARGES_ANCIL",
+        "type": "real/non-negative",
+        "representation": "number"
+    }
+]

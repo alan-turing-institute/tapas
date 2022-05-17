@@ -13,7 +13,7 @@ from prive.utils.data import index_split, get_dtype
 def _parse_csv(fp, schema):
     """
     Parse fp into a TabularDataset using schema
-    
+
     Parameters
     ----------
     fp: A file-type object
@@ -27,13 +27,13 @@ def _parse_csv(fp, schema):
     ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
     ## then convert them
     dtypes = {i: get_dtype(col['type'], col['representation']) for i, col in enumerate(schema)}
-    
+
     data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None)
-    
+
     ## Convert any date or datetime fields to datetime
     for c in [i for i, col in enumerate(schema) if col['representation'] == 'date' or col['representation'] == 'datetime']:
         data[i] = pd.to_datetime(data[i])
-        
+
     description = DataDescription(schema)
     return TabularDataset(data, description)
 
@@ -68,14 +68,14 @@ class Dataset(ABC):
         Read from dataset and description as strings.
         """
         pass
-    
+
     @abstractmethod
     def write_to_string(self):
         """
         Write dataset to a string.
         """
         pass
-    
+
     @abstractmethod
     def sample(self, n_samples):
         """
@@ -159,24 +159,23 @@ class TabularDataset(Dataset):
         self.data = data
         self.description = description
 
-        
+
     @classmethod
     def read_from_string(cls, data, description):
         """
         Parameters
         ----------
-        data: A string, holding a csv version of the data
+        data: str
+          The csv version of the data
 
-        description: A DataDescription, holding a json version of the schema
+        description: DataDescription
 
         Returns
         -------
         TabularDataset
         """
-        parsed_schema = json.loads(schema)
+        return _parse_csv(io.StringIO(data), description.schema)
 
-        return _parse_csv(io.StringIO(data, schema))
-                
     @classmethod
     def read(cls, filepath):
         """
@@ -199,15 +198,15 @@ class TabularDataset(Dataset):
 
         return _parse_csv(f'{filepath}.csv', schema)
 
-        
+
     def write_to_string(self):
         """
         Return a string holding the dataset (as a csv).
 
         """
         # Passing None to to_csv returns the csv as a string
-        return self.data.to_csv(None, header = False, index = False) 
-                   
+        return self.data.to_csv(None, header = False, index = False)
+
 
     def write(self, filepath):
         """
@@ -226,14 +225,20 @@ class TabularDataset(Dataset):
         # TODO: Make sure this writes it exactly as needed
         self.data.to_csv(filepath+'.csv', header=False, index=False)
 
-    def sample(self, n_samples=1, frac=None):
+    def sample(self, n_samples=1, frac=None, random_state=None):
         """
-        Sample from a TabularDataset object a set of records.
+        Sample a set of records from a TabularDataset object.
 
         Parameters
         ----------
         n_samples : int
-            Number of records to sample.
+            Number of records to sample. If frac is not None, this parameter is ignored.
+
+        frac : float
+            Fraction of records to sample.
+
+        random_state : optional
+            Passed to `pandas.DataFrame.sample()`
 
         Returns
         -------
@@ -244,7 +249,7 @@ class TabularDataset(Dataset):
         if frac:
             n_samples = int(frac * len(self))
 
-        return TabularDataset(data=self.data.sample(n_samples), description=self.description)
+        return TabularDataset(data=self.data.sample(n_samples, random_state = random_state), description=self.description)
 
     def get_records(self, record_ids):
         """
@@ -349,7 +354,6 @@ class TabularDataset(Dataset):
             assert len(records_out) == len(records_in), \
                 f'Number of records out must equal number of records in, got {len(records_out)}, {len(records_in)}'
 
-        # TODO: Should multiple records_in with no records_out be supported?
         if in_place:
             self.drop_records(records_out, n=len(records_in), in_place=in_place)
             self.add_records(records_in, in_place=in_place)
@@ -429,15 +433,16 @@ class TabularDataset(Dataset):
         Returns
         -------
         iterator
-            An iterator object that iterates over individual records, as TabularDatasets.
+            An iterator object that iterates over individual records, as TabularRecords.
 
         """
         # iterrows() returns tuples (index, record), and map applies a 1-argument
         # function to the iterable it is given, hence why we have idx_and_rec
         # instead of the cleaner (idx, rec).
-        convert_record = lambda idx_and_rec: TabularDataset(
-            # iterrows() outputs pd.Series rather than .DataFrame, so we convert here:
-            data=idx_and_rec[1].to_frame().T, description=self.description)
+        convert_record = lambda idx_and_rec: TabularRecord.from_dataset(
+            TabularDataset(
+                # iterrows() outputs pd.Series rather than .DataFrame, so we convert here:
+                data=idx_and_rec[1].to_frame().T, description=self.description))
         return map(convert_record, self.data.iterrows())
 
     def __len__(self):
@@ -474,3 +479,82 @@ class TabularDataset(Dataset):
             raise ValueError(f'Only length-1 TabularDatasets can be checked for containment, got length {len(item)})')
 
         return (self.data == item.data.iloc[0]).all(axis=1).any()
+
+
+class TabularRecord(TabularDataset):
+    """
+    Class for tabular record object. The tabular data is a Pandas Dataframe with 1 row
+    and the data description is a dictionary.
+
+    """
+
+    def __init__(self, data, description, identifier):
+        super().__init__(data, description)
+        # id of the object based on their index on the original dataset
+        self.id = identifier
+
+    @classmethod
+    def from_dataset(cls, tabular_row):
+        """
+        Create a TabularRecord object from a TabularDataset object containing 1 record.
+
+        Parameters
+        ----------
+        tabular_row: TabularDataset
+            A TabularDataset object containing one record.
+
+        Returns
+        -------
+        TabularRecord
+            A TabularRecord object
+
+        """
+        if tabular_row.data.shape[0] != 1:
+            raise AssertionError(
+                f'Parent TabularDataset object must contain only 1 record, not {tabular_row.data.shape[0]}')
+
+        return cls(tabular_row.data, tabular_row.description, tabular_row.data.index.values[0])
+
+    def get_id(self, tabular_dataset):
+        """
+
+        Check if the record is found on a given TabularDataset and return the object id (index) on that
+        dataset.
+
+        Parameters
+        ----------
+        tabular_dataset: TabularDataset
+            A TabularDataset object.
+
+        Returns
+        -------
+        int
+            The id of the object based on the index in the original dataset.
+
+        """
+
+        merged = pd.merge(tabular_dataset.data, self.data, how='outer', indicator=True)
+
+        if merged[merged['_merge'] == 'both'].shape[0] != 1:
+            raise AssertionError('Error, more than one copy of this record is present on the dataset')
+
+        return merged[merged['_merge'] == 'both'].index.values[0]
+
+    def set_id(self, identifier):
+        """
+        Overwrite the id attribute on the TabularRecord object.
+
+        Parameters
+        ----------
+        identifier: int or str
+            An id value to be assigned to the TabularRecord id attribute
+
+        Returns
+        -------
+        None
+
+        """
+        self.id = identifier
+        self.data.index = pd.Index([identifier])
+
+        return
