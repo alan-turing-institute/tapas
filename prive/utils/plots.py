@@ -2,14 +2,44 @@ import matplotlib.pyplot as plt
 import os
 import seaborn as sns
 import numpy as np
-from palettable import cartocolors
+
+# configurable axis ranges
+axis_ranges = {"accuracy": (0, 1), "true_positive_rate": (0, 1), "false_positive_rate": (0, 1),
+                   "mia_advantage": (-0.2, 1.2),
+                   "privacy_gain": (-0.2, 1.2)}
+color_pal = sns.color_palette("colorblind", 10)
 
 
 def metric_comparison_plots(data, comparison_label, fixed_pair_label, metrics, marker_label, output_path):
+
+    """
+    For a fixed pair of datasets-attacks-generators-target available in the data make a figure comparing
+        performance between metrics. Options configure which dimension to compare against. Figures are saved to disk.
+
+    Parameters
+    ----------
+    data: dataframe
+        Input dataframe from the MIAttackReport class
+    comparison_label: str
+        Name of column that will be use as X axis
+    fixed_pair_columns: list[str]
+             Columns in dataframe to fix (groupby) for a given figure in order to make meaningful comparisons. It can be any pair
+    metrics:  list[str]
+        List of metrics to be used in the report, these can be any of the following:
+        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
+    marker_label: str
+        Column in dataframe that be used to as marker in a point plot comparison. It can be either: 'generator',
+    'attack' or 'target_id'.
+    output_path: str
+        Path where the figure is to be saved.
+
+    Returns
+    -------
+    None
+
+    """
     set_style()
-    axis_ranges = {"accuracy": (0, 1), "true_positive_rate": (0, 1), "false_positive_rate": (0, 1),
-                   "mia_advantage": (-0.2, 1.2),
-                   "privacy_gain": (-0.2, 1.2)}
+
 
     for pair_name, pair in data.groupby(fixed_pair_label):
         fig, axs = plt.subplots(len(metrics), sharex=True)
@@ -28,7 +58,7 @@ def metric_comparison_plots(data, comparison_label, fixed_pair_label, metrics, m
         axs[-1].set_xlabel(f'{comparison_label}s')
 
         handles, labels = axs[i].get_legend_handles_labels()
-        fig.legend(handles, labels, loc='center right')
+        fig.legend(handles, labels, loc='lower right', prop={'size': 12})
 
         fig.suptitle(
             f'Comparison of {comparison_label}s and different targets'
@@ -45,9 +75,6 @@ def metric_comparison_plots(data, comparison_label, fixed_pair_label, metrics, m
 
 
 def set_style():
-    #colours = cartocolors.qualitative.Safe_8.hex_colors
-    #cpalette = sns.color_palette(colours)
-    color_pal = sns.color_palette("colorblind", 10)
 
     sns.set_palette(color_pal)
     sns.set_style('whitegrid', {'axes.spines.right': True,
@@ -64,13 +91,13 @@ def set_style():
         'font.family': 'sans-serif',
         'font.sans-serif': 'Tahoma',
         'font.size': 10,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
+        'xtick.labelsize': 10,
+        'ytick.labelsize': 10,
+        'axes.labelsize': 12,
+        'axes.titlesize': 12,
         'savefig.dpi': 75,
         'figure.autolayout': False,
-        'figure.figsize': (10, 10),
+        'figure.figsize': (12, 10),
         'figure.titlesize': 18,
         'lines.linewidth': 2.0,
         'lines.markersize': 6,

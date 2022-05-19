@@ -45,7 +45,7 @@ class MIAttackReport(Report):
                 mia_advantage: float
                 privacy_gain: float
 
-        metrics = list[str]
+        metrics: list[str]
             List of metrics to be used in the report, these can be any of the following:
         "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
 
