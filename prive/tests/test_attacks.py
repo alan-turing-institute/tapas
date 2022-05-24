@@ -10,6 +10,7 @@ sys.path.append('../..')
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 from prive.threat_models import TargetedAuxiliaryDataMIA
+from prive.generators import Raw
 
 # The classes being tested.
 from prive.attacks import ClosestDistanceAttack
@@ -36,7 +37,7 @@ class TestClosestDistance(TestCase):
 		return TargetedAuxiliaryDataMIA(
 			target_record = self._make_target(a,b),
 			dataset = self.dataset,
-			generator = lambda x: x,  # Dummy generator
+			generator = None,
 			sample_real_frac = 0.5)
 
 	def _make_target(self, a, b):
@@ -46,14 +47,15 @@ class TestClosestDistance(TestCase):
 			dummy_data_description)
 
 	def test_dummy(self):
+		# Check whether the attack works on a dummy dataset,
+		#  with a specified threshold.
+
 		# Take a record that is not in the dataset (distance 1/2).
-		# Recall that by default, this uses the Hamming distance.
 		mia = self._make_mia(0, 0)
 		attack = ClosestDistanceAttack(threshold = 0.3)
 		attack.train(mia)
 		# Check that the training worked as intended.
 		self.assertEqual(attack.trained, True)
-
 		# Check that the score is working as intended.
 		scores = attack.attack_score([rec for rec in self.dataset])
 		self.assertEqual(len(scores), len(self.dataset))
@@ -66,12 +68,23 @@ class TestClosestDistance(TestCase):
 		# Perform the attack for a user *in* the dataset.
 		attack = ClosestDistanceAttack(threshold = 0.3)
 		attack.train(self._make_mia(0, 1))
-		print(attack.attack_score([rec for rec in self.dataset]))
 		self.assertEqual(attack.attack([self.dataset])[0], True)
 
 	def test_training(self):
 		# Check that the threshold selection works.
-		pass
+		# This merely checks that the code runs, not that it is correct.
+		attack_tpr = ClosestDistanceAttack(tpr = 0.1)
+		mia = TargetedAuxiliaryDataMIA(
+			target_record = self._make_target(0, 4),
+			dataset = self.dataset,
+			generator = Raw(),
+			sample_real_frac = 0.5,
+			num_training_records = 2,
+			num_synthetic_records = 2,
+			replace_target = True)
+		attack_tpr.train(mia)
+		attack_fpr = ClosestDistanceAttack(fpr = 0.1)
+		attack_fpr.train(mia)
 
 
 if __name__ == '__main__':

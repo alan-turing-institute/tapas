@@ -62,7 +62,7 @@ class ClosestDistanceAttack(Attack):
             self.__name__ += f'threshold={self.threshold})'
 
 
-    def train(self, threat_model: TargetedMIA, num_samples: int = 100):
+    def train(self, threat_model: TargetedMIA, num_samples: int = 5):
         """
         Train the attack for a specific target.
 
@@ -87,12 +87,12 @@ class ClosestDistanceAttack(Attack):
         synthetic_datasets, labels = self.threat_model.generate_training_samples(num_samples)
         # Compute the roc curve with - threshold, since the decision we use is
         #  score <= threshold, but roc_curve uses score >= threshold.
-        fpr_all, tpr_all, thresholds = roc_curve(labels, - self.score(synthetic_datasets))
+        fpr_all, tpr_all, thresholds = roc_curve(labels, - self.attack_score(synthetic_datasets))
         # Select the threshold such that the fpr (or tpr) is closest to target.
-        if fpr is not None:
-            index = np.argmin(np.abs(fpr_all - fpr))
+        if self.fpr is not None:
+            index = np.argmin(np.abs(fpr_all - self.fpr))
         else:
-            index = np.argmin(np.abs(tpr_all - tpr))
+            index = np.argmin(np.abs(tpr_all - self.tpr))
         self.threshold = - thresholds[index]
         self.trained = True
 
@@ -117,7 +117,7 @@ class ClosestDistanceAttack(Attack):
         for ds in datasets:
             # Use the __iter__ function of Dataset to iterate over records.
             distances = [self.distance_function(record, self.target_record) for record in ds]
-            scores.append(min(distances))
+            scores.append(np.min(distances))
         return np.array(scores)
 
 
