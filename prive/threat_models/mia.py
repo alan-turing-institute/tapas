@@ -32,7 +32,7 @@ class TargetedMIA(ThreatModel):
     # Generating training and testing samples depends on the assumptions!
 
 
-class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
+class TargetedAuxiliaryDataMIA(TargetedMIA, StaticDataThreatModel):
     """
     This threat model assumes access to some data and some knowledge of
     the algorithm that will be used as generator, specified by passing a
@@ -89,7 +89,7 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
 
         """
         assert (aux_data is not None) or (sample_real_frac != 0.), \
-            'At least one of aux_data or sample_real_fraction must be given'
+            'At least one of aux_data or sample_real_frac must be given'
         assert (0 <= sample_real_frac <= 1), \
             f'sample_real_frac must be in [0, 1], got {sample_real_frac}'
         if aux_data:
@@ -99,7 +99,8 @@ class TargetedAuxiliaryDataMIA(StaticDataThreatModel):
         ## Set up ground truth
         self.target_record = target_record
         self.dataset = dataset
-        self.dataset.drop_records([target_record.id], in_place=True) # Remove target
+        # vvv TODO: this doesn't work with the current Dataset object. vvv
+        # self.dataset.drop_records([target_record.id], in_place=True) # Remove target
         self.generator = generator
 
         ## Set up adversary's knowledge
