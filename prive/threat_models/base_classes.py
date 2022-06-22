@@ -18,6 +18,7 @@ from which training datasets are sampled, with or without the target record.
 
 from abc import ABC, abstractmethod
 
+
 class ThreatModel(ABC):
     """
     Abstract base class for a threat model.
@@ -33,41 +34,24 @@ class ThreatModel(ABC):
     def test(self, attack, *args, **kwargs):
         """
         This method should implement the logic for testing an attack's success
-        against the prescribed threat model.
+        against the prescribed threat model. It takes as argument an Attack
+        object, as well as (potential) additional parameters.
 
         """
 
-        pass
+        abstract
 
 
-class StaticDataThreatModel(ThreatModel):
+class TrainableThreatModel(ThreatModel):
     """
-    Abstract base class for threat models in which attackers have some prior
-    on real datasets, from which they can sample training datasets for the
-    attack.
-
-    """
-
-    @abstractmethod
-    def generate_training_samples(self, num_samples, *args, **kwargs):
-        """
-        Logic to generate training samples.
-
-        """
-        pass
-
-
-class InteractiveThreatModel(ThreatModel):
-    """
-    Abstract base class for interactive threat models, where the attacker
-    iteratively uses the synthetic data generator with specific inputs.
+    Some threat models additionally define a way to train attacks with
+    synthetic datasets generated using the attacker's knowledge.
 
     """
 
-    @abstractmethod
-    def interact(self, attack, *args, **kwargs):
+    def generate_training_samples(self, num_samples):
         """
-        Houses logic for how an attack can interact with this threat model.
+        Generate synthetic datasets (and potentially associated labels) to
+        train an attacl.
 
         """
-        pass
