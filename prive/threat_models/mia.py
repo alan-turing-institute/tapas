@@ -1,7 +1,11 @@
 """
 Threat models for Membership Inference Attacks.
 
+Membership inference attacks aim at detecting the presence of a specific
+record in the training dataset from the synthetic dataset observed.
+
 """
+
 # Type checking stuff
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -29,7 +33,8 @@ class TargetedMIA(ThreatModel):
     def __init__(self, target_record):
         self.target_record = target_record
 
-    # Generating training and testing samples depends on the assumptions!
+    def test():
+        pass
 
 
 class TargetedAuxiliaryDataMIA(TargetedMIA, StaticDataThreatModel):

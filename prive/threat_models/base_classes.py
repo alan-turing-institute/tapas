@@ -42,9 +42,9 @@ class ThreatModel(ABC):
 
 class StaticDataThreatModel(ThreatModel):
     """
-    Abstract base class for threat models in which attackers are assumed to
-    leverage their knowledge by generating a fixed set of training samples to
-    train their attacks on.
+    Abstract base class for threat models in which attackers have some prior
+    on real datasets, from which they can sample training datasets for the
+    attack.
 
     """
 
@@ -59,8 +59,8 @@ class StaticDataThreatModel(ThreatModel):
 
 class InteractiveThreatModel(ThreatModel):
     """
-    Placeholder for interactive threat model idea (and to indicate divergence
-    from static data threat model).
+    Abstract base class for interactive threat models, where the attacker
+    iteratively uses the synthetic data generator with specific inputs.
 
     """
 
