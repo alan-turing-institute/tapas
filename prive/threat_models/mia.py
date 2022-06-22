@@ -153,6 +153,12 @@ class TargetedMIA(TrainableThreatModel):
             num_samples, training=True, with_labels=True
         )
         gen_datasets = [self.atk_know_gen(ds) for ds in training_datasets]
+        # Add the datasets generated to the memory.
+        if not ignore_memory:
+            self._memory[training] = (
+                mem_datasets + gen_datasets,
+                mem_labels + gen_labels,
+            )
         # Combine results from the memory with generated results.
         return mem_datasets + gen_datasets, mem_labels + gen_labels
 
