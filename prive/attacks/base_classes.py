@@ -21,7 +21,7 @@ class Attack(ABC):
     """
 
     @abstractmethod
-    def train(self):
+    def train(self, threat_model):
         """
         Train parameters of the attack.
 

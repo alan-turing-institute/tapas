@@ -47,7 +47,7 @@ class Raw(Generator):
         
     def __call__(self, dataset, num_samples, random_state = None):
         self.fit(dataset)
-        return self.generate(num_samples, randon_state = random_state)
+        return self.generate(num_samples, random_state = random_state)
 
 
 # And importantly, import generators from disk executables.
