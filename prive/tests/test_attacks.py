@@ -10,7 +10,11 @@ import sys
 sys.path.append("../..")
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
-from prive.threat_models import TargetedMIA, AppendTarget, AuxiliaryDataKnowledge, BlackBoxKnowledge
+from prive.threat_models import (
+    TargetedMIA,
+    AuxiliaryDataKnowledge,
+    BlackBoxKnowledge,
+)
 from prive.generators import Raw
 
 # The classes being tested.
@@ -35,12 +39,11 @@ class TestClosestDistance(TestCase):
 
     def _make_mia(self, a, b):
         """Helper function to generate a MIA threat model."""
-        data_knowledge = AppendTarget(
+        return TargetedMIA(
             AuxiliaryDataKnowledge(self.dataset, sample_real_frac=0.5),
             self._make_target(a, b),
+            None,
         )
-        gen_knowledge = None
-        return TargetedMIA(data_knowledge, gen_knowledge)
 
     def _make_target(self, a, b):
         """Helper function to generate a target record."""
@@ -76,14 +79,12 @@ class TestClosestDistance(TestCase):
         # Check that the threshold selection works.
         # This merely checks that the code runs, not that it is correct.
         mia = TargetedMIA(
-            AppendTarget(
-                AuxiliaryDataKnowledge(
-                    self.dataset, sample_real_frac=0.5, num_training_records=2
-                ),
-                self._make_target(0, 4),
-                replace_target=True,
+            AuxiliaryDataKnowledge(
+                self.dataset, sample_real_frac=0.5, num_training_records=2
             ),
+            self._make_target(0, 4),
             BlackBoxKnowledge(generator=Raw(), num_synthetic_records=2),
+            replace_target=True,
         )
         attack_tpr = ClosestDistanceAttack(tpr=0.1)
         attack_tpr.train(mia)
