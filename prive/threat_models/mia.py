@@ -1,221 +1,190 @@
 """
-Threat models for Membership Inference Attacks.
+Threat models for Membership Inference Attacks (MIA).
+
+Membership inference attacks aim at detecting the presence of a specific
+record in the training dataset from the synthetic dataset observed.
 
 """
+
 # Type checking stuff
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from ..attacks import Attack # for typing
-    from ..datasets import Dataset # for typing
-    from ..generators import Generator # for typing
+    from ..attacks import Attack  # for typing
+    from ..datasets import Dataset  # for typing
+    from ..generators import Generator  # for typing
 
-# Real imports
+from .base_classes import ThreatModel, TrainableThreatModel
+from .attacker_knowledge import AttackerKnowledgeOnData, AttackerKnowledgeOnGenerator
+
 import numpy as np
-import pandas as pd
-
-from .base_classes import ThreatModel, StaticDataThreatModel
 
 
-class TargetedMIA(ThreatModel):
+class AppendTarget(AttackerKnowledgeOnData):
     """
-    Abstract base class for a targeted MIA.
+    Randomly add a given target to the datasets samples from auxiliary data.
+    This class can be used to augment AttackerKnowledgeOnData objects that
+    represent "generic" knowledge of the private dataset in order to use
+    them for membership inference attacks. This is more of a wrapper than
+    a standalone object.
 
-    A MIA (membership inference attack) aims at identifying whether a given
-    target record is in the training dataset.
-
-    """
-
-    def __init__(self, target_record):
-        self.target_record = target_record
-
-    # Generating training and testing samples depends on the assumptions!
-
-
-class TargetedAuxiliaryDataMIA(TargetedMIA, StaticDataThreatModel):
-    """
-    This threat model assumes access to some data and some knowledge of
-    the algorithm that will be used as generator, specified by passing a
-    shadow model. If no shadow model is passed, full access is assumed.
+    By default, this operatees as an AttackerKnowledgeOnData object, but the
+    generate_datasets method can also output a list of labels describing
+    target membership to the dataset.
 
     """
 
-    def __init__(self,
-                 target_record: Dataset,
-                 dataset: Dataset,
-                 # dataset_sampler=None,
-                 generator: Generator,
-                 aux_data: Dataset = None,
-                 sample_real_frac: float = 0.,
-                 shadow_model: Generator = None,
-                 num_training_records: int = 1000,
-                 num_synthetic_records: int = 1000,
-                 memorise_datasets: bool = True,
-                 replace_target: bool = True):
+    def __init__(
+        self,
+        attacker_knowledge: AttackerKnowledgeOnData,
+        target_record: Dataset,
+        generate_pairs=True,
+        replace_target=False,
+    ):
         """
-        Initialise threat model with ground truth target record, dataset and
-        generator. Additionally, either aux_data or sample_real_frac must be
-        provided in order to initialise the adverary's data knowledge. Optionally
-        a shadow_model can be provided to indicate that the adversary does not
-        have complete knowledge of the generator and chooses to model it as
-        shadow_model.
+        Wrap an AttackerKnowledgeOnData object by appending a record.
 
         Parameters
-        ----------
-        target_record : Dataset
-            Record to be targeted by the attacks.
-        dataset : Dataset
-            Real dataset to use to generate test synthetic datasets from.
-        generator : Generator
-            Generator to use to generate test datasets.
-        aux_data : Dataset, optional
-            Dataset that the adversary is assumed to have access to. This or
-            sample_real_frac must be provided. The default is None.
-        sample_real_frac : float, optional
-            Fraction of real data to sample and assume adversary has access to.
-            Must be in [0, 1]. This must be > 0 or aux_data provided.
-            The default is 0.
-        shadow_model : Generator, optional
-            Adversary's model of the generator, if not provided, the adversary
-            is assumed to have full access to the generator. The default is None.
-        num_training_records : int, optional
-            Number of training records to use to train each copy of shadow_model,
-            when generating synthetic training datasets for the attack.
-            The default is 1000.
-        num_synthetic_records : int, optional
-            Number of synthetic records to generate in each synthetic dataset.
-            The default is 1000.
-        memorise_datasets : bool, optional
-            Whether to save generated datasets. The default is True.
-        replace_target : bool, optional
-            Whether or not to remove a row before adding the target in each dataset.
-            The default is False.
+        -----
+        attacker_knowledge: AttackerKnowledgeOnData
+            The data knowledge from which datasets are generated.
+        target_record: Dataset
+            The target record to append half of the time.
+        generate_pairs: bool, default True
+            Whether to output pairs of datasets (positive and negative) or
+            randomly choose for each dataset.
+        replace_target: bool, default False
+            Whether to replace a record, instead of appending.
 
         """
-        assert (aux_data is not None) or (sample_real_frac != 0.), \
-            'At least one of aux_data or sample_real_frac must be given'
-        assert (0 <= sample_real_frac <= 1), \
-            f'sample_real_frac must be in [0, 1], got {sample_real_frac}'
-        if aux_data:
-            assert aux_data.description == dataset.description, \
-                'aux_data does not match the description of dataset'
-
-        ## Set up ground truth
+        self.attacker_knowledge = attacker_knowledge
         self.target_record = target_record
-        self.dataset = dataset
-        # vvv TODO: this doesn't work with the current Dataset object. vvv
-        # self.dataset.drop_records([target_record.id], in_place=True) # Remove target
-        self.generator = generator
-
-        ## Set up adversary's knowledge
-        self._adv_data = {
-            'aux': (aux_data or self.dataset.empty()),#.drop_records([target_record.data.index[0]]),
-            'real': self.dataset.sample(frac=sample_real_frac),
-            'target': self.target_record}
-        # If no shadow model provided, assume full access to generator
-        self.shadow_model = shadow_model or generator
-
-        ## Set up hyperparameters for how the adversary will create shadow models
-        self.num_training_records = num_training_records
-        self.num_synthetic_records = num_synthetic_records
-        self.memorise_datasets = memorise_datasets # JJ: I think this can be done at run-time
+        self.generate_pairs = generate_pairs
         self.replace_target = replace_target
 
-        self.train_sets = None
-        self.test_sets = None
-
-
-    @property
-    def adv_data(self):
+    def generate_datasets(
+        self, num_samples: int, training: bool = True, with_labels: bool = False
+    ) -> list[Dataset]:
         """
-        Dataset: The data the adversary has access to.
+        Generates datasets according to the attacker's knowledge, and randomly
+        appends the target record to half of them.
+
+        If `with_labels` is True, this also returns the labels (whether the
+        target was in the private dataset).
 
         """
-        return self._adv_data['aux'] + self._adv_data['real']
+        # Generate the datasets from the attacker knowledge.
+        datasets = self.attacker_knowledge.generate_datasets(num_samples, training)
+        if self.generate_pairs:
+            # If pairs are required, duplicate the list and assign labels 0 and 1.
+            datasets = datasets + datasets
+            labels = [0] * num_samples + [1] * num_samples
+        else:
+            # Pick random labels for each dataset.
+            labels = list(np.random.random() <= 0.5)
+        # Produce a list of datasets with appended target where label = 1.
+        app_datasets = [
+            (
+                ds.replace(self.target_record)
+                if self.replace_target
+                else ds.add_records(self.target_record)
+            )
+            if l
+            else ds
+            for ds, l in zip(datasets, labels)
+        ]
+        if with_labels:
+            return app_datasets, labels
+        return app_datasets
 
-    def _generate_datasets(self,
-                           num_samples: int,
-                           num_synthetic_records: int = None,
-                           training: bool = True) -> tuple[list[Dataset], list[int]]:
+
+class TargetedMIA(TrainableThreatModel):
+    """
+    This threat model implements a MIA with arbitrary attacker knowledfe on
+    data and generator.
+
+    """
+
+    def __init__(
+        self,
+        attacker_knowledge_data: AppendTarget,
+        attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
+        memorise_datasets=True,
+    ):
+        self.target_record = attacker_knowledge_data.target_record
+        self.atk_know_data = attacker_knowledge_data
+        self.atk_know_gen = attacker_knowledge_generator
+        # Also, handle the memoisation to prevent recomputing datasets.
+        self.memorise_datasets = memorise_datasets
+        # maps training = True/False -> list of datasets, list of labels.
+        self._memory = {True: ([], []), False: ([], [])}
+
+    def _generate_samples(
+        self, num_samples: int, training: bool = True, ignore_memory: bool = False
+    ) -> tuple[list[Dataset], list[bool]]:
         """
-        Generate synthetic datasets and labels using self.shadow_model. Synthetic
-        datasets are generated in pairs, one from D, and one from D u {target},
-        where D is sampled without replacement from either self.adv_data or
-        self.dataset depending on whether or not training=True.
+        Internal method to generate samples for training or testing. This outputs 
+        two lists, the first of synthetic datasets and the second of labels (1 if
+        the target is in the training dataset used to produce the corresponding
+        dataset, and 0 otherwise).
 
         Parameters
         ----------
-        num_samples : int
-            Number of training dataset *pairs* to generate.
-        num_synthetic_records : int, optional
-            Size of synthetic datasets to generate. If None, use
-            self.num_synthetic_records. The default is None.
-        replace_target : bool, optional
-            Indicates whether target is included by replacing a record or by
-            just adding it. If True, a random record will be removed before
-            adding target. The default is False.
-        training : bool, optional
-            If True, D's will be sampled from the adversary's data (self.adv_data).
-            Otherwise, D's will be sampled from the real data (self.datasets).
-            The default is True.
-
-        Returns
-        -------
-        tuple(list[Dataset], np.ndarray)
-            List of generated synthetic datasets. List of labels.
-
+        num_samples: int
+            The number of synthetic datasets to generate.
+        training: bool (default, True)
+            whether to generate samples from the training or test distribution.
+        ignore_memory: bool, default False
+            Whether to use the memoized datasets, or ignore them.
         """
-        # If training, sample datasets from the adversary's data. Otherwise,
-        # sample datasets from the real dataset.
-        dataset = (self.adv_data if training else self.dataset)#.copy()
+        # Retrieve memoized samples (if needed).
+        if not ignore_memory:
+            mem_datasets = []
+            mem_labels = []
+        else:
+            mem_datasets, mem_labels = self._memory[training]
+            num_samples -= len(mem_datasets)
+            # No samples are needed! Return what is in memory:
+            if num_samples <= 0:
+                return mem_datasets[:num_samples], mem_labels[:num_samples]
+        # Generate sample.
+        training_datasets, gen_labels = self.atk_know_data.generate_datasets(
+            num_samples, training=True, with_labels=True
+        )
+        gen_datasets = [self.atk_know_gen(ds) for ds in training_datasets]
+        # Add the datasets generated to the memory.
+        if not ignore_memory:
+            self._memory[training] = (
+                mem_datasets + gen_datasets,
+                mem_labels + gen_labels,
+            )
+        # Combine results from the memory with generated results.
+        return mem_datasets + gen_datasets, mem_labels + gen_labels
 
-        num_synthetic_records = num_synthetic_records or self.num_synthetic_records
-
-        # Split the data into subsets
-        datasets = dataset.create_subsets(num_samples, self.num_training_records)
-
-        synthetic_without_target = []
-        synthetic_with_target = []
-
-        for training_dataset in datasets:
-            # Compute generator(D)
-            synthetic_without_target.append(self.generator(training_dataset, num_synthetic_records))
-
-            # Then, add  - or replace a record by - the target the record.
-            if self.replace_target:
-                training_dataset = training_dataset.replace(self.target_record)
-            else:
-                training_dataset = training_dataset.add_records(self.target_record)
-            synthetic_with_target.append(self.generator(training_dataset, num_synthetic_records))
-
-        synthetic_datasets = synthetic_without_target + synthetic_with_target
-        labels = ([0] * num_samples) + ([1] * num_samples)
-
-        return synthetic_datasets, labels
-
-    def generate_training_samples(self,
-                                  num_samples: int,
-                                  num_synthetic_records: int = None) -> tuple[list[Dataset], list[int]]:
+    def generate_training_samples(
+        self, num_samples: int, ignore_memory: bool = False
+    ) -> tuple[list[Dataset], list[bool]]:
         """
-        Generate samples according to the attacker's known information.
-        (See _generate_datasets for the specific arguments.) This is just
-        short-hand for calling _generate_datasets with training=True.
+        Generate samples to train an attack.
 
+        Parameters
+        ----------
+        num_samples: int
+            The number of synthetic datasets to generate.
+        ignore_memory: bool, default False
+            Whether to use the memoized datasets, or ignore them.
         """
-        return self._generate_datasets(num_samples, num_synthetic_records, training=True)
+        return self._generate_samples(num_samples, True, ignore_memory)
 
-    def test(self,
-             attack: Attack,
-             num_samples: int,
-             num_synthetic_records: int = None,
-             save_datasets: bool = False) -> tuple[list[int], list[int]]:
+    def test(
+        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False
+    ) -> tuple[list[int], list[int]]:
         """
-        Test an attack against this threat model. First, random subsets of size
-        self.num_training_records are sampled from self.dataset (the real dataset)
-        and then self.target_record is added to each of them. The attack is run
-        on both the datasets with and without the target and their guesses
-        are returned alongside the ground-truth for each dataset. The generated
-        test datasets can be saved by setting save_datasets=True.
+        Test an attack against this threat model. This samples `num_samples`
+        testing synthetic datasets along with labels revealing whether the
+        target was part of the original dataset. It then runs the attack on
+        each synthetic dataset. The labels and predicted labels are returned.
 
         Parameters
         ----------
@@ -223,14 +192,8 @@ class TargetedAuxiliaryDataMIA(TargetedMIA, StaticDataThreatModel):
             Attack to test.
         num_samples : int
             Number of test datasets to generate and test against.
-        num_synthetic_records : int, optional
-            Number of synthetic records to generate per synthetic dataset.
-            The default is None, in which case the default specified during
-            __init__ is used.
-        save_datasets : bool, optional
-            Whether or not to save the generated test datasets into the threat
-            model to be used for other attacks. Also whether or not to use existing
-            datasets to test the current attack. The default is False.
+        ignore_memory: bool, default False
+            Whether to use the memoized datasets, or ignore them.
 
         Returns
         -------
@@ -238,37 +201,9 @@ class TargetedAuxiliaryDataMIA(TargetedMIA, StaticDataThreatModel):
             Tuple of (ground_truth, guesses), where ground_truth indicates
             what the attack needed to guess, and guesses are the attack's actual
             guesses.
-
         """
-        # Check for existing datasets
-        if self.test_sets and save_datasets:
-            # Make sure we load in pairs
-            n = len(self.test_sets) // 2
-            test_datasets = self.test_sets['datasets'][:num_samples] + self.test_sets['datasets'][n:n+num_samples]
-            test_labels = self.test_sets['labels'][:num_samples] + self.test_sets['labels'][n:n+num_samples]
-
-        else:
-            test_datasets = []
-            test_labels = []
-
-        num_extra_samples = num_samples - (len(test_datasets)//2)
-
-        # Generate test samples
-        new_datasets, new_labels = self._generate_datasets(
-            num_extra_samples, num_synthetic_records, training=False)
-
-        test_datasets.extend(new_datasets)
-        test_labels.extend(new_labels)
-
-        # Save datasets if required
-        if save_datasets:
-            if not self.test_sets:
-                self.test_sets = {'datasets': test_datasets, 'labels': test_labels}
-            else:
-                self.test_sets['datasets'] += new_datasets
-                self.test_sets['labels'] += new_labels
-
-        # Attack makes guesses about test samples
-        guesses = attack.attack(test_datasets).tolist()
-
-        return test_labels, guesses
+        test_datasets, truth_labels = self._generate_samples(
+            num_samples, False, ignore_memory
+        )
+        pred_labels = attack.attack(test_datasets)
+        return pred_labels, truth_labels
