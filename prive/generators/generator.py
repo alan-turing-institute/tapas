@@ -22,8 +22,8 @@ class Generator(ABC):
         """Fit generator to real data."""
         pass
 
-    # The call method should map a dataset to a synthetic dataset
-    def __call__(self, *args, **kwargs):
+    # The call method should map a dataset to a synthetic dataset.
+    def __call__(self, dataset, num_samples):
         pass
         #return self.generate(*args, **kwargs)
 
@@ -39,8 +39,10 @@ class Raw(Generator):
         self.dataset = dataset
         self.trained = True
 
-    def generate(self, num_samples, random_state = None):
+    def generate(self, num_samples = None, random_state = None):
         if self.trained: 
+            if num_samples is None:
+                return self.dataset
             return self.dataset.sample(num_samples, random_state = random_state)
         else:
             raise RuntimeError("No dataset provided to generator")

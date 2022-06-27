@@ -26,7 +26,7 @@ from .attacker_knowledge import (
 import numpy as np
 
 
-class MIALabeler(AttackerKnowledgeWithLabel):
+class MIALabeller(AttackerKnowledgeWithLabel):
     """
     Randomly add a given target to the datasets sampled from auxiliary data.
     This class can be used to augment AttackerKnowledgeOnData objects that
@@ -66,15 +66,12 @@ class MIALabeler(AttackerKnowledgeWithLabel):
         self.generate_pairs = generate_pairs
         self.replace_target = replace_target
 
-    def generate_datasets(
-        self, num_samples: int, training: bool = True, with_labels: bool = False
-    ) -> list[Dataset]:
+    def generate_datasets_with_label(
+        self, num_samples: int, training: bool = True
+    ) -> tuple[list[Dataset], list[int]]:
         """
-        Generates datasets according to the attacker's knowledge, and randomly
-        appends the target record to half of them.
-
-        If `with_labels` is True, this also returns the labels (whether the
-        target was in the private dataset).
+        Generate `num_samples` training or testing datasets with corresponding
+        labels (arbitrary ints or bools).
 
         """
         # Generate the datasets from the attacker knowledge.
@@ -85,7 +82,7 @@ class MIALabeler(AttackerKnowledgeWithLabel):
             labels = [0] * num_samples + [1] * num_samples
         else:
             # Pick random labels for each dataset.
-            labels = list(np.random.random() <= 0.5)
+            labels = list(np.random.random(size=(num_samples,)) <= 0.5)
         # Produce a list of datasets with appended target where label = 1.
         app_datasets = [
             (
@@ -97,19 +94,7 @@ class MIALabeler(AttackerKnowledgeWithLabel):
             else ds
             for ds, l in zip(datasets, labels)
         ]
-        if with_labels:
-            return app_datasets, labels
-        return app_datasets
-
-    def generate_datasets_with_label(
-        self, num_samples: int, training: bool = True
-    ) -> tuple[list[Dataset], list[int]]:
-        """
-        Generate `num_samples` training or testing datasets with corresponding
-        labels (arbitrary ints or bools).
-
-        """
-        return self.generate_datasets(num_samples, training, with_labels=True)
+        return app_datasets, labels
 
 
 class TargetedMIA(LabelInferenceThreatModel):
@@ -124,13 +109,13 @@ class TargetedMIA(LabelInferenceThreatModel):
         attacker_knowledge_data: AttackerKnowledgeOnData,
         target_record: Dataset,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
-        generate_pairs=True,
-        replace_target=False,
-        memorise_datasets=True,
+        generate_pairs: bool = True,
+        replace_target: bool = False,
+        memorise_datasets: bool = True,
     ):
         LabelInferenceThreatModel.__init__(
             self,
-            MIALabeler(
+            MIALabeller(
                 attacker_knowledge_data, target_record, generate_pairs, replace_target
             ),
             attacker_knowledge_generator,

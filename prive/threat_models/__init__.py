@@ -9,3 +9,4 @@ from .attacker_knowledge import (
     LabelInferenceThreatModel,
 )
 from .mia import TargetedMIA
+from .aia import TargetedAIA
