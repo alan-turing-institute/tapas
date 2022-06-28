@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from ..generators import Generator  # for typing
 
 from abc import ABC, abstractmethod
+from .base_classes import TrainableThreatModel
 
 
 class AttackerKnowledgeOnData:
@@ -42,6 +43,26 @@ class AttackerKnowledgeOnData:
     ) -> list[Dataset]:
         """
         Generate `num_samples` training or testing datasets.
+
+        """
+        abstract
+
+
+class AttackerKnowledgeWithLabel(AttackerKnowledgeOnData):
+    """
+    Abstract base class that builds on AttackerKnowledgeOnData that adds the
+    functionality of labeling the datasets. Such labels can be represent, e.g.,
+    whether a specific user is part of the dataset. This is used to define
+    membership/attribute inference attacks.
+    """
+
+    @abstractmethod
+    def generate_datasets_with_label(
+        self, num_samples: int, training: bool = True
+    ) -> tuple[list[Dataset], list[int]]:
+        """
+        Generate `num_samples` training or testing datasets with corresponding
+        labels (arbitrary ints or bools).
 
         """
         abstract
@@ -141,7 +162,7 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
         return dataset.create_subsets(num_samples, self.num_training_records)
 
 
-class ExactDataKnowledge(AuxiliaryDataKnowledge):
+class ExactDataKnowledge(AttackerKnowledgeOnData):
     """
     Also called worst-case attack, this assumes that the attacker knows the
     exact dataset used to generate 
@@ -190,3 +211,125 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
 
     def generate(self, training_dataset: Dataset):
         return self.generator(training_dataset, self.num_synthetic_records)
+        
+
+# With the tools developed in this module, we can define a generic threat model
+# where the attacker aims to infer the "label" of the private dataset. The
+# label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
+
+
+class LabelInferenceThreatModel(TrainableThreatModel):
+    def __init__(
+        self,
+        attacker_knowledge_data: AttackerKnowledgeWithLabel,
+        attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
+        memorise_datasets=True,
+    ):
+        """
+        Generate a Label-Inference Threat Model.
+
+        Parameters
+        ----------
+        attacker_knowledge_data: AttackerKnowledgeWithLabel
+            The knowledge on data available to the attacker, which includes a
+            label that the attack aims to predict.
+        attacker_knowledge_generator: AttackerKnowledgeOnGenerator
+            The knowledge on the generator available to the attacker.
+        memorise_datasets: True
+            Whether to memoise the synthetic datasets generated,
+        """
+        self.atk_know_data = attacker_knowledge_data
+        self.atk_know_gen = attacker_knowledge_generator
+        # Also, handle the memoisation to prevent recomputing datasets.
+        self.memorise_datasets = memorise_datasets
+        # maps training = True/False -> list of datasets, list of labels.
+        self._memory = {True: ([], []), False: ([], [])}
+
+    def _generate_samples(
+        self, num_samples: int, training: bool = True, ignore_memory: bool = False
+    ) -> tuple[list[Dataset], list[bool]]:
+        """
+        Internal method to generate samples for training or testing. This outputs 
+        two lists, the first of synthetic datasets and the second of labels (1 if
+        the target is in the training dataset used to produce the corresponding
+        dataset, and 0 otherwise).
+
+        Parameters
+        ----------
+        num_samples: int
+            The number of synthetic datasets to generate.
+        training: bool (default, True)
+            whether to generate samples from the training or test distribution.
+        ignore_memory: bool, default False
+            Whether to use the memoised datasets, or ignore them.
+        """
+        # Retrieve memoized samples (if needed).
+        if not ignore_memory:
+            mem_datasets = []
+            mem_labels = []
+        else:
+            mem_datasets, mem_labels = self._memory[training]
+            num_samples -= len(mem_datasets)
+            # No samples are needed! Return what is in memory:
+            if num_samples <= 0:
+                return mem_datasets[:num_samples], mem_labels[:num_samples]
+        # Generate sample: first, produce the original datasets with labels.
+        training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
+            num_samples, training=True
+        )
+        # Then, generate synthetic data from each original dataset.
+        gen_datasets = [self.atk_know_gen(ds) for ds in training_datasets]
+        # Add the entries generated to the memory.
+        if not ignore_memory:
+            self._memory[training] = (
+                mem_datasets + gen_datasets,
+                mem_labels + gen_labels,
+            )
+        # Combine results from the memory with generated results.
+        return mem_datasets + gen_datasets, mem_labels + gen_labels
+
+    def generate_training_samples(
+        self, num_samples: int, ignore_memory: bool = False
+    ) -> tuple[list[Dataset], list[bool]]:
+        """
+        Generate samples to train an attack.
+
+        Parameters
+        ----------
+        num_samples: int
+            The number of synthetic datasets to generate.
+        ignore_memory: bool, default False
+            Whether to use the memoized datasets, or ignore them.
+        """
+        return self._generate_samples(num_samples, True, ignore_memory)
+
+    def test(
+        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False
+    ) -> tuple[list[int], list[int]]:
+        """
+        Test an attack against this threat model. This samples `num_samples`
+        testing synthetic datasets along with labels. It then runs the attack
+        on each synthetic dataset, to estimate a label on each. The true and
+        predicted labels are returned.
+
+        Parameters
+        ----------
+        attack : Attack
+            Attack to test.
+        num_samples : int
+            Number of test datasets to generate and test against.
+        ignore_memory: bool, default False
+            Whether to use the memoized datasets, or ignore them.
+
+        Returns
+        -------
+        tuple(list(int), list(int))
+            Tuple of (true_labels, pred_labels), where true_labels indicates
+            the true label of the original datasets and pred_labels are the
+            labels predicted by the attack from the synthetic datasets.
+        """
+        test_datasets, truth_labels = self._generate_samples(
+            num_samples, False, ignore_memory
+        )
+        pred_labels = attack.attack(test_datasets)
+        return pred_labels, truth_labels

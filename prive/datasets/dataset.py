@@ -26,19 +26,27 @@ def _parse_csv(fp, schema):
     """
     ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
     ## then convert them
-    dtypes = {i: get_dtype(col['type'], col['representation']) for i, col in enumerate(schema)}
+    dtypes = {
+        i: get_dtype(col["type"], col["representation"]) for i, col in enumerate(schema)
+    }
 
     data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None)
 
     ## Convert any date or datetime fields to datetime
-    for c in [i for i, col in enumerate(schema) if col['representation'] == 'date' or col['representation'] == 'datetime']:
+    for c in [
+        i
+        for i, col in enumerate(schema)
+        if col["representation"] == "date" or col["representation"] == "datetime"
+    ]:
         data[i] = pd.to_datetime(data[i])
 
     description = DataDescription(schema)
     return TabularDataset(data, description)
 
+
 ## Classes
 ## -------
+
 
 class Dataset(ABC):
     """
@@ -159,7 +167,6 @@ class TabularDataset(Dataset):
         self.data = data
         self.description = description
 
-
     @classmethod
     def read_from_string(cls, data, description):
         """
@@ -193,11 +200,10 @@ class TabularDataset(Dataset):
             A TabularDataset.
 
         """
-        with open(f'{filepath}.json') as f:
+        with open(f"{filepath}.json") as f:
             schema = json.load(f)
 
-        return _parse_csv(f'{filepath}.csv', schema)
-
+        return _parse_csv(f"{filepath}.csv", schema)
 
     def write_to_string(self):
         """
@@ -205,8 +211,7 @@ class TabularDataset(Dataset):
 
         """
         # Passing None to to_csv returns the csv as a string
-        return self.data.to_csv(None, header = False, index = False)
-
+        return self.data.to_csv(None, header=False, index=False)
 
     def write(self, filepath):
         """
@@ -219,11 +224,11 @@ class TabularDataset(Dataset):
 
         """
 
-        with open(f'{filepath}.json', 'w') as fp:
+        with open(f"{filepath}.json", "w") as fp:
             json.dump(self.description.schema, fp, indent=4)
 
         # TODO: Make sure this writes it exactly as needed
-        self.data.to_csv(filepath+'.csv', header=False, index=False)
+        self.data.to_csv(filepath + ".csv", header=False, index=False)
 
     def sample(self, n_samples=1, frac=None, random_state=None):
         """
@@ -249,7 +254,10 @@ class TabularDataset(Dataset):
         if frac:
             n_samples = int(frac * len(self))
 
-        return TabularDataset(data=self.data.sample(n_samples, random_state = random_state), description=self.description)
+        return TabularDataset(
+            data=self.data.sample(n_samples, random_state=random_state),
+            description=self.description,
+        )
 
     def get_records(self, record_ids):
         """
@@ -268,6 +276,8 @@ class TabularDataset(Dataset):
         """
 
         # TODO: what if the index is supposed to be a column? an identifier?
+        if len(record_ids) == 1:
+            return TabularRecord(self.data.iloc[record_ids], self.description, record_ids[0])
         return TabularDataset(self.data.iloc[record_ids], self.description)
 
     def drop_records(self, record_ids=[], n=1, in_place=False):
@@ -322,7 +332,9 @@ class TabularDataset(Dataset):
         """
 
         if in_place:
-            assert self.description == records.description, "Both datasets must have the same data description"
+            assert (
+                self.description == records.description
+            ), "Both datasets must have the same data description"
 
             self.data = pd.concat([self.data, records.data])
             return
@@ -347,12 +359,13 @@ class TabularDataset(Dataset):
         Returns
         -------
         TabularDataset or None
-            A modified TabularDataset object with the replaced record(s) or None if inplace=True..
+            A modified TabularDataset object with the replaced record(s) or None if in_place=True..
 
         """
         if len(records_out) > 0:
-            assert len(records_out) == len(records_in), \
-                f'Number of records out must equal number of records in, got {len(records_out)}, {len(records_in)}'
+            assert len(records_out) == len(
+                records_in
+            ), f"Number of records out must equal number of records in, got {len(records_out)}, {len(records_in)}"
 
         if in_place:
             self.drop_records(records_out, n=len(records_in), in_place=in_place)
@@ -382,8 +395,9 @@ class TabularDataset(Dataset):
             A lists containing subsets of the data with and without the target record(s).
 
         """
-        assert sample_size <= len(self), \
-            f'Cannot create subsets larger than original dataset, sample_size max: {len(self)} got {sample_size}'
+        assert sample_size <= len(
+            self
+        ), f"Cannot create subsets larger than original dataset, sample_size max: {len(self)} got {sample_size}"
 
         # create splits
         splits = index_split(self.data.shape[0], sample_size, n)
@@ -406,6 +420,19 @@ class TabularDataset(Dataset):
         """
         return self.get_records([])
 
+    def copy(self):
+        """
+        Create a TabularDataset that is a deep copy of this one. In particular,
+        the underlying data is copied and can thus be modified freely.
+
+        Returns
+        -------
+        TabularDataset
+            A copy of this TabularDataset.
+
+        """
+        return TabularDataset(self.data.copy(), self.description)
+
     def __add__(self, other):
         """
         Adding two TabularDataset objects with the same data description together
@@ -422,7 +449,9 @@ class TabularDataset(Dataset):
 
         """
 
-        assert self.description == other.description, "Both datasets must have the same data description"
+        assert (
+            self.description == other.description
+        ), "Both datasets must have the same data description"
 
         return TabularDataset(pd.concat([self.data, other.data]), self.description)
 
@@ -442,7 +471,10 @@ class TabularDataset(Dataset):
         convert_record = lambda idx_and_rec: TabularRecord.from_dataset(
             TabularDataset(
                 # iterrows() outputs pd.Series rather than .DataFrame, so we convert here:
-                data=idx_and_rec[1].to_frame().T, description=self.description))
+                data=idx_and_rec[1].to_frame().T,
+                description=self.description,
+            )
+        )
         return map(convert_record, self.data.iterrows())
 
     def __len__(self):
@@ -474,9 +506,13 @@ class TabularDataset(Dataset):
 
         """
         if not isinstance(item, TabularDataset):
-            raise ValueError(f'Only TabularDatasets can be checked for containment, not {type(item)}')
+            raise ValueError(
+                f"Only TabularDatasets can be checked for containment, not {type(item)}"
+            )
         if len(item) != 1:
-            raise ValueError(f'Only length-1 TabularDatasets can be checked for containment, got length {len(item)})')
+            raise ValueError(
+                f"Only length-1 TabularDatasets can be checked for containment, got length {len(item)})"
+            )
 
         return (self.data == item.data.iloc[0]).all(axis=1).any()
 
@@ -511,9 +547,12 @@ class TabularRecord(TabularDataset):
         """
         if tabular_row.data.shape[0] != 1:
             raise AssertionError(
-                f'Parent TabularDataset object must contain only 1 record, not {tabular_row.data.shape[0]}')
+                f"Parent TabularDataset object must contain only 1 record, not {tabular_row.data.shape[0]}"
+            )
 
-        return cls(tabular_row.data, tabular_row.description, tabular_row.data.index.values[0])
+        return cls(
+            tabular_row.data, tabular_row.description, tabular_row.data.index.values[0]
+        )
 
     def get_id(self, tabular_dataset):
         """
@@ -533,12 +572,14 @@ class TabularRecord(TabularDataset):
 
         """
 
-        merged = pd.merge(tabular_dataset.data, self.data, how='outer', indicator=True)
+        merged = pd.merge(tabular_dataset.data, self.data, how="outer", indicator=True)
 
-        if merged[merged['_merge'] == 'both'].shape[0] != 1:
-            raise AssertionError('Error, more than one copy of this record is present on the dataset')
+        if merged[merged["_merge"] == "both"].shape[0] != 1:
+            raise AssertionError(
+                "Error, more than one copy of this record is present on the dataset"
+            )
 
-        return merged[merged['_merge'] == 'both'].index.values[0]
+        return merged[merged["_merge"] == "both"].index.values[0]
 
     def set_id(self, identifier):
         """
@@ -558,3 +599,34 @@ class TabularRecord(TabularDataset):
         self.data.index = pd.Index([identifier])
 
         return
+
+    def set_value(self, column, value):
+        """
+        Overwrite the value of attribute `column` of the TabularRecord object.
+
+        Parameters
+        ----------
+        column: str
+            The identifier of the attribute to be replaced.
+        value: (value set of column)
+            The value to set the `column` of the record.
+
+        Returns
+        -------
+        None
+
+        """
+        self.data[column] = value
+
+    def copy(self):
+        """
+        Create a TabularRecord that is a deep copy of this one. In particular,
+        the underlying data is copied and can thus be modified freely.
+
+        Returns
+        -------
+        TabularRecord
+            A copy of this TabularRecord.
+
+        """
+        return TabularRecord(self.data.copy(), self.description, self.id)
