@@ -29,8 +29,8 @@ def _parse_csv(fp, schema):
     dtypes = {
         i: get_dtype(col["type"], col["representation"]) for i, col in enumerate(schema)
     }
-
-    data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None)
+    
+    data = pd.read_csv(fp)
 
     ## Convert any date or datetime fields to datetime
     for c in [
@@ -165,6 +165,8 @@ class TabularDataset(Dataset):
         description: prive.datasets.data_description.DataDescription
         """
         self.data = data
+        
+        assert isinstance(description,DataDescription), 'description needs to be of class DataDescription'
         self.description = description
 
     @classmethod
@@ -211,7 +213,8 @@ class TabularDataset(Dataset):
 
         """
         # Passing None to to_csv returns the csv as a string
-        return self.data.to_csv(None, header=False, index=False)
+        # return self.data.to_csv(None, header=False, index=False)
+        return self.data.to_csv(None, index=False)
 
     def write(self, filepath):
         """
