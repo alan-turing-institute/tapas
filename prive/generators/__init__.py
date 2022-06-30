@@ -1,1 +1,1 @@
-from .generator import Generator, Raw, GeneratorFromExecutable
+from .generator import Generator, Raw, GeneratorFromExecutable, ReprosynGenerator
