@@ -101,7 +101,8 @@ def main():
     # Initialise attacks.
     attacks = {}
     for atk in runconfig["attacks"]:
-        # TODO: Implement load_attack
+        # TODO: Implement load_attack.
+        # FH: I dislike load_attack, can we remove it?
         attacks[atk["name"]] = load_attack(**atk, dataset=dataset)
 
     # Train attacks.

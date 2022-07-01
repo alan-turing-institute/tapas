@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..datasets import Dataset
-    from ..threat_models import LabelInferenceThreatModel
     from .set_classifiers import SetClassifier
 
 # Real imports
@@ -18,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from .base_classes import Attack
+from ..threat_models import LabelInferenceThreatModel
 
 
 class GroundhogAttack(Attack):

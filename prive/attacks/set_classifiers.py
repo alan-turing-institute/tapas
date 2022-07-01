@@ -145,7 +145,10 @@ class FeatureBasedSetClassifier(SetClassifier):
         self.classifier.fit(self.features(datasets), labels)
 
     def predict(self, datasets: list[Dataset]):
-        return self.Classifier.predict(self.features(datasets))
+        return self.classifier.predict(self.features(datasets))
+
+    def predict_proba(self, datasets: list[Dataset]):
+        return self.classifier.predict_proba(self.features(datasets))
 
 
 ## We here propose a few possible SetFeature that can be used for attacks.

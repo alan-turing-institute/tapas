@@ -20,8 +20,15 @@ from prive.threat_models import (
 from prive.generators import Raw
 
 # The classes being tested.
-from prive.attacks import ClosestDistanceAttack, NaiveSetFeature, HistSetFeature
+from prive.attacks import (
+    ClosestDistanceAttack,
+    GroundhogAttack,
+    NaiveSetFeature,
+    HistSetFeature,
+    FeatureBasedSetClassifier,
+)
 
+from sklearn.linear_model import LogisticRegression
 
 ## Test for closest-distance.
 
@@ -211,6 +218,46 @@ class TestSetFeatures(TestCase):
                 + discrete_1hot,
             ),
         )
+
+
+## Test for the Groundhog attack.
+
+
+class TestGroundHog:
+    """Test whether the groundhog attack (Stadler et al.) works."""
+
+    def test_groundhog_runs(self):
+        """Test whether the Groundhog attack runs."""
+        values = ["x", "y", "z"]
+        total_dataset = TabularDataset(
+            pd.DataFrame(
+                [
+                    (np.random.random(), values[np.random.randint(3)])
+                    for _ in range(100)
+                ],
+                columns=["a", "b"],
+            ),
+            DataDescription(
+                [
+                    {"name": "a", "type": "real", "representation": "number"},
+                    {"name": "b", "type": "finite", "representation": values},
+                ]
+            ),
+        )
+        mia = TargetedMIA(
+            AuxiliaryDataKnowledge(
+                total_dataset, sample_real_frac=0.5, num_training_records=20
+            ),
+            total_dataset.sample(1),  # Random target.
+            BlackBoxKnowledge(Raw(), num_synthetic_records=10),
+        )
+        attack = GroundhogAttack(
+            FeatureBasedSetClassifier(
+                NaiveSetFeature() + HistSetFeature(num_bins=10, bounds=(0, 1)),
+                LogisticRegression(),
+            )
+        )
+        attack.train(mia)
 
 
 if __name__ == "__main__":
