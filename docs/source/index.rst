@@ -25,9 +25,8 @@ successful), however if an attack identifies issues under a realistic threat
 model then the level of privacy in your dataset is likely not at the desired
 level. 
 
-
-
-## Using the Package 
+Using the Package 
+-----------------
 
 To meet the two use cases above we provide two different interfaces into the package. 
 The first is a pure python interface which can be combined directly with
@@ -47,15 +46,17 @@ Contents
    :template: custom-module-template.rst
    :recursive:
 
-   prive
 
 .. toctree::
+   index
+   installation
+   quickstart
    dataset-schema
 
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
