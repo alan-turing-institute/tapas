@@ -68,7 +68,7 @@ def encode_data(dataset, infer_ranges=False): # TODO: Write tests
         name = cdict['name']
         d_type = cdict['type']
         d_repr = cdict['representation']
-        col_data = dataset.data[i]
+        col_data = dataset.data[name]
 
         if d_type == 'finite':
             if isinstance(d_repr, int):
