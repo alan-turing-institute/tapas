@@ -121,6 +121,6 @@ were true.)
 Future extensions
 -----------------
 
-``countable/partial``? (Strings with prefix order!)
-``countable/ordered/dense`` (Decimals) ``countable/ordered/least/dense``
-(Decimals or strings with dictionary order)
+- ``countable/partial``? (Strings with prefix order!)
+- ``countable/ordered/dense`` (Decimals) 
+- ``countable/ordered/least/dense`` (Decimals or strings with dictionary order)
