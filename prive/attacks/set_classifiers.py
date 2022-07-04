@@ -251,7 +251,6 @@ class HistSetFeature(SetFeature):
                 # at the moment, and will be ignored.
                 pass
 
-        print(features)
         return np.concatenate(features, axis=1)
 
 
