@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath('../../prive'))
 # -- Project information -----------------------------------------------------
 
 project = 'prive'
-copyright = '2022, James Jordon, Camila Rangel Smith, Florimond Houssiau, James Gedes, Callum Mole'
-author = 'James Jordon, Camila Rangel Smith, Florimond Houssiau, James Gedes, Callum Mole'
+copyright = '2022, James Jordon, Camila Rangel Smith, Florimond Houssiau, James Geddes, Callum Mole, Andrew Elliott'
+author = 'James Jordon, Camila Rangel Smith, Florimond Houssiau, James Geddes, Callum Mole, Andrew Elliott'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'
