@@ -22,6 +22,7 @@ Contents
 
 .. toctree::
    dataset-schema
+   modelling-threats
 
 
 
