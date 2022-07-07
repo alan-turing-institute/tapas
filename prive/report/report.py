@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from prive.report import MIAttackSummary
-from prive.utils.plots import metric_comparison_plots
+from .utils import metric_comparison_plots
 
 
 class Report(ABC):
