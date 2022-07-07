@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from prive.datasets.data_description import DataDescription
-from prive.utils.data import index_split, get_dtype
+from .utils import encode_data, index_split, get_dtype
 
 # Helper function for parsing file-like objects
 def _parse_csv(fp, schema):
@@ -432,6 +432,24 @@ class TabularDataset(Dataset):
 
         """
         return TabularDataset(self.data.copy(), self.description)
+
+    @property
+    def as_numeric(self):
+        """
+        Encodes this dataset as a np.array, where numeric values are kept as is
+        and categorical values are 1-hot encoded. This is only computed once
+        (for efficiency reasons), so beware of modifying TabularDataset after
+        using this property.
+
+        The columns are kept in the order of the description, with categorical
+        variables encoded over several contiguous columns.
+
+        Returns
+        -------
+        np.array
+
+        """
+        return encode_data(self)
 
     def __add__(self, other):
         """
