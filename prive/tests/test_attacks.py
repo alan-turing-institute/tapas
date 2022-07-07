@@ -25,6 +25,7 @@ from prive.attacks import (
     GroundhogAttack,
     NaiveSetFeature,
     HistSetFeature,
+    CorrSetFeature,
     FeatureBasedSetClassifier,
 )
 
@@ -203,19 +204,25 @@ class TestSetFeatures(TestCase):
             data_description,
         )
         num_bins = 10
-        feature = NaiveSetFeature() + HistSetFeature(num_bins=num_bins, bounds=(0, 1))
+        feature = (
+            NaiveSetFeature()
+            + HistSetFeature(num_bins=num_bins, bounds=(0, 1))
+            + CorrSetFeature()
+        )
         result = feature([dataset])
         # We only test whether the size of the output is correct.
         # We assume the content is correct, from other tests.
         num_continuous = 1
         discrete_1hot = 3
+        num_columns = num_continuous + discrete_1hot
         self.assertEqual(
             result.shape,
             (
                 1,
-                3 * (num_continuous + discrete_1hot)
-                + num_bins * num_continuous
-                + discrete_1hot,
+                3 * num_columns  # Naive
+                + num_bins * num_continuous  # Hist
+                + discrete_1hot  # Hist
+                + num_columns * (num_columns - 1) / 2,  # Corr
             ),
         )
 
@@ -253,7 +260,9 @@ class TestGroundHog:
         )
         attack = GroundhogAttack(
             FeatureBasedSetClassifier(
-                NaiveSetFeature() + HistSetFeature(num_bins=10, bounds=(0, 1)),
+                NaiveSetFeature()
+                + HistSetFeature(num_bins=10, bounds=(0, 1))
+                + CorrSetFeature(),
                 LogisticRegression(),
             )
         )

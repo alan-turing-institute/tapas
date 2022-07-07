@@ -12,7 +12,6 @@ import numpy as np
 
 from abc import ABC, abstractmethod
 
-from prive.utils.data import encode_data, get_num_features, one_hot
 
 
 class SetClassifier(ABC):
@@ -162,14 +161,14 @@ class FeatureBasedSetClassifier(SetClassifier):
 
 class NaiveSetFeature(SetFeature):
     """
-    Naive feature set F_Naive from Stadler et al. Mean, median, and variance of
+    Naive set feature F_Naive from Stadler et al. Mean, median, and variance of
     each column is computed.
 
     """
 
     def extract(self, datasets: list[TabularDataset]) -> np.array:
-        np_data = [encode_data(dataset) for dataset in datasets]
-        representation = np.stack(
+        np_data = [dataset.as_numeric for dataset in datasets]
+        return np.stack(
             [
                 np.concatenate(
                     [
@@ -181,7 +180,6 @@ class NaiveSetFeature(SetFeature):
                 for data in np_data
             ]
         )
-        return representation
 
     # def size(self, data_description: DataDescription) -> int:
     #     return data_description.encoded_dim
@@ -189,7 +187,7 @@ class NaiveSetFeature(SetFeature):
 
 class HistSetFeature(SetFeature):
     """
-    F_Hist feature set from Stadler et al. Compute a histogram of each column,
+    F_Hist set feature from Stadler et al. Compute a histogram of each column,
     with binning for continuous variables.
 
     """
@@ -211,52 +209,75 @@ class HistSetFeature(SetFeature):
 
     def extract(self, datasets: list[TabularDataset]) -> np.array:
         dataset_description = datasets[0].description
+        np_data = [dataset.as_numeric for dataset in datasets]
         features = []
+        # Index of the current column in Numpy form.
+        cidx = 0
         for column_descriptor in dataset_description:
             ctype = column_descriptor["type"]
 
             if ctype.startswith("finite"):
                 # Categorical variables.
-                # First, retrieve all values.
+                # First, retrieve the number of values.
                 if isinstance(column_descriptor["representation"], int):
-                    values = list(range(column_descriptor["representation"]))
+                    num_values = column_descriptor["representation"]
                 else:
-                    values = sorted(column_descriptor["representation"])
-                # Then, 1-hot encode all these columns and compute the means.
+                    num_values = len(column_descriptor["representation"])
+                # Then, compute the means of the next num_values 1-hot encoded columns.
                 features.append(
                     np.stack(
                         [
-                            one_hot(dataset.data[column_descriptor["name"]], values).mean(axis=0)
-                            for dataset in datasets
+                            data[:, cidx : cidx + num_values].mean(axis=0)
+                            for data in np_data
                         ]
                     )
                 )
+                cidx += num_values
 
             elif ctype.startswith("real") or ctype == "interval":
-                # Continuous variables
+                # Continuous variables.
                 cmin, cmax = (0, 1) if ctype == "interval" else self.bounds
                 bins = np.linspace(cmin, cmax, self.num_bins + 1)
                 features.append(
                     np.stack(
                         [
-                            np.histogram(ds.data[column_descriptor["name"]], bins)[0]
-                            / len(ds)
-                            for ds in datasets
+                            np.histogram(data[:, cidx], bins)[0] / data.shape[0]
+                            for data in np_data
                         ]
                     )
                 )
+                cidx += 1
 
             else:
                 # This type is not supported by this attack, at least
                 # at the moment, and will be ignored.
                 pass
 
-        print(features)
         return np.concatenate(features, axis=1)
 
 
 class CorrSetFeature(SetFeature):
-    pass
+    """
+    F_Corr set feature from Stadler et al. Compute linear correlation between
+    features. For categorical attributes, do this after 1-hot encoding.
+
+    """
+
+    def _corr(self, array):
+        """
+        Compute a flattened correlation matrix. This also filters NaNs and
+        removes symmetrical elements.
+
+        """
+        corr_matrix = np.corrcoef(array)
+        above_diagonal = np.triu_indices(corr_matrix.shape[0], 1)
+        return corr_matrix[above_diagonal]
 
     def extract(self, datasets: list[TabularDataset]) -> np.array:
-        todo
+        """
+        Compute correlations between numeric attributes and 1-hot encoded
+        categorical attributes.
+
+        """
+        np_data = [dataset.as_numeric for dataset in datasets]
+        return np.stack([self._corr(dataset.as_numeric) for dataset in datasets])

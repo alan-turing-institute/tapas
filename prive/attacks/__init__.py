@@ -8,5 +8,6 @@ from .set_classifiers import (
     FeatureBasedSetClassifier,
     NaiveSetFeature,
     HistSetFeature,
+    CorrSetFeature,
 )
 from .utils import load_attack
