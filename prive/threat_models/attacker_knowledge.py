@@ -243,6 +243,8 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             A callable used to track iterations. The method __next__ is called
             whenever a dataset needs to be generated. This can be used to track
             progress, e.g. with tqdm. Default is lambda x: x (silent).
+            Note that this iterator is only called for synthetic data generation,
+            which is often the bottleneck, and not training data generation.
 
         """
         self.atk_know_data = attacker_knowledge_data

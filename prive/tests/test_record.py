@@ -1,7 +1,5 @@
 import unittest
 
-import sys
-sys.path.append("../..")
 from prive.datasets import TabularRecord
 from prive.datasets import TabularDataset
 

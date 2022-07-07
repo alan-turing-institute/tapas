@@ -4,9 +4,6 @@ from unittest import TestCase
 
 import pandas as pd
 
-import sys
-
-sys.path.append("../..")
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 from prive.threat_models import (

@@ -7,9 +7,6 @@ from warnings import filterwarnings
 
 filterwarnings("ignore")
 
-import sys
-
-sys.path.append("../..")
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 

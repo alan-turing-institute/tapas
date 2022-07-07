@@ -2,9 +2,6 @@ import os
 import unittest
 import numpy as np
 
-import sys
-
-sys.path.append("../..")
 from prive.report import MIAttackSummary
 
 

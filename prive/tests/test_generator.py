@@ -7,11 +7,6 @@ import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
-# filterwarnings('ignore')
-
-import sys
-
-sys.path.append("../..")
 import prive.datasets as datasets
 import prive.generators as generators
 

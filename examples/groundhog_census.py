@@ -6,12 +6,10 @@ The goal of PrivE is to evaluate the possibility of an attack, rather than
 train and deploy attacks against real datasets. This informs the design
 decisions made, especially as relates to the auxiliary knowledge.
 
+This example is meant as a general introduction to PrivE, and explains some
+important design choices to make when using the toolbox.
+
 """
-
-# This is only required if you haven't installed PrivE as a module.
-import sys
-
-sys.path.append("..")
 
 import prive
 import prive.datasets
@@ -20,8 +18,12 @@ import prive.threat_models
 import prive.attacks
 import prive.report
 
+# Some fancy displays when training/testing.
+import tqdm
+
 from sklearn.ensemble import RandomForestClassifier
 
+print('Loading dataset...')
 # We attack the 1% Census Microdata file, available at:
 #  https://www.ons.gov.uk/census/2011census/2011censusdata/censusmicrodata/microdatateachingfile
 # We have created a .json description file, so that prive.Dataset.read can load both.
@@ -69,6 +71,8 @@ threat_model = prive.threat_models.TargetedMIA(
     generate_pairs=True,
     #  - do we append the target to the dataset, or replace a record by it?
     replace_target=True,
+    # (Optional) nice display for training and testing.
+    iterator_tracker=tqdm.tqdm,
 )
 
 # Next step: initialise an attacker. Here, we just apply the GroundHog attack
@@ -86,6 +90,7 @@ attacker = prive.attacks.GroundhogAttack(
 	)
 )
 
+print('Training the attack...')
 # Having defined all the objects that we need, we can train the attack.
 attacker.train(
 	# The TargetedMIA threat model is a TrainableThreatModel: it defines a method
@@ -97,10 +102,12 @@ attacker.train(
 	num_samples = 1000,
 )
 
+print('Testing the attack...')
 # The attack is trained! Evaluate it within the test model.
 # [explain why we split this way.]
 attack_labels, truth_labels = threat_model.test(attacker, num_samples=1000)
 
+print('Generating summary...')
 # Finally, generate a report to evaluate the results.
 attack_summary = prive.report.MIAttackSummary(
 	# The summary requires these
