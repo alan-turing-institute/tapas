@@ -5,23 +5,26 @@ import json
 from unittest import TestCase
 from warnings import filterwarnings
 
-filterwarnings('ignore')
+filterwarnings("ignore")
 
+import sys
+
+sys.path.append("../..")
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 
 
 class TestTabularDataset(TestCase):
     def setUp(self):
-        self.dataset = TabularDataset.read('tests/data/test_texas')
-        self.row_in = TabularDataset.read('tests/data/row_in_texas')
-        self.row_out = TabularDataset.read('tests/data/row_out_texas')
+        self.dataset = TabularDataset.read("tests/data/test_texas")
+        self.row_in = TabularDataset.read("tests/data/row_in_texas")
+        self.row_out = TabularDataset.read("tests/data/row_out_texas")
 
     def test_read(self):
 
         self.assertEqual(len(self.dataset), 998)
 
-        with open('tests/data/test_texas.json') as f:
+        with open("tests/data/test_texas.json") as f:
             description = json.load(f)
 
         self.assertEqual(self.dataset.description.schema, description)
@@ -45,7 +48,9 @@ class TestTabularDataset(TestCase):
 
         # Sample a random index and check that the row in data_1000 matches that in data_sample2
         idx = randint(0, 499)
-        self.assertTrue((data_1000.data.iloc[500 + idx] == data_sample2.data.iloc[idx]).all())
+        self.assertTrue(
+            (data_1000.data.iloc[500 + idx] == data_sample2.data.iloc[idx]).all()
+        )
 
     def test_get_records(self):
         # returns a subset of the records
@@ -78,7 +83,7 @@ class TestTabularDataset(TestCase):
         self.assertEqual(len(new_dataset), len(self.dataset) - 4)
 
         # test in-place flag
-        new_dataset = copy.copy(self.dataset) # Don't want to modify self.dataset
+        new_dataset = copy.copy(self.dataset)  # Don't want to modify self.dataset
         new_dataset.drop_records(index, in_place=True)
         # check length
         self.assertEqual(len(new_dataset), len(self.dataset) - len(index))
@@ -93,10 +98,12 @@ class TestTabularDataset(TestCase):
 
         new_dataset = self.dataset.add_records(record)
 
-        self.assertEqual(new_dataset.data.shape[0], self.dataset.data.shape[0] + len(index))
+        self.assertEqual(
+            new_dataset.data.shape[0], self.dataset.data.shape[0] + len(index)
+        )
 
         # test in-place flag
-        new_dataset = copy.copy(self.dataset) # don't want to modify self.dataset
+        new_dataset = copy.copy(self.dataset)  # don't want to modify self.dataset
         new_dataset.add_records(record, in_place=True)
         # check length
         self.assertEqual(len(new_dataset), len(self.dataset) + len(index))
@@ -108,9 +115,9 @@ class TestTabularDataset(TestCase):
         # returns a subset of the records
         index = [100]
 
-        rI= self.dataset.create_subsets(10, 100)
+        rI = self.dataset.create_subsets(10, 100)
 
-        self.assertEqual(len(rI),10)
+        self.assertEqual(len(rI), 10)
         self.assertEqual(100, rI[0].data.shape[0])
 
     def test_replace(self):
@@ -128,14 +135,21 @@ class TestTabularDataset(TestCase):
         self.assertEqual(len(data_sample100), len(replaced_sample))
 
         # check if record is in dataset
-        self.assertFalse((replaced_sample.data == self.dataset.get_records(index_to_drop).data.iloc[0]).all().all())
+        self.assertFalse(
+            (
+                replaced_sample.data
+                == self.dataset.get_records(index_to_drop).data.iloc[0]
+            )
+            .all()
+            .all()
+        )
 
         # check removing random record
         replaced_sample = data_sample100.replace(records_in)
         self.assertEqual(len(data_sample100), len(replaced_sample))
 
         # check in-place flag
-        new_dataset = copy.copy(data_sample100) # don't want to modify self.dataset
+        new_dataset = copy.copy(data_sample100)  # don't want to modify self.dataset
         new_dataset.replace(records_in, index_to_drop, in_place=True)
 
         self.assertEqual(len(new_dataset), len(data_sample100))
@@ -170,5 +184,5 @@ class TestTabularDataset(TestCase):
             self.assertIn(row, self.dataset)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

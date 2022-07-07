@@ -90,6 +90,6 @@ class TestAIA(TestCase):
         for ds, target_value in zip(datasets, labels):
             record = target_record.copy()
             record.set_value("c", target_value)
-            print(ds.data, '\n', target_record.data, target_value)
+            print(ds.data, "\n", target_record.data, target_value)
             self.assertEqual(record in ds, True)
             pass

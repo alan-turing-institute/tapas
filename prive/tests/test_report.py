@@ -2,6 +2,9 @@ import os
 import unittest
 import numpy as np
 import datetime
+
+import sys
+sys.path.append("../..")
 from prive.report import MIAttackReport
 
 
