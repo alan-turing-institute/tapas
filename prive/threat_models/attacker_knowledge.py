@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from ..attacks import Attack  # for typing
     from ..datasets import Dataset  # for typing
     from ..generators import Generator  # for typing
+    from collections.abc import Iterable
 
 from abc import ABC, abstractmethod
 from .base_classes import TrainableThreatModel
@@ -211,7 +212,7 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
 
     def generate(self, training_dataset: Dataset):
         return self.generator(training_dataset, self.num_synthetic_records)
-        
+
 
 # With the tools developed in this module, we can define a generic threat model
 # where the attacker aims to infer the "label" of the private dataset. The
@@ -224,6 +225,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         attacker_knowledge_data: AttackerKnowledgeWithLabel,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
         memorise_datasets=True,
+        iterator_tracker: Callable[[list], Iterable] = None,
     ):
         """
         Generate a Label-Inference Threat Model.
@@ -237,16 +239,22 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             The knowledge on the generator available to the attacker.
         memorise_datasets: True
             Whether to memoise the synthetic datasets generated,
+        iterator_tracker: Callable list L -> Iterable over L.
+            A callable used to track iterations. The method __next__ is called
+            whenever a dataset needs to be generated. This can be used to track
+            progress, e.g. with tqdm. Default is lambda x: x (silent).
+
         """
         self.atk_know_data = attacker_knowledge_data
         self.atk_know_gen = attacker_knowledge_generator
         # Also, handle the memoisation to prevent recomputing datasets.
         self.memorise_datasets = memorise_datasets
+        self.iterator_tracker = iterator_tracker or (lambda x: x)
         # maps training = True/False -> list of datasets, list of labels.
         self._memory = {True: ([], []), False: ([], [])}
 
     def _generate_samples(
-        self, num_samples: int, training: bool = True, ignore_memory: bool = False
+        self, num_samples: int, training: bool = True, ignore_memory: bool = False,
     ) -> tuple[list[Dataset], list[bool]]:
         """
         Internal method to generate samples for training or testing. This outputs 
@@ -262,6 +270,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             whether to generate samples from the training or test distribution.
         ignore_memory: bool, default False
             Whether to use the memoised datasets, or ignore them.
+
         """
         # Retrieve memoized samples (if needed).
         if not ignore_memory:
@@ -278,7 +287,9 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             num_samples, training=True
         )
         # Then, generate synthetic data from each original dataset.
-        gen_datasets = [self.atk_know_gen(ds) for ds in training_datasets]
+        gen_datasets = [
+            self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
+        ]
         # Add the entries generated to the memory.
         if not ignore_memory:
             self._memory[training] = (
@@ -289,7 +300,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         return mem_datasets + gen_datasets, mem_labels + gen_labels
 
     def generate_training_samples(
-        self, num_samples: int, ignore_memory: bool = False
+        self, num_samples: int, ignore_memory: bool = False,
     ) -> tuple[list[Dataset], list[bool]]:
         """
         Generate samples to train an attack.
@@ -304,7 +315,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         return self._generate_samples(num_samples, True, ignore_memory)
 
     def test(
-        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False
+        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False,
     ) -> tuple[list[int], list[int]]:
         """
         Test an attack against this threat model. This samples `num_samples`
