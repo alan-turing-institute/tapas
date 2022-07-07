@@ -25,7 +25,7 @@ class AttackSummary(ABC):
 
 class MIAttackSummary(AttackSummary):
     """
-    Class summarising main performance metrics of a memberhsip inference attack.
+    Class summarising main performance metrics of a membership inference attack.
 
     """
     def __init__(
