@@ -2,13 +2,15 @@
 A represention of the metadata describing a dataset.
 """
 
+# TODO: this is only for tabular data?
+
 class DataDescription:
     def __init__(self, schema):
         """
         Parameters
         ----------
         schema: list[dict]
-            A list of metadata about each column. Each column is represented by an dictionary whose
+            A list of metadata about each column. Each column is represented by a dictionary whose
             values are the ``name``, ``type``, and on-disk ``representation`` of the column.
         """
         self.schema = schema

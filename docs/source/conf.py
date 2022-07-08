@@ -17,9 +17,10 @@ sys.path.insert(0, os.path.abspath('../../prive'))
 
 # -- Project information -----------------------------------------------------
 
+# The authors are (temporarily) in alphabetical order.
 project = 'prive'
-copyright = '2022, James Jordon, Camila Rangel Smith, Florimond Houssiau, James Gedes, Callum Mole'
-author = 'James Jordon, Camila Rangel Smith, Florimond Houssiau, James Gedes, Callum Mole'
+copyright = '2022, Andrew Elliott, James Geddes, Florimond Houssiau, James Jordon, Callum Mole, Camila Rangel Smith'
+author = 'Andrew Elliott, James Geddes, Florimond Houssiau, James Jordon, Callum Mole, Camila Rangel Smith'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'

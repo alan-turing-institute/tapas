@@ -52,6 +52,8 @@ Contents
    installation
    quickstart
    dataset-schema
+   modelling-threats
+   implementing-attacks
 
 
 
