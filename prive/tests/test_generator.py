@@ -5,11 +5,9 @@ from warnings import filterwarnings
 
 import numpy as np
 import pandas as pd
-import pandas.testing as pdt 
+import pandas.testing as pdt
 
-# filterwarnings('ignore')
-
-import prive.datasets as datasets 
+import prive.datasets as datasets
 import prive.generators as generators
 
 
@@ -21,19 +19,19 @@ class TestGenerator(TestCase):
     def test_generate_raw(self):
         raw = generators.Raw()
         raw.fit(self.dataset)
-        ds = raw.generate(5, random_state = 0)
+        ds = raw.generate(5, random_state=0)
 
         ## A previously-saved dataset generated as above
         baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
 
-        pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
+        pdt.assert_frame_equal(ds.data.reset_index(drop=True), baseline_dataset.data)
 
     def test_generator_from_exe(self):
         exe = generators.GeneratorFromExecutable("bin/raw")
 
         ## The following is identical to test_generate_raw
         exe.fit(self.dataset)
-        ds = exe.generate(5) ## TODO: Figure out how to make reproducible call 
+        ds = exe.generate(5)  ## TODO: Figure out how to make reproducible call
         print(ds.data)
 
         ## A previously-saved dataset generated as above
@@ -44,8 +42,7 @@ class TestGenerator(TestCase):
             self.assertIn(row, self.dataset)
 
         # TODO: reproducible call should uncomment this
-        #pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
-       
+        # pdt.assert_frame_equal(ds.data.reset_index(drop = True), baseline_dataset.data)
 
 
 if __name__ == "__main__":

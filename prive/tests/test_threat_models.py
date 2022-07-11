@@ -4,9 +4,6 @@ from unittest import TestCase
 
 import pandas as pd
 
-import sys
-
-sys.path.append("../..")
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 from prive.threat_models import (
@@ -90,6 +87,6 @@ class TestAIA(TestCase):
         for ds, target_value in zip(datasets, labels):
             record = target_record.copy()
             record.set_value("c", target_value)
-            print(ds.data, '\n', target_record.data, target_value)
+            print(ds.data, "\n", target_record.data, target_value)
             self.assertEqual(record in ds, True)
             pass
