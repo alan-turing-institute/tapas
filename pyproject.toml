@@ -16,6 +16,7 @@ numpy = "^1.22.3"
 Sphinx = {version = "^4.5.0", optional = true}
 sphinx-rtd-theme = {version = "^1.0.0", optional = true}
 reprosyn = {git = "https://github.com/alan-turing-institute/reprosyn.git", branch="main"}
+tqdm = "^4.64.0"
 
 [tool.poetry.dev-dependencies]
 spyder-kernels = "^2.1.0"
