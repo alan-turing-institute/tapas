@@ -112,6 +112,7 @@ class TargetedMIA(LabelInferenceThreatModel):
         generate_pairs: bool = True,
         replace_target: bool = False,
         memorise_datasets: bool = True,
+        iterator_tracker: Callable[[list], Iterable] = None,
     ):
         LabelInferenceThreatModel.__init__(
             self,
@@ -120,5 +121,6 @@ class TargetedMIA(LabelInferenceThreatModel):
             ),
             attacker_knowledge_generator,
             memorise_datasets,
+            iterator_tracker=iterator_tracker,
         )
         self.target_record = target_record

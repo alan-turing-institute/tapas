@@ -4,11 +4,10 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from prive.report import MIAttackSummary
-from prive.utils.plots import metric_comparison_plots
+from .utils import metric_comparison_plots
 
 
 class Report(ABC):
-
     @abstractmethod
     def compare(self, output_path):
         """
@@ -24,7 +23,7 @@ class MIAttackReport(Report):
 
     """
 
-    def __init__(self, df, metrics):
+    def __init__(self, df, metrics=None):
         """
         Initialise MIAttackReport class.
 
@@ -52,11 +51,16 @@ class MIAttackReport(Report):
 
         """
         self.attacks_data = df
-        self.metrics = metrics
+        self.metrics = metrics or [
+            "accuracy",
+            "true_positive_rate",
+            "false_positive_rate",
+            "mia_advantage",
+            "privacy_gain",
+        ]
 
     @classmethod
-    def load_summary_statistics(cls, attacks,
-                                metrics=None):
+    def load_summary_statistics(cls, attacks, metrics=None):
         """
         Load attacks data, calculate summary statistics, merge into a single dataframe and initialise object.
 
@@ -89,8 +93,13 @@ class MIAttackReport(Report):
         """
 
         if metrics is None:
-            metrics = ["accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage",
-                       "privacy_gain"]
+            metrics = [
+                "accuracy",
+                "true_positive_rate",
+                "false_positive_rate",
+                "mia_advantage",
+                "privacy_gain",
+            ]
         df_list = []
 
         for attack in attacks:
@@ -132,10 +141,14 @@ class MIAttackReport(Report):
 
         """
 
-        metric_comparison_plots(data=self.attacks_data, comparison_label=comparison_column,
-                                fixed_pair_label=fixed_pair_columns,
-                                metrics=self.metrics, marker_label=marker_column,
-                                output_path=filepath)
+        metric_comparison_plots(
+            data=self.attacks_data,
+            comparison_label=comparison_column,
+            fixed_pair_label=fixed_pair_columns,
+            metrics=self.metrics,
+            marker_label=marker_column,
+            output_path=filepath,
+        )
 
         return None
 
@@ -155,18 +168,18 @@ class MIAttackReport(Report):
         """
 
         # compare generators and target ids for fixed dataset-atacks
-        self.compare('generator', ['dataset', 'attack'], 'target_id', filepath)
+        self.compare("generator", ["dataset", "attack"], "target_id", filepath)
 
         # compare attacks and target ids for fixed dataset-generators
-        self.compare('attack', ['dataset', 'generator'], 'target_id', filepath)
+        self.compare("attack", ["dataset", "generator"], "target_id", filepath)
 
         # compare datasets and target ids for fixed attacks-generators
-        self.compare('dataset', ['attack', 'generator'], 'target_id', filepath)
+        self.compare("dataset", ["attack", "generator"], "target_id", filepath)
 
         # compare targets and generators ids for fixed attacks-dataset
-        self.compare('target_id', ['dataset', 'attack'], 'generator', filepath)
+        self.compare("target_id", ["dataset", "attack"], "generator", filepath)
 
         # compare targets and attacks ids for fixed dataset-generators
-        self.compare('target_id', ['dataset', 'generator'], 'attack', filepath)
+        self.compare("target_id", ["dataset", "generator"], "attack", filepath)
 
-        print(f'All figures saved to directory {filepath}')
+        print(f"All figures saved to directory {filepath}")

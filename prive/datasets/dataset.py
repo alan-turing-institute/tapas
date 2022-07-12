@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from prive.datasets.data_description import DataDescription
-from prive.utils.data import index_split, get_dtype
+from .utils import encode_data, index_split, get_dtype
 
 # Helper function for parsing file-like objects
 def _parse_csv(fp, schema):
@@ -30,15 +30,17 @@ def _parse_csv(fp, schema):
         i: get_dtype(col["type"], col["representation"]) for i, col in enumerate(schema)
     }
 
-    data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None)
+    cnames = [col["name"] for col in schema]
+
+    data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None, names=cnames)
 
     ## Convert any date or datetime fields to datetime
     for c in [
-        i
-        for i, col in enumerate(schema)
+        col["name"]
+        for col in schema
         if col["representation"] == "date" or col["representation"] == "datetime"
     ]:
-        data[i] = pd.to_datetime(data[i])
+        data[c] = pd.to_datetime(data[c])
 
     description = DataDescription(schema)
     return TabularDataset(data, description)
@@ -277,7 +279,9 @@ class TabularDataset(Dataset):
 
         # TODO: what if the index is supposed to be a column? an identifier?
         if len(record_ids) == 1:
-            return TabularRecord(self.data.iloc[record_ids], self.description, record_ids[0])
+            return TabularRecord(
+                self.data.iloc[record_ids], self.description, record_ids[0]
+            )
         return TabularDataset(self.data.iloc[record_ids], self.description)
 
     def drop_records(self, record_ids=[], n=1, in_place=False):
@@ -432,6 +436,24 @@ class TabularDataset(Dataset):
 
         """
         return TabularDataset(self.data.copy(), self.description)
+
+    @property
+    def as_numeric(self):
+        """
+        Encodes this dataset as a np.array, where numeric values are kept as is
+        and categorical values are 1-hot encoded. This is only computed once
+        (for efficiency reasons), so beware of modifying TabularDataset after
+        using this property.
+
+        The columns are kept in the order of the description, with categorical
+        variables encoded over several contiguous columns.
+
+        Returns
+        -------
+        np.array
+
+        """
+        return encode_data(self)
 
     def __add__(self, other):
         """
