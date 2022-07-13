@@ -6,7 +6,7 @@ TO DO
 Python Interface
 ----------------
 
-For this example, we apply the Groundhog attack to the Census 1%
+For this example, we apply the `Groundhog attack <https://www.usenix.org/system/files/sec22summer_stadler.pdf>`_ to the Census 1%
 Teaching file of the England and Wales census and the simplest Raw
 generator.
 
@@ -128,7 +128,7 @@ We here select the first record, arbitrarily:
                        
 
 The remaining options inform how the attacker will be trained (e.g. do
-we generate pairs (D, D U {target}) to train the attack) for full
+we generate pairs (D, D U {target}) to train the attack). For full
 details please see the API documentation.
 
 Next step: initialise an attacker in this example, we just apply the
