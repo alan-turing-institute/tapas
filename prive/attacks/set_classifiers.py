@@ -269,9 +269,13 @@ class CorrSetFeature(SetFeature):
         removes symmetrical elements.
 
         """
-        corr_matrix = np.corrcoef(array)
+        corr_matrix = np.corrcoef(array.T)
+        # Remove redundant entries from the symmetrical matrix.
         above_diagonal = np.triu_indices(corr_matrix.shape[0], 1)
-        return corr_matrix[above_diagonal]
+        array = corr_matrix[above_diagonal]
+        # Fill in NaNs with 0.
+        array[np.isnan(array)] = 0
+        return array
 
     def extract(self, datasets: list[TabularDataset]) -> np.array:
         """

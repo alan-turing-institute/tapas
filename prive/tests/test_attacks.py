@@ -194,9 +194,16 @@ class TestSetFeatures(TestCase):
                 {"name": "b", "type": "finite", "representation": ["x", "y", "z"]},
             ]
         )
+        num_records = 100
         dataset = TabularDataset(
             pd.DataFrame(
-                [(0.1, "x"), (0.9, "y"), (0.7, "x"), (0.9, "z")], columns=["a", "b"]
+                zip(
+                    np.random.random(size=(num_records,)),
+                    np.random.choice(
+                        ["x", "y", "z"], size=(num_records,), replace=True
+                    ),
+                ),
+                columns=["a", "b"],
             ),
             data_description,
         )
@@ -233,12 +240,13 @@ class TestGroundHog:
     def test_groundhog_runs(self):
         """Test whether the Groundhog attack runs."""
         values = ["x", "y", "z"]
+        num_records = 1000
         total_dataset = TabularDataset(
             pd.DataFrame(
-                [
-                    (np.random.random(), values[np.random.randint(3)])
-                    for _ in range(100)
-                ],
+                zip(
+                    np.random.random(size=num_records),
+                    np.random.choice(values, size=num_records, replace=True),
+                ),
                 columns=["a", "b"],
             ),
             DataDescription(
@@ -250,10 +258,10 @@ class TestGroundHog:
         )
         mia = TargetedMIA(
             AuxiliaryDataKnowledge(
-                total_dataset, sample_real_frac=0.5, num_training_records=20
+                total_dataset, sample_real_frac=0.5, num_training_records=200
             ),
             total_dataset.sample(1),  # Random target.
-            BlackBoxKnowledge(Raw(), num_synthetic_records=10),
+            BlackBoxKnowledge(Raw(), num_synthetic_records=200),
         )
         attack = GroundhogAttack(
             FeatureBasedSetClassifier(
