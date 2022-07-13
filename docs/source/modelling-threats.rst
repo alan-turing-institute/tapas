@@ -84,22 +84,30 @@ This is represented by a ``prive.threat_models.AttackerKnowledgeOnGenerator``, t
 Attack goal
 -----------
 
-Membership Inference Attack: MIA
-Attribute Inference Attack: AIA
+Traditionally, privacy attacks attempt to *re-identify* a target record in the data.
+In synthetic data, this is impossible: records in the synthetic data are *not* linked 1-1 with real records.
+Attack models must thus detect different forms of leakages in the data.
 
-.. list-tables::
-    :widths: 20 80
+``PrivE`` implements two standard threat models, which have been applied to most types of data releases (e.g. aggregate statistics, machine learning models, synthetic data).
+
+.. list-table::
+    :widths: 15 20 65
     :header-rows: 1
 
     * - Class
+      - Type
       - Description
     * - ``TargetedMIA``
       - **Membership Inference Attack**
+      - The attacker attempts to infer whether the private dataset contains a *target* record :math:`x`.
     * - ``TargetedAIA``
       - **Attribute Inference Attack**
+      - The attacker attempts to infer the value of the *sensitive* attribute :math:`a` of a *target* record :math:`x` in the private dataset. The attacker is assumed to know that the record is in the dataset, and the value of all other attributes :math:`x_{-a}`.
 
+Both of these classes take the auxiliary knowledge on both the dataset and the mechanism as arguments to their constructors.
+Under the hood, they wrap the ``AttackerKnowledgeOnData`` objects to randomly append/modify the target record to produce (labelled) training datasets.
 
-Interfacing attacks and threat models
--------------------------------------
+Other attack models have been proposed in the literature, which will be implemented in future work:
 
-Attacks have restriction on threat model / dataset type
+- **Reconstruction attack**: the attacker attempts to produce a significant number of records from the private dataset.
+- **Uniqueness attack**: the attacker attempts to identify whether a *target* record :math:`x` is unique in the dataset.
