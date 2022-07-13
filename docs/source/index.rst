@@ -11,6 +11,11 @@ Welcome to prive's documentation!
 .. note::
    This project is under active development.
 
+   Thus, the API of each of the modules could change at any time.
+
+   We welcome contributions from other 
+
+
 This library is designed to be an extensible privacy toolbox which should be
 accessible to: 
 
