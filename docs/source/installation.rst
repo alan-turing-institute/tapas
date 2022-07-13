@@ -24,6 +24,7 @@ Then run
 from inside the project directory. This will create a virtual environment (default `.venv`), that can be accessed by running `poetry shell`, or in the usual way (with `source .venv/bin/activate`).
 
 Pip installation (includes command-line tool)
+---------------------------------------------
 
 It is also possible to install from pip:
 
