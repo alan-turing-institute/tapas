@@ -186,6 +186,22 @@ these attack_labels, truth_labels, And some metadata for nicer displays.
    metrics = attack_summary.get_metrics() 
    print(metrics)
 
-Command line Interface ----------------
+The resultant table then looks like this:
 
-TO DO
+=================== ==================================
+Column              Value
+=================== ==================================
+dataset             Census
+target_id           0
+generator           raw
+attack              FeatureBasedSetClassifierGroundhog
+accuracy            0.5285
+true_positive_rate  0.531284
+false_positive_rate 0.473829
+mia_advantage       0.057455
+privacy_gain        0.942545
+=================== ==================================
+
+Where we see that privacy gain is actually larger than we would expect, given
+that the generator does not protect privacy at all, to alleviate this we would need to 
+modify the statistics used in the attack. 
