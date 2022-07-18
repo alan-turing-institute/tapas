@@ -13,7 +13,7 @@ Welcome to prive's documentation!
 
    Thus, the API of each of the modules could change at any time.
 
-   We welcome contributions from other 
+   Finally, we welcome contributions to our package in any way. 
 
 
 This library is designed to be an extensible privacy toolbox which should be
@@ -44,16 +44,22 @@ interact with our package without having to develop in a python ecosystem.
 
 
 
-Contents
+API
 --------
+
 .. autosummary::
    :toctree: _autosummary
    :template: custom-module-template.rst
    :recursive:
 
+   prive
+
+Contents
+--------
 
 .. toctree::
-   index
+   :maxdepth: 1
+
    installation
    quickstart
    dataset-schema
