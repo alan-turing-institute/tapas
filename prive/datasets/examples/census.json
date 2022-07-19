@@ -1,10 +1,5 @@
 [
     {
-        "name": "Person ID",
-        "type": "countable",
-        "representation": "integer"
-    },
-    {
         "name": "Region",
         "type": "finite",
         "representation": ["E12000001", "E12000002", "E12000003", "E12000004", "E12000005",
