@@ -215,8 +215,7 @@ class TabularDataset(Dataset):
 
         """
         # Passing None to to_csv returns the csv as a string
-        # return self.data.to_csv(None, header=False, index=False)
-        return self.data.to_csv(None, index=False)
+        return self.data.to_csv(None, header=False, index=False)
 
     def write(self, filepath):
         """
