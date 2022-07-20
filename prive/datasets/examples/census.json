@@ -81,7 +81,7 @@
         "representation": ["-9", "4", "3", "2", "1"]
     },
     {
-        "name": "Approximate Social Grade",
+        "name": "Approximated Social Grade",
         "type": "finite",
         "representation": ["4", "3", "2", "-9", "1"]
     }
