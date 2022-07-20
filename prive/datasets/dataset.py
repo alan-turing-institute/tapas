@@ -6,6 +6,7 @@ import io
 import numpy as np
 import pandas as pd
 
+
 from prive.datasets.data_description import DataDescription
 from .utils import encode_data, index_split, get_dtype
 
@@ -32,8 +33,12 @@ def _parse_csv(fp, schema):
 
     cnames = [col["name"] for col in schema]
 
-    data = pd.read_csv(fp, header=None, dtype=dtypes, index_col=None, names=cnames)
 
+    data = pd.read_csv(fp, header=validate_header(fp, cnames), dtype=dtypes, index_col=None, names=cnames)
+    
+    ### see . 
+    
+    
     ## Convert any date or datetime fields to datetime
     for c in [
         col["name"]
@@ -45,6 +50,46 @@ def _parse_csv(fp, schema):
     description = DataDescription(schema)
     return TabularDataset(data, description)
 
+
+def validate_header(fp, cnames):
+    """
+    Helper function to toggle 'header' argument in pd.read_csv()
+    
+    Reads first row of data. 
+    
+    Raises exception is header exists and it does not match schema.
+    
+    
+
+    Parameters
+    ----------
+    fp: A file-type object
+    cnames: Column names from schema.
+
+    Returns
+    -------
+    an option for 'header' argument in pd.read_csv(). 
+    
+    0 if header exists and it matches cnames.
+    None is header does not exist. 
+
+    """
+    
+    row0 = pd.read_csv(fp, header=None, nrows=1) 
+    if all(row0.iloc[0].apply(lambda x: isinstance(x, str))):
+        # is a potential header row
+        if (row0.iloc[0] == cnames).all(): 
+            # is the same.
+            return 0
+        else:
+            # is a header row but invalid.
+            raise AssertionError(
+                "Data has header row that does not match schema"
+            )
+    else:
+        # is not a header row. 
+        return None
+        
 
 ## Classes
 ## -------
@@ -215,7 +260,7 @@ class TabularDataset(Dataset):
 
         """
         # Passing None to to_csv returns the csv as a string
-        return self.data.to_csv(None, header=False, index=False)
+        return self.data.to_csv(None, index=False)
 
     def write(self, filepath):
         """
@@ -232,7 +277,7 @@ class TabularDataset(Dataset):
             json.dump(self.description.schema, fp, indent=4)
 
         # TODO: Make sure this writes it exactly as needed
-        self.data.to_csv(filepath + ".csv", header=False, index=False)
+        self.data.to_csv(filepath + ".csv", index=False)
 
     def sample(self, n_samples=1, frac=None, random_state=None):
         """
