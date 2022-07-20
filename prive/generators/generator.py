@@ -2,10 +2,12 @@
 from abc import ABC, abstractmethod
 import shutil
 import os
+import json
 from io import StringIO
 import subprocess
 from subprocess import PIPE
 from prive.datasets import TabularDataset
+
 
 class Generator(ABC):
     """Base class for generators"""
@@ -77,6 +79,7 @@ class GeneratorFromExecutable(Generator):
         super().__init__()
 
     def fit(self, dataset):
+        assert isinstance(dataset, TabularDataset)
         self.dataset = dataset
         self.trained = True
 
@@ -87,6 +90,58 @@ class GeneratorFromExecutable(Generator):
             output = proc.communicate(input = input)[0].decode()
 
             return TabularDataset.read_from_string(output, self.dataset.description)
+        else:
+            raise RuntimeError("No dataset provided to generator")
+
+    def __call__(self, dataset, num_samples):
+        self.fit(dataset)
+        return self.generate(num_samples)
+
+class ReprosynGenerator(Generator):
+    """
+    A class which wraps an external executable as a generator. Currently supports
+    only tabular datasets.
+    """
+    def __init__(self, exe='rsyn', method='mst', config = {}):
+        """
+        Parameters
+        ----------
+        exe : The path to the executable as a string. defaults to rsyn
+        method : the reprosyn generator
+        config: dictionary stating method parameters. 
+        """
+        actual_exe = shutil.which(exe)
+        if actual_exe is not None:
+            self.exe = actual_exe
+        else: 
+            actual_exe = shutil.which(exe, path = os.getcwd())
+            if actual_exe is not None:
+                self.exe = actual_exe
+            else:
+                raise RuntimeError("Can't find user-supplied executable")
+        self.method = method
+        self.config = config
+        
+        super().__init__()
+
+    def fit(self, dataset):
+        assert isinstance(dataset, TabularDataset), 'dataset must be of class TabularDataset'
+        self.dataset = dataset
+        self.trained = True
+        
+    def get_default_config(self):
+        out = subprocess.run([self.exe, "--generateconfig", self.method], capture_output=True)
+        return json.load(StringIO(out.stdout.decode()))
+
+    def generate(self, num_samples):
+        if self.trained:
+            proc = subprocess.Popen([self.exe, "--size", f"{num_samples}", "--configstring", f"{json.dumps(self.config)}", self.method], stdin = PIPE, stdout = PIPE, stderr = PIPE)
+            input = bytes(self.dataset.write_to_string(), 'utf-8') 
+            
+            output = proc.communicate(input = input)
+            print('stderr: ', output[1])
+            
+            return TabularDataset.read_from_string(output[0].decode(), self.dataset.description)
         else:
             raise RuntimeError("No dataset provided to generator")
 
