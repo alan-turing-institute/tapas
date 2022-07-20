@@ -32,10 +32,10 @@ def _parse_csv(fp, schema):
     }
 
     cnames = [col["name"] for col in schema]
-
-
-    data = pd.read_csv(fp, header=validate_header(fp, cnames), dtype=dtypes, index_col=None, names=cnames)
     
+    data = pd.read_csv(fp, header=validate_header(io.StringIO(fp.getvalue()), cnames), dtype=dtypes, index_col=None, names=cnames)
+    
+
     ### see . 
     
     
@@ -75,7 +75,7 @@ def validate_header(fp, cnames):
 
     """
     
-    row0 = pd.read_csv(fp, header=None, nrows=1) 
+    row0 = pd.read_csv(fp, header=None, index_col=None, nrows=1) 
     if all(row0.iloc[0].apply(lambda x: isinstance(x, str))):
         # is a potential header row
         if (row0.iloc[0] == cnames).all(): 
@@ -83,8 +83,9 @@ def validate_header(fp, cnames):
             return 0
         else:
             # is a header row but invalid.
+            invalid=[{'data': r, 'schema': c} for r, c in zip(row0.iloc[0], cnames) if r != c]
             raise AssertionError(
-                "Data has header row that does not match schema"
+                f"Data has header row that does not match schema. Invalid matches:\n {invalid}"
             )
     else:
         # is not a header row. 
