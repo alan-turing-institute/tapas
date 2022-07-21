@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..datasets import Dataset, DataDescription, TabularDataset
     from ..threat_models import LabelInferenceThreatModel
-    from .set_classifiers import SetClassifier
     from sklearn.base import ClassifierMixin
 
 import numpy as np

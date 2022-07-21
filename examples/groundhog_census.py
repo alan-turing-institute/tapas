@@ -74,20 +74,7 @@ threat_model = prive.threat_models.TargetedMIA(
 
 # Next step: initialise an attacker. Here, we just apply the GroundHog attack
 # with standard parameters (from Stadler et al., 2022).
-attacker = prive.attacks.GroundhogAttack(
-    # The GroundhogAttack attacker is mostly a wrapper over a set classifier.
-    # We here use, as in Stadler et al., a feature-based set classifier, which
-    #  (1) computes a vector of (fixed) features of the set to classify.
-    #  (2) trains a vector-based classifier using these features.
-    prive.attacks.FeatureBasedSetClassifier(
-        # We use the F_naive, F_hist and F_corr fatures (from the paper).
-        prive.attacks.NaiveSetFeature()
-        + prive.attacks.HistSetFeature()
-        + prive.attacks.CorrSetFeature(),
-        # We use a random forest with 100 trees and default parameters.
-        RandomForestClassifier(n_estimators=100),
-    )
-)
+attacker = prive.attacks.GroundhogAttack()
 
 print("Training the attack...")
 # Having defined all the objects that we need, we can train the attack.

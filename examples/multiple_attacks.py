@@ -11,12 +11,13 @@ import prive.threat_models
 import prive.attacks
 import prive.report
 
-import pandas
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 # Load the data.
-data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File", label="Census")
+data = prive.datasets.TabularDataset.read(
+    "data/2011 Census Microdata Teaching File", label="Census"
+)
 
 # Create a dummy generator.
 generator = prive.generators.Raw()
@@ -38,29 +39,20 @@ threat_model = prive.threat_models.TargetedMIA(
     replace_target=True,
 )
 
-# We define a simple wrapper for groundhog, since it's otherwise a bit wordy.
-groundhog = lambda features, model, label: prive.attacks.GroundhogAttack(
-    prive.attacks.FeatureBasedSetClassifier(features, model), label=label
-)
+
 # We here create a range of attacks to test.
 attacks = [
-    groundhog(
-        prive.attacks.NaiveSetFeature(),
-        RandomForestClassifier(n_estimators=100),
-        "NaiveGroundhog",
+    prive.attacks.GroundhogAttack(
+        use_hist=False, use_corr=False, label="NaiveGroundhog"
     ),
-    groundhog(
-        prive.attacks.HistSetFeature(),
-        RandomForestClassifier(n_estimators=100),
-        "HistGroundhog",
+    prive.attacks.GroundhogAttack(
+        use_naive=False, use_corr=False, label="HistGroundhog"
     ),
-    groundhog(
-        prive.attacks.CorrSetFeature(),
-        RandomForestClassifier(n_estimators=100),
-        "CorrGroundhog",
+    prive.attacks.GroundhogAttack(
+        use_naive=False, use_hist=False, label="CorrGroundhog"
     ),
-    groundhog(
-        prive.attacks.CorrSetFeature(), LogisticRegression(), "LogisticGroundhog"
+    prive.attacks.GroundhogAttack(
+        model=LogisticRegression(), label="LogisticGroundhog"
     ),
     prive.attacks.ClosestDistanceAttack(fpr=0.1, label="Closest-Distance"),
 ]

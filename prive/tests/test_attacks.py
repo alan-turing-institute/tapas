@@ -263,14 +263,7 @@ class TestGroundHog:
             total_dataset.sample(1),  # Random target.
             BlackBoxKnowledge(Raw(), num_synthetic_records=200),
         )
-        attack = GroundhogAttack(
-            FeatureBasedSetClassifier(
-                NaiveSetFeature()
-                + HistSetFeature(num_bins=10, bounds=(0, 1))
-                + CorrSetFeature(),
-                LogisticRegression(),
-            )
-        )
+        attack = GroundhogAttack()
         attack.train(mia)
 
 

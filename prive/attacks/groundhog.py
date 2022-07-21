@@ -1,131 +1,72 @@
 """
-Parent class for launching a membership inference attack on the output of a 
-generative model.
+This file implements the Groundhog attack, as introduced in:
+    Stadler, T., Oprisanu, B. and Troncoso, C., 2021. Synthetic data–anonymisation
+    groundhog day. In 31st USENIX Security Symposium (USENIX Security 22).
+
+The Groundhog attack is a black-box attack based on shadow modelling that
+uses a combination of three set features (Naive, Hist and Corr) and a random
+forest as learner.
+
 """
-# Type checking stuff
-from __future__ import annotations
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ..datasets import Dataset
-    from .set_classifiers import SetClassifier
+from .shadow_modelling import ShadowModellingAttack
+from .set_classifiers import (
+    FeatureBasedSetClassifier,
+    NaiveSetFeature,
+    HistSetFeature,
+    CorrSetFeature,
+)
 
-# Real imports
-from abc import ABC, abstractmethod
-
-import numpy as np
-import pandas as pd
-
-from .base_classes import Attack
-from ..threat_models import LabelInferenceThreatModel
+from sklearn.ensemble import RandomForestClassifier
 
 
-class GroundhogAttack(Attack):
+class GroundhogAttack(ShadowModellingAttack):
     """
-    Implementation of Stadler et al. (2022) attack.
-
-    Parent class for membership inference attack on the output of a 
-    generative model using a classifier.
-
-    Attributes
-    ----------
-    classifier : SetClassifier
-        Instance of a SetClassifier that will be used as the classification
-        model for this attack.
-    trained : bool
-        Indicates whether or not the attack has been trained on some data.
+    The attack introduced by Stadler et al.
 
     """
 
-    def __init__(self, classifier: SetClassifier, label: str = None):
-        """
-        Initialise a Groundhog attack from a threat model and classifier.
-
-        Parameters
-        ----------
-        classifier : SetClassifier
-            SetClassifier to set for attack.
-        label: str (optional)
-            A label to reference this attack in reports.
-
-        """
-        self.classifier = classifier
-
-        self.trained = False
-
-        self._label = label or f"Groundhog({self.classifier.label})"
-
-    def train(
-        self, threat_model: LabelInferenceThreatModel = None, num_samples: int = 100,
+    def __init__(
+        self, use_naive=True, use_hist=True, use_corr=True, model=None, label=None
     ):
         """
-        Train the attack classifier on a labelled set of datasets. The datasets
-        will either be generated from threat_model or need to be provided.
-
         Parameters
         ----------
-        threat_model : ThreatModel
-            Threat model to use to generate training samples if synthetic_datasets
-            or labels are not given.
-        num_samples : int, optional
-            Number of datasets to generate using threat_model if
-            synthetic_datasets or labels are not given. The default is 100.
-
+        use_naive: bool (default True)
+            Whether to use F_naive as a feature.
+        use_hist: bool (default True)
+            Whether to use F_hist as a feature.
+        use_corr: bool (default True)
+            Whether to use F_corr as a feature.
+        model: sklearn.base.ClassifierMixin (default None)
+            If specified, the binary classifier to use for the attack. If None,
+            the default (random forest with 100 learners) is used.
+        label: str (default None)
+            An optional label to refer to the attack in reports.
         """
+        # Parse the selection of features.
+        features = None
+        if use_naive:
+            features = NaiveSetFeature()
+        if use_hist:
+            h = HistSetFeature()
+            features = h if features is None else features + h
+        if use_corr:
+            c = CorrSetFeature()
+            features = c if features is None else features + c
+        assert features is not None, "At least one feature must be specified."
 
-        assert isinstance(
-            threat_model, LabelInferenceThreatModel
-        ), "The Groundhog attack requires a label-inference threat model."
-
-        # Generate data from threat model if no data is provided
-        synthetic_datasets, labels = threat_model.generate_training_samples(num_samples)
-
-        # Fit the classifier to the data.
-        self.classifier.fit(synthetic_datasets, labels)
-        self.trained = True
-
-    def attack(self, datasets: list[Dataset]) -> list[int]:
-        """
-        Make a guess about the target's membership in the training data that was
-        used to produce each dataset in datasets.
-
-        Parameters
-        ----------
-        datasets : list[Dataset]
-            List of (synthetic) datasets to make a guess for.
-
-        Returns
-        -------
-        list[int]
-            Binary guesses for each dataset. A guess of 1 at index i indicates
-            that the attack believes that the target was present in dataset i.
-
-        """
-        assert self.trained, "Attack must first be trained."
-
-        return self.classifier.predict(datasets)
-
-    def attack_score(self, synT: list[Dataset]) -> list[float]:
-        """
-        Calculate classifier's raw probability about the presence of the target.
-        Output is a probability in [0, 1].
-
-        Parameters
-        ----------
-        synT : list[Dataset]
-            List of (synthetic) datasets to make a guess for.
-
-        Returns
-        -------
-        list[float]
-            List of probabilities corresponding to attacker's guess about the truth.
-
-        """
-        assert self.trained, "Attack must first be trained."
-
-        return self.classifier.predict_proba(datasets)
-
-    @property
-    def label(self):
-        return self._label
-    
+        ShadowModellingAttack.__init__(
+            self,
+            # The attack uses a feature-based set classifier, which first
+            # extracts fixed (non-trainable) features from the set, then
+            # fits a machine learning classifier from these features.
+            FeatureBasedSetClassifier(
+                # Use the default features: Naive, Hist and/or Corr.
+                features,
+                # If a classifier is specified, use it. Otherwise, use a random
+                # forest with 100 trees and default parameters.
+                model or RandomForestClassifier(n_estimators=100),
+            ),
+            label=label or "Groundhog",
+        )
