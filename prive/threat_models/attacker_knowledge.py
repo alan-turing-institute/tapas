@@ -173,7 +173,6 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
     @property
     def label(self):
         return self.dataset.label + " (AUX)"
-    
 
 
 class ExactDataKnowledge(AttackerKnowledgeOnData):
@@ -194,7 +193,6 @@ class ExactDataKnowledge(AttackerKnowledgeOnData):
     @property
     def label(self):
         return self.training_dataset.label + " (EXACT)"
-    
 
 
 class AttackerKnowledgeOnGenerator:
@@ -242,7 +240,6 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
     @property
     def label(self):
         return self.generator.label
-    
 
 
 # With the tools developed in this module, we can define a generic threat model

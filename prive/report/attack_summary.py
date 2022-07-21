@@ -1,12 +1,15 @@
 """
 Classes to summarise the output of an attack in terms of a range of metrics.
 
+AttackSummary are produced by ThreatModel.test calls, and typically contain all
+relevant outputs of the test. They provide an interface to access and interpret
+these outputs.
 
 """
 
-import os
 from abc import ABC, abstractmethod
 import numpy as np
+import os
 import pandas as pd
 
 

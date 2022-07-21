@@ -16,7 +16,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 # Load the data.
-data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File")
+data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File", label="Census")
 
 # Create a dummy generator.
 generator = prive.generators.Raw()
@@ -39,46 +39,40 @@ threat_model = prive.threat_models.TargetedMIA(
 )
 
 # We define a simple wrapper for groundhog, since it's otherwise a bit wordy.
-groundhog = lambda features, model: prive.attacks.GroundhogAttack(
-    prive.attacks.FeatureBasedSetClassifier(features, model)
+groundhog = lambda features, model, label: prive.attacks.GroundhogAttack(
+    prive.attacks.FeatureBasedSetClassifier(features, model), label=label
 )
 # We here create a range of attacks to test.
 attacks = [
     groundhog(
-        prive.attacks.NaiveSetFeature(), RandomForestClassifier(n_estimators=100)
+        prive.attacks.NaiveSetFeature(),
+        RandomForestClassifier(n_estimators=100),
+        "NaiveGroundhog",
     ),
-    groundhog(prive.attacks.HistSetFeature(), RandomForestClassifier(n_estimators=100)),
-    groundhog(prive.attacks.CorrSetFeature(), RandomForestClassifier(n_estimators=100)),
-    groundhog(prive.attacks.CorrSetFeature(), LogisticRegression()),
-    prive.attacks.ClosestDistanceAttack(fpr=0.1),
-]
-
-attack_names = [
-    "NaiveGroundhog",
-    "HistGroundhog",
-    "CorrGroundhog",
-    "LogisticGroundhog",
-    "Closest-Distance",
+    groundhog(
+        prive.attacks.HistSetFeature(),
+        RandomForestClassifier(n_estimators=100),
+        "HistGroundhog",
+    ),
+    groundhog(
+        prive.attacks.CorrSetFeature(),
+        RandomForestClassifier(n_estimators=100),
+        "CorrGroundhog",
+    ),
+    groundhog(
+        prive.attacks.CorrSetFeature(), LogisticRegression(), "LogisticGroundhog"
+    ),
+    prive.attacks.ClosestDistanceAttack(fpr=0.1, label="Closest-Distance"),
 ]
 
 # Train, evaluate, and summarise all attacks.
 summaries = []
-for attack, name in zip(attacks, attack_names):
-    print(f"Evaluating attack {name}...")
+for attack in attacks:
+    print(f"Evaluating attack {attack.label}...")
     attack.train(threat_model, num_samples=100)
-    attack_labels, truth_labels = threat_model.test(attack, num_samples=100)
-    summaries.append(
-        prive.report.MIAttackSummary(
-            attack_labels,
-            truth_labels,
-            generator_info="raw",
-            attack_info=name,
-            dataset_info="Census",
-            target_id="0",
-        ).get_metrics()
-    )
+    summaries.append(threat_model.test(attack, num_samples=100))
 
 # Finally, group together the summaries as a report.
 print("Publishing a report.")
-report = prive.report.MIAttackReport(pandas.concat(summaries))
+report = prive.report.MIAttackReport(summaries)
 report.create_report("multiple_attacks_raw")

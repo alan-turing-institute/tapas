@@ -137,6 +137,7 @@ class FeatureBasedSetClassifier(SetClassifier):
         """
         self.features = features
         self.classifier = classifier
+        self._label = label or f"Classifier({self.features.label}, {str(self.classifier)})"
 
     def fit(self, datasets: list[Dataset], labels: list[int]):
         self.classifier.fit(self.features(datasets), labels)
@@ -149,7 +150,7 @@ class FeatureBasedSetClassifier(SetClassifier):
 
     @property
     def label(self):
-        return f"Classifier({self.features.label}, {str(self.classifier)})"
+        return self._label
 
 
 ## We here propose a few possible SetFeature that can be used for attacks.
