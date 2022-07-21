@@ -16,9 +16,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..attacks import Attack  # for typing
-    from ..datasets import Dataset  # for typing
-    from ..generators import Generator  # for typing
+    from ..attacks import Attack
+    from ..datasets import Dataset
+    from ..generators import Generator
     from collections.abc import Iterable
 
 from abc import ABC, abstractmethod
@@ -47,6 +47,14 @@ class AttackerKnowledgeOnData:
 
         """
         abstract
+
+    @property
+    def label(self):
+        """
+        A string to represent this knowledge.
+
+        """
+        return self._label
 
 
 class AttackerKnowledgeWithLabel(AttackerKnowledgeOnData):
@@ -162,6 +170,11 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
         # Split the data into subsets.
         return dataset.create_subsets(num_samples, self.num_training_records)
 
+    @property
+    def label(self):
+        return self.dataset.label + " (AUX)"
+    
+
 
 class ExactDataKnowledge(AttackerKnowledgeOnData):
     """
@@ -177,6 +190,11 @@ class ExactDataKnowledge(AttackerKnowledgeOnData):
         self, num_samples: int, training: bool = True
     ) -> list[Dataset]:
         return [self.training_dataset] * num_samples
+
+    @property
+    def label(self):
+        return self.training_dataset.label + " (EXACT)"
+    
 
 
 class AttackerKnowledgeOnGenerator:
@@ -197,6 +215,14 @@ class AttackerKnowledgeOnGenerator:
     def __call__(self, training_dataset: Dataset):
         return self.generate(training_dataset)
 
+    @property
+    def label(self):
+        """
+        A string to represent this knowledge.
+
+        """
+        return self._label
+
 
 class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
     """
@@ -212,6 +238,11 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
 
     def generate(self, training_dataset: Dataset):
         return self.generator(training_dataset, self.num_synthetic_records)
+
+    @property
+    def label(self):
+        return self.generator.label
+    
 
 
 # With the tools developed in this module, we can define a generic threat model

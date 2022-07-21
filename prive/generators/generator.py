@@ -29,6 +29,14 @@ class Generator(ABC):
         pass
         #return self.generate(*args, **kwargs)
 
+    @property
+    def label(self):
+        return "Unnamed Generator"
+
+    def __str__(self):
+        return self.label
+    
+
 
 # We can implement some generators that extend this file.
 
@@ -53,6 +61,10 @@ class Raw(Generator):
         self.fit(dataset)
         return self.generate(num_samples, random_state = random_state)
 
+    @property
+    def label(self):
+        return "Raw"
+
 
 # And importantly, import generators from disk executables.
 
@@ -61,7 +73,7 @@ class GeneratorFromExecutable(Generator):
     A class which wraps an external executable as a generator. Currently supports
     only tabular datasets.
     """
-    def __init__(self, exe):
+    def __init__(self, exe, label = None):
         """
         Parameters
         ----------
@@ -76,6 +88,7 @@ class GeneratorFromExecutable(Generator):
                 self.exe = actual_exe
             else:
                 raise RuntimeError("Can't find user-supplied executable")
+        self._label = label or exe
         super().__init__()
 
     def fit(self, dataset):
@@ -97,18 +110,25 @@ class GeneratorFromExecutable(Generator):
         self.fit(dataset)
         return self.generate(num_samples)
 
+    @property
+    def label(self):
+        return self._label
+    
+
 class ReprosynGenerator(Generator):
     """
     A class which wraps an external executable as a generator. Currently supports
     only tabular datasets.
     """
-    def __init__(self, exe='rsyn', method='mst', config = {}):
+    def __init__(self, exe='rsyn', method='mst', config = {}, verbose=True, label = None):
         """
         Parameters
         ----------
         exe : The path to the executable as a string. defaults to rsyn
         method : the reprosyn generator
         config: dictionary stating method parameters. 
+        verbose: whether to display the stderr from reprosyn.
+        label: string to represent this generator in reports.
         """
         actual_exe = shutil.which(exe)
         if actual_exe is not None:
@@ -121,6 +141,9 @@ class ReprosynGenerator(Generator):
                 raise RuntimeError("Can't find user-supplied executable")
         self.method = method
         self.config = config
+        self.verbose = verbose
+
+        self._label = label or method
         
         super().__init__()
 
@@ -139,7 +162,8 @@ class ReprosynGenerator(Generator):
             input = bytes(self.dataset.write_to_string(), 'utf-8') 
             
             output = proc.communicate(input = input)
-            print('stderr: ', output[1])
+            if self.verbose:
+                print('stderr: ', output[1])
             
             return TabularDataset.read_from_string(output[0].decode(), self.dataset.description)
         else:
@@ -148,3 +172,7 @@ class ReprosynGenerator(Generator):
     def __call__(self, dataset, num_samples):
         self.fit(dataset)
         return self.generate(num_samples)
+
+    @property
+    def label(self):
+        return self._label

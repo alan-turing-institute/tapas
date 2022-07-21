@@ -6,14 +6,13 @@ record in the training dataset from the synthetic dataset observed.
 
 """
 
-# Type checking stuff
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..attacks import Attack  # for typing
-    from ..datasets import Dataset  # for typing
-    from ..generators import Generator  # for typing
+    from ..attacks import Attack
+    from ..datasets import Dataset
+    from ..generators import Generator
 
 from .base_classes import ThreatModel, TrainableThreatModel
 from .attacker_knowledge import (
@@ -22,6 +21,8 @@ from .attacker_knowledge import (
     AttackerKnowledgeWithLabel,
     LabelInferenceThreatModel,
 )
+
+from ..report import MIAttackSummary
 
 import numpy as np
 
@@ -96,6 +97,11 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         ]
         return app_datasets, labels
 
+    @property
+    def label(self):
+        return self.attacker_knowledge.label
+    
+
 
 class TargetedMIA(LabelInferenceThreatModel):
     """
@@ -124,3 +130,24 @@ class TargetedMIA(LabelInferenceThreatModel):
             iterator_tracker=iterator_tracker,
         )
         self.target_record = target_record
+
+    # Wrap the test method to output a MIAttackSummary.
+    def test(
+        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False,
+    ) -> MIAttackSummary:
+        """
+        see prive.threat_models.LabelInferenceThreatModel.test for more information.
+        """
+        # Run the test method from LabelInferenceThreatModel, unchanged.
+        pred_labels, truth_labels = LabelInferenceThreatModel.test(
+            self, attack, num_samples, ignore_memory
+        )
+        # Post-process this as a MIAttackSummary.
+        return MIAttackSummary(
+            pred_labels,
+            truth_labels,
+            generator_info = self.atk_know_gen.label,
+            attack_info = attack.label,
+            dataset_info = self.atk_know_data.label,
+            target_id = self.target_record.label,
+        )

@@ -11,7 +11,7 @@ from prive.datasets.data_description import DataDescription
 from .utils import encode_data, index_split, get_dtype
 
 # Helper function for parsing file-like objects
-def _parse_csv(fp, schema):
+def _parse_csv(fp, schema, label=None):
     """
     Parse fp into a TabularDataset using schema
 
@@ -19,6 +19,7 @@ def _parse_csv(fp, schema):
     ----------
     fp: A file-type object
     schema: A json schema
+    label: a name to represent this dataset (optional)
 
     Returns
     -------
@@ -26,20 +27,16 @@ def _parse_csv(fp, schema):
 
     """
     ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
-    ## then convert them
+    ## then convert them.
     dtypes = {
         i: get_dtype(col["type"], col["representation"]) for i, col in enumerate(schema)
     }
 
     cnames = [col["name"] for col in schema]
     
-    data = pd.read_csv(fp, header=validate_header(fp, cnames), dtype=dtypes, index_col=None, names=cnames)
+    data = pd.read_csv(fp, header=validate_header(fp, cnames), dtype=dtypes, index_col=None, names=cnames)    
     
-
-    ### see . 
-    
-    
-    ## Convert any date or datetime fields to datetime
+    ## Convert any date or datetime fields to datetime.
     for c in [
         col["name"]
         for col in schema
@@ -47,7 +44,7 @@ def _parse_csv(fp, schema):
     ]:
         data[c] = pd.to_datetime(data[c])
 
-    description = DataDescription(schema)
+    description = DataDescription(schema, label=label)
     return TabularDataset(data, description)
 
 
@@ -198,6 +195,11 @@ class Dataset(ABC):
         """
         pass
 
+    @property
+    def label(self):
+        return "Unnamed dataset"
+    
+
 
 class TabularDataset(Dataset):
     """
@@ -211,8 +213,8 @@ class TabularDataset(Dataset):
         Parameters
         ----------
         data: pandas.DataFrame
-
         description: prive.datasets.data_description.DataDescription
+        label: str (optional)
         """
         self.data = data
         
@@ -226,17 +228,16 @@ class TabularDataset(Dataset):
         ----------
         data: str
           The csv version of the data
-
         description: DataDescription
 
         Returns
         -------
         TabularDataset
         """
-        return _parse_csv(io.StringIO(data), description.schema)
+        return _parse_csv(io.StringIO(data), description.schema, description.label)
 
     @classmethod
-    def read(cls, filepath):
+    def read(cls, filepath, label = None):
         """
         Read csv and json files for dataframe and schema respectively.
 
@@ -245,6 +246,8 @@ class TabularDataset(Dataset):
         filepath: str
             Full path to the csv and json, excluding the ``.csv`` or ``.json`` extension.
             Both files should have the same root name.
+        label: str or None
+            An optional string to represent this dataset.
 
         Returns
         -------
@@ -255,7 +258,7 @@ class TabularDataset(Dataset):
         with open(f"{filepath}.json") as f:
             schema = json.load(f)
 
-        return _parse_csv(f"{filepath}.csv", schema)
+        return _parse_csv(f"{filepath}.csv", schema, label or filepath)
 
     def write_to_string(self):
         """
@@ -588,6 +591,11 @@ class TabularDataset(Dataset):
 
         return (self.data == item.data.iloc[0]).all(axis=1).any()
 
+    @property
+    def label(self):
+        return self.description.label
+    
+
 
 class TabularRecord(TabularDataset):
     """
@@ -702,3 +710,13 @@ class TabularRecord(TabularDataset):
 
         """
         return TabularRecord(self.data.copy(), self.description, self.id)
+
+    @property
+    def label(self):
+        """
+        The label for records is their identifier. We assume here that the label
+        of the rest of the dataset is obvious from context. If not, it can be
+        retrived as self.description.label.
+
+        """
+        return str(self.id)

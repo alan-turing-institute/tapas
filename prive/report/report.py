@@ -1,4 +1,8 @@
-"""Classes to report summary of attacks"""
+"""
+Classes to produce reports summarising the success of attacks.
+
+"""
+
 from abc import ABC, abstractmethod
 
 import pandas as pd

@@ -37,7 +37,7 @@ class GroundhogAttack(Attack):
 
     """
 
-    def __init__(self, classifier: SetClassifier):
+    def __init__(self, classifier: SetClassifier, label: str = None):
         """
         Initialise a Groundhog attack from a threat model and classifier.
 
@@ -45,13 +45,15 @@ class GroundhogAttack(Attack):
         ----------
         classifier : SetClassifier
             SetClassifier to set for attack.
+        label: str (optional)
+            A label to reference this attack in reports.
 
         """
         self.classifier = classifier
 
         self.trained = False
 
-        self.__name__ = f"{self.classifier.__class__.__name__}Groundhog"
+        self._label = label or f"Groundhog({self.classifier.label})"
 
     def train(
         self, threat_model: LabelInferenceThreatModel = None, num_samples: int = 100,
@@ -119,7 +121,11 @@ class GroundhogAttack(Attack):
             List of probabilities corresponding to attacker's guess about the truth.
 
         """
-        # None of this will work
         assert self.trained, "Attack must first be trained."
 
         return self.classifier.predict_proba(datasets)
+
+    @property
+    def label(self):
+        return self._label
+    

@@ -3,10 +3,11 @@
 # Imports for type annotations.
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from ..datasets import Dataset, DataDescription
-    from ..threat_models import ThreatModel # for typing
+    from ..threat_models import ThreatModel  # for typing
 
 import numpy as np
 from sklearn.metrics import roc_curve
@@ -26,9 +27,14 @@ class ClosestDistanceAttack(Attack):
 
     """
 
-    def __init__(self, distance_function: Callable[[Dataset,Dataset], float] = None,
-                 threshold: float = None, fpr: float = None, tpr: float = None,
-                 metric_name='default'):
+    def __init__(
+        self,
+        distance_function: Callable[[Dataset, Dataset], float] = None,
+        threshold: float = None,
+        fpr: float = None,
+        tpr: float = None,
+        label: str = None,
+    ):
         """
         Create the attack with chosen parameters.
 
@@ -39,7 +45,7 @@ class ClosestDistanceAttack(Attack):
         threshold: decision threshold for the classifier. If lest None (default),
             the threshold is learned from training data.
         fpr/tpr: the target false/true positive rate for the threshold selection.
-        metric_name (optional): name of the distance metric used.
+        label (optional): name of this attack, for reporting.
 
         Exactly one of threshold, fpr or tpr must be not None.
 
@@ -48,19 +54,21 @@ class ClosestDistanceAttack(Attack):
         # Check that at least one of threshold, tpr and fpr is set.
         self.threshold = threshold
         self.fpr, self.tpr = fpr, tpr
-        assert ((fpr is None) + (tpr is None) + (threshold is None)) == 2,\
-            'Exactly one of threshold, fpr or tpr must be specified.'
+        assert (
+            (fpr is None) + (tpr is None) + (threshold is None)
+        ) == 2, "Exactly one of threshold, fpr or tpr must be specified."
 
         self.trained = False
 
-        self.__name__ = f'ClosestDistance({metric_name}, '
-        if fpr is not None:
-            self.__name__ += f'fpr={self.fpr:.2f})'
-        elif tpr is not None:
-            self.__name__ += f'tpr={self.tpr:.2f})'
-        else:
-            self.__name__ += f'threshold={self.threshold})'
-
+        self._label = label
+        if label is None:
+            self._label = f"ClosestDistance({str(distance_function)}, "
+            if fpr is not None:
+                self._label += f"fpr={self.fpr:.2f})"
+            elif tpr is not None:
+                self._label += f"tpr={self.tpr:.2f})"
+            else:
+                self._label += f"threshold={self.threshold})"
 
     def train(self, threat_model: TargetedMIA, num_samples: int = 5):
         """
@@ -76,26 +84,30 @@ class ClosestDistanceAttack(Attack):
         num_samples: number of training  datasets to generate (default: 100).
 
         """
-        assert isinstance(threat_model, TargetedMIA), \
-             "Incompatible attack model: needs targeted MIA."
+        assert isinstance(
+            threat_model, TargetedMIA
+        ), "Incompatible attack model: needs targeted MIA."
         self.threat_model = threat_model
         self.target_record = self.threat_model.target_record
         if self.threshold is not None:
             self.trained = True
             return  # No training required.
         # If the threshold is not specified, train to get the desired tpr or fpr.
-        synthetic_datasets, labels = self.threat_model.generate_training_samples(num_samples)
+        synthetic_datasets, labels = self.threat_model.generate_training_samples(
+            num_samples
+        )
         # Compute the roc curve with - threshold, since the decision we use is
         #  score <= threshold, but roc_curve uses score >= threshold.
-        fpr_all, tpr_all, thresholds = roc_curve(labels, - self.attack_score(synthetic_datasets))
+        fpr_all, tpr_all, thresholds = roc_curve(
+            labels, -self.attack_score(synthetic_datasets)
+        )
         # Select the threshold such that the fpr (or tpr) is closest to target.
         if self.fpr is not None:
             index = np.argmin(np.abs(fpr_all - self.fpr))
         else:
             index = np.argmin(np.abs(tpr_all - self.tpr))
-        self.threshold = - thresholds[index]
+        self.threshold = -thresholds[index]
         self.trained = True
-
 
     def attack_score(self, datasets: list[Dataset]):
         """
@@ -116,10 +128,11 @@ class ClosestDistanceAttack(Attack):
         scores = []
         for ds in datasets:
             # Use the __iter__ function of Dataset to iterate over records.
-            distances = [self.distance_function(record, self.target_record) for record in ds]
+            distances = [
+                self.distance_function(record, self.target_record) for record in ds
+            ]
             scores.append(np.min(distances))
         return np.array(scores)
-
 
     def attack(self, datasets: list[Dataset]):
         """
@@ -140,10 +153,9 @@ class ClosestDistanceAttack(Attack):
 
         """
         if not self.trained:
-            raise Exception('Please train this attack.')
+            raise Exception("Please train this attack.")
         attack_scores = self.attack_score(datasets)
         return attack_scores <= self.threshold
-
 
     def _default_distance(self, x: Dataset, y: Dataset):
         """
@@ -160,3 +172,7 @@ class ClosestDistanceAttack(Attack):
         """
         # TODO: check the dataset description.
         return (x.data.values != y.data.values).mean()
+
+    @property
+    def label(self):
+        return self._label

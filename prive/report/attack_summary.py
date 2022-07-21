@@ -1,4 +1,9 @@
-"""Classes to summarise an attack"""
+"""
+Classes to summarise the output of an attack in terms of a range of metrics.
+
+
+"""
+
 import os
 from abc import ABC, abstractmethod
 import numpy as np

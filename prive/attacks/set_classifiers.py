@@ -13,7 +13,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 
-
 class SetClassifier(ABC):
     """
     Abstract base class for classifiers over set-valued data.
@@ -44,6 +43,10 @@ class SetClassifier(ABC):
     # Map __call__ to predict.
     def __call__(self, *args, **kwargs):
         return self.predict(*args, **kwargs)
+
+    @property
+    def label(self):
+        return "Unknown classifier"
 
 
 ## Typical setup: first, features are extracted from the dataset, then a
@@ -78,20 +81,6 @@ class SetFeature(ABC):
                 Each row is a dataset, and each column a different feature.
         """
 
-    # This only applies to tabular datasets, which have a DataDescription.
-    # @abstractmethod
-    # def size(self, data_description: DataDescription) -> int:
-    #     """
-    #     Compute the number of features extracted by this FeatureSet.
-
-    #     Parameters
-    #     ----------
-    #     data_description: DataDescription
-    #         Description of the dataset whose features will be computed.
-
-    #     """
-    #     return 0
-
     # Map __call__ to get_representation.
     def __call__(self, *args, **kwargs):
         return self.extract(*args, **kwargs)
@@ -100,6 +89,10 @@ class SetFeature(ABC):
     # addition operator (overloaded).
     def __add__(self, set_feature_2):
         return CombinedSetFeatures(self, set_feature_2)
+
+    @property
+    def label(self):
+        return "Unknown SetFeature"
 
 
 class CombinedSetFeatures(SetFeature):
@@ -115,8 +108,9 @@ class CombinedSetFeatures(SetFeature):
     def extract(self, dataset: Dataset) -> np.array:
         return np.concatenate([f.extract(dataset) for f in self.features], axis=1)
 
-    # def size(self, data_description: DataDescription) -> int:
-    #     return sum([f.size(data_description) for f in self.features])
+    @property
+    def label(self):
+        return "+".join([f.label for f in self.features])
 
 
 class FeatureBasedSetClassifier(SetClassifier):
@@ -126,16 +120,20 @@ class FeatureBasedSetClassifier(SetClassifier):
 
     """
 
-    def __init__(self, features: SetFeature, classifier: ClassifierMixin):
+    def __init__(
+        self, features: SetFeature, classifier: ClassifierMixin, label: str = None
+    ):
         """
         Parameters
         ----------
         features: SetFeature
             A static (non-trainable) SetFeature object that is used to
             extract features from a dataset.
-        classifiers: sklearn.base.ClassifierMixin
+        classifier: sklearn.base.ClassifierMixin
             A (sklearn) classifier trained to predict a label based on
             the features extracted from an input dataset.
+        label: str (optional)
+            Label to represent this classifier in reports.
         """
         self.features = features
         self.classifier = classifier
@@ -148,6 +146,10 @@ class FeatureBasedSetClassifier(SetClassifier):
 
     def predict_proba(self, datasets: list[Dataset]):
         return self.classifier.predict_proba(self.features(datasets))
+
+    @property
+    def label(self):
+        return f"Classifier({self.features.label}, {str(self.classifier)})"
 
 
 ## We here propose a few possible SetFeature that can be used for attacks.
@@ -181,8 +183,9 @@ class NaiveSetFeature(SetFeature):
             ]
         )
 
-    # def size(self, data_description: DataDescription) -> int:
-    #     return data_description.encoded_dim
+    @property
+    def label(self):
+        return "F_Naive"
 
 
 class HistSetFeature(SetFeature):
@@ -255,6 +258,10 @@ class HistSetFeature(SetFeature):
 
         return np.concatenate(features, axis=1)
 
+    @property
+    def label(self):
+        return f"F_Hist({self.num_bins})"
+
 
 class CorrSetFeature(SetFeature):
     """
@@ -285,3 +292,7 @@ class CorrSetFeature(SetFeature):
         """
         np_data = [dataset.as_numeric for dataset in datasets]
         return np.stack([self._corr(dataset.as_numeric) for dataset in datasets])
+
+    @property
+    def label(self):
+        return "F_Corr"
