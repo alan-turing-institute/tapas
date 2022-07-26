@@ -2,6 +2,7 @@
 
 from unittest import TestCase
 
+import numpy as np
 import pandas as pd
 
 from prive.datasets import TabularDataset, TabularRecord
@@ -33,7 +34,7 @@ target_record = dataset.get_records([4])
 dataset = dataset.drop_records([4])
 
 knowledge_on_data = AuxiliaryDataKnowledge(
-    dataset, sample_real_frac=0.5, num_training_records=2
+    dataset, auxiliary_split=0.5, num_training_records=2
 )
 knowledge_on_sdg = BlackBoxKnowledge(Raw(), num_synthetic_records=None)
 
@@ -89,3 +90,34 @@ class TestAIA(TestCase):
             record.set_value("c", target_value)
             print(ds.data, "\n", target_record.data, target_value)
             self.assertEqual(record in ds, True)
+
+
+class TestAttackerKnowledge(TestCase):
+    """Test the attacker knowledge."""
+
+    def test_auxiliary_dataset(self):
+        gen_data = lambda size: TabularDataset(
+            pd.DataFrame(
+                np.random.randint(10, size=(size, 3)), columns=["a", "b", "c"]
+            ),
+            dummy_data_description,
+        )
+        # Check that the auxiliary and test datasets have appropriate size.
+        for aux_size, test_size, split, full_size in [
+            (20, 20, 0.5, 1000),
+            (0, 0, 0.1, 100),
+            (117, 39, 0.8, None),
+        ]:
+            dataset = gen_data(full_size) if full_size is not None else None
+            threat_model = AuxiliaryDataKnowledge(
+                dataset=dataset,
+                auxiliary_split=split,
+                aux_data=gen_data(aux_size) if aux_size > 0 else None,
+                test_data=gen_data(test_size) if test_size > 0 else None,
+            )
+            # Compute the contribution of the full dataset to auxiliary and test data.
+            aux_split_size = int(split * full_size) if full_size is not None else 0
+            test_split_size = full_size - aux_split_size if full_size is not None else 0
+            # Check that sizes are as expected.
+            self.assertEqual(len(threat_model.aux_data), aux_size + aux_split_size)
+            self.assertEqual(len(threat_model.test_data), test_size + test_split_size)

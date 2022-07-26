@@ -38,7 +38,7 @@ data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
     # The attacker has access to 50% of the data as auxiliary information.
     # This information will be used to generate training datasets.
     data,
-    sample_real_frac=0.5,
+    auxiliary_split=0.5,
     # The attacker knows that the real dataset contains 5000 samples. This thus
     # reflects the attacker's knowledge about the real data.
     num_training_records=5000,

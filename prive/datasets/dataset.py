@@ -434,10 +434,10 @@ class TabularDataset(Dataset):
 
         return reduced_dataset.add_records(records_in)
 
-    def create_subsets(self, n, sample_size):
+    def create_subsets(self, n, sample_size, drop_records=False):
         """
-        Create a number of training datasets (sub-samples from main dataset)
-        of a given sample size  with and without target records.
+        Create a number n of subsets of this dataset of size sample_size without
+        replacement. If needed, the records can be dropped from this dataset.
 
         Parameters
         ----------
@@ -445,6 +445,8 @@ class TabularDataset(Dataset):
             Number of datasets to create.
         sample_size : int
             Size of the subset datasets to be created.
+        drop_records: bool
+            Whether to remove the records sampled from this dataset (in place).
 
         Returns
         -------
@@ -456,11 +458,16 @@ class TabularDataset(Dataset):
             self
         ), f"Cannot create subsets larger than original dataset, sample_size max: {len(self)} got {sample_size}"
 
-        # create splits
+        # Create splits.
         splits = index_split(self.data.shape[0], sample_size, n)
 
-        # list of TabularDataset without target record(s)
+        # Returns a list of TabularDataset subsampled from this dataset.
         subsamples = [self.get_records(train_index) for train_index in splits]
+
+        # If required, remove the indices from the dataset.
+        if drop_records:
+            for train_index in splits:
+                self.drop_records(train_index, in_place=True)
 
         return subsamples
 

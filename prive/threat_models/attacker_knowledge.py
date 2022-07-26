@@ -88,59 +88,79 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
 
     def __init__(
         self,
-        dataset: Dataset,
+        dataset: Dataset = None,
+        auxiliary_split: float = 0.5,
         aux_data: Dataset = None,
-        sample_real_frac: float = 0.0,
+        test_data: Dataset = None,
         num_training_records: int = 1000,
     ):
         """
-        Initialise threat model with a given dataset. This dataset is either
-        split between auxiliary and test (if sample_real_frac>0), or is treated
-        as test dataset (if aux_data is not None). 
+        Initialise this threat model with a given dataset. This threat model
+        requires an auxiliary dataset available to the attacker, and a test
+        dataset to evaluate attacks. These can either be specified by giving
+        a dataset (`dataset`) to split between the two, with a fraction of
+        `auxiliary_split` giving the relative size of the auxiliary dataset;
+        and/or by explicitly specifying aux_data and test_data. If both are
+        given together, the resulting auxiliary/test datasets are obtained by
+        concatenating the other two.
 
         Parameters
         ----------
-        dataset : Dataset
-            Real dataset to use to generate test synthetic datasets from.
+        dataset : Dataset (None)
+            Dataset to split between test and auxiliary data.
+        auxiliary_split: float in [0,1], optional.
+            Fraction of `dataset` to use as auxiliary dataset. The rest of the
+            dataset is used as test dataset.
         aux_data : Dataset, optional
             Dataset that the adversary is assumed to have access to. This or
-            sample_real_frac must be provided. The default is None.
-        sample_real_frac : float, optional
-            Fraction of real data to sample and assume adversary has access to.
-            Must be in [0, 1]. This must be > 0 or aux_data provided.
-            The default is 0.
-        num_training_records : int, optional
+            auxiliary_split must be provided. The default is None.
+        test_data: Dataset, optional
+            Dataset used to generate test datasets to evaluate the attack. The
+            default is None.
+        num_training_records : int, optional (default 1000).
             Number of training records to use to train each copy of shadow_model,
             when generating synthetic training datasets for the attack.
             The default is 1000.
         """
         assert (aux_data is not None) or (
-            sample_real_frac != 0.0
-        ), "At least one of aux_data or sample_real_frac must be given"
+            auxiliary_split > 0.0 and dataset is not None
+        ), "No auxiliary data given."
+        assert (test_data is not None) or (
+            auxiliary_split < 1 and dataset is not None
+        ), "No test data given."
         assert (
-            0 <= sample_real_frac <= 1
+            0 <= auxiliary_split <= 1
         ), f"sample_real_frac must be in [0, 1], got {sample_real_frac}"
-        if aux_data:
-            assert (
-                aux_data.description == dataset.description
-            ), "aux_data does not match the description of dataset"
+        # Check that the descriptions match for all pairs of two datasets.
+        for d1, d2 in [
+            (dataset, aux_data),
+            (dataset, test_data),
+            (aux_data, test_data),
+        ]:
+            if d1 is not None and d2 is not None:
+                assert (
+                    d1.description == d2.description
+                ), "Dataset descriptions do not match"
 
-        self.dataset = dataset
+        # If provided, split the dataset.
+        if dataset is not None:
+            aux_size = int(auxiliary_split * len(dataset))
+            self.test_data = dataset.copy()
+            self.aux_data = self.test_data.create_subsets(
+                n=1, sample_size=aux_size, drop_records=True
+            ) [0]
+            # Add other specified datasets, if any.
+            if aux_data is not None:
+                self.aux_data = self.aux_data + aux_data
+            if test_data is not None:
+                self.test_data = self.test_data + test_data
+
+        # Otherwise, just use the datasets specified by the users.
+        else:
+            self.aux_data = aux_data
+            self.test_data = test_data
+
         self.num_training_records = num_training_records
-
-        # Define the attacker's knowledge.
-        self._adv_data = {
-            "aux": (aux_data or self.dataset.empty()),
-            "real": self.dataset.sample(frac=sample_real_frac),
-        }
-
-    @property
-    def adv_data(self):
-        """
-        Dataset: The data the adversary has access to.
-
-        """
-        return self._adv_data["aux"] + self._adv_data["real"]
 
     def generate_datasets(
         self, num_samples: int, training: bool = True
@@ -165,14 +185,14 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
         """
         # If training, sample datasets from the adversary's data. Otherwise,
         # sample datasets from the real dataset.
-        dataset = self.adv_data if training else self.dataset
+        dataset = self.aux_data if training else self.test_data
 
         # Split the data into subsets.
         return dataset.create_subsets(num_samples, self.num_training_records)
 
     @property
     def label(self):
-        return self.dataset.label + " (AUX)"
+        return self.aux_data.label + " (AUX)"
 
 
 class ExactDataKnowledge(AttackerKnowledgeOnData):

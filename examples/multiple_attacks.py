@@ -24,7 +24,7 @@ generator = prive.generators.Raw()
 
 # Select the auxiliary data + black-box attack model.
 data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
-    data, sample_real_frac=0.5, num_training_records=1000,
+    data, auxiliary_split=0.5, num_training_records=1000,
 )
 
 sdg_knowledge = prive.threat_models.BlackBoxKnowledge(
