@@ -50,7 +50,7 @@ attacks = [
     groundhog(prive.attacks.HistSetFeature(), RandomForestClassifier(n_estimators=100)),
     groundhog(prive.attacks.CorrSetFeature(), RandomForestClassifier(n_estimators=100)),
     groundhog(prive.attacks.CorrSetFeature(), LogisticRegression()),
-    prive.attacks.ClosestDistanceAttack(fpr=0.1),
+    prive.attacks.ClosestDistanceAttack(criterion="accuracy"),
 ]
 
 attack_names = [
