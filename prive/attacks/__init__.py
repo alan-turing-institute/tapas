@@ -10,4 +10,5 @@ from .set_classifiers import (
     HistSetFeature,
     CorrSetFeature,
 )
+from .distances import DistanceMetric, HammingDistance, LpDistance
 from .utils import load_attack

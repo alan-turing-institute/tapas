@@ -11,6 +11,8 @@ import prive.threat_models
 import prive.attacks
 import prive.report
 
+from prive.attacks import LpDistance
+
 import pandas
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -50,7 +52,8 @@ attacks = [
     groundhog(prive.attacks.HistSetFeature(), RandomForestClassifier(n_estimators=100)),
     groundhog(prive.attacks.CorrSetFeature(), RandomForestClassifier(n_estimators=100)),
     groundhog(prive.attacks.CorrSetFeature(), LogisticRegression()),
-    prive.attacks.ClosestDistanceAttack(criterion="accuracy"),
+    # prive.attacks.ClosestDistanceAttack(criterion="accuracy"),
+    prive.attacks.ClosestDistanceAttack(distance=LpDistance(2), criterion="accuracy")
 ]
 
 attack_names = [

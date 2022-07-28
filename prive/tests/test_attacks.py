@@ -24,6 +24,8 @@ from prive.attacks import (
     HistSetFeature,
     CorrSetFeature,
     FeatureBasedSetClassifier,
+    HammingDistance,
+    LpDistance,
 )
 
 from sklearn.linear_model import LogisticRegression
@@ -41,6 +43,7 @@ dummy_data = pd.DataFrame([(0, 1), (0, 2), (3, 4), (3, 5)], columns=["a", "b"])
 
 
 ## Test for closest-distance attack.
+
 
 class TestClosestDistance(TestCase):
     """Test the closest-distance attack."""
@@ -68,22 +71,23 @@ class TestClosestDistance(TestCase):
 
         # Take a record that is not in the dataset (distance 1/2).
         mia = self._make_mia(0, 0)
-        attack = ClosestDistanceAttack(criterion=('threshold', 0.3))
+        attack = ClosestDistanceAttack(criterion=("threshold", -0.3))
         attack.train(mia)
         # Check that the training worked as intended.
-        self.assertEqual(attack._threshold, 0.3)
+        self.assertEqual(attack._threshold, -0.3)
         # Check that the score is working as intended.
         scores = attack.attack_score([rec for rec in self.dataset])
         self.assertEqual(len(scores), len(self.dataset))
-        for score, distance in zip(scores, [0.5, 0.5, 1, 1]):
+        for score, distance in zip(scores, [1, 1, 2, 2]):
             self.assertEqual(score, -distance)
         # Assert that the total score and decisions are ok.
-        self.assertEqual(attack.attack_score([self.dataset])[0], -0.5)
+        self.assertEqual(attack.attack_score([self.dataset])[0], -1)
         self.assertEqual(attack.attack([self.dataset])[0], False)
 
         # Perform the attack for a user *in* the dataset.
-        attack = ClosestDistanceAttack(criterion=('threshold', -0.3))
+        attack = ClosestDistanceAttack(criterion=("threshold", -0.3))
         attack.train(self._make_mia(0, 1))
+        print("attack")
         self.assertEqual(attack.attack([self.dataset])[0], True)
 
     def test_training(self):
@@ -97,13 +101,61 @@ class TestClosestDistance(TestCase):
             BlackBoxKnowledge(generator=Raw(), num_synthetic_records=2),
             replace_target=True,
         )
-        attack_tpr = ClosestDistanceAttack(criterion=('tpr', 0.1))
+        attack_tpr = ClosestDistanceAttack(criterion=("tpr", 0.1))
         attack_tpr.train(mia)
-        attack_fpr = ClosestDistanceAttack(criterion=('fpr', 0.1))
+        attack_fpr = ClosestDistanceAttack(criterion=("fpr", 0.1))
         attack_fpr.train(mia)
+
+    def test_distances(self):
+        # Check that the other distances run and have zero.
+        num_cat = 10
+        num_records = 21
+        full_dataset = TabularDataset(
+            pd.DataFrame(
+                zip(
+                    np.random.randint(num_cat, size=(num_records,)),
+                    np.random.random(size=(num_records,)),
+                ),
+                columns=["a", "b"],
+            ),
+            DataDescription(
+                [
+                    {"name": "a", "type": "finite", "representation": num_cat},
+                    {"name": "b", "type": "countable", "representation": "integer"},
+                ]
+            ),
+        )
+        # Also select a subset of smaller size.
+        num_records_small = 5
+        small_dataset = full_dataset.create_subsets(1, num_records_small)[0]
+        # Check a few distances.
+        distances = [
+            HammingDistance(),
+            HammingDistance(columns=['a']),
+            LpDistance(2),
+            LpDistance(4),
+            LpDistance(2, weights=np.random.random(size=(num_cat + 1))),
+            0.5 * LpDistance(2) + HammingDistance() * 0.5
+        ]
+        for d in distances:
+            array_of_dists = d(full_dataset, full_dataset)
+            # Check that the size of the array is correct.
+            self.assertEqual(array_of_dists.shape, (num_records, num_records))
+            # Check that distance to self is 0.
+            for i in range(num_records):
+                self.assertEqual(array_of_dists[i, i], 0)
+            # Check that the distance is symmetrical.
+            for i in range(num_records):
+                for j in range(i + 1, num_records):
+                    self.assertEqual(array_of_dists[i, j], array_of_dists[j, i])
+            # Check that the size is correct for smaller dataset.
+            self.assertEqual(
+                d(small_dataset, full_dataset).shape, (num_records_small, num_records)
+            )
 
 
 ## Test for features.
+
 
 class TestSetFeatures(TestCase):
     """Test whether the set features defined for Groundhog are implemented correctly."""
@@ -233,6 +285,7 @@ class TestSetFeatures(TestCase):
 
 
 ## Test for the Groundhog attack.
+
 
 class TestGroundHog:
     """Test whether the groundhog attack (Stadler et al.) works."""

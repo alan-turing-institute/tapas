@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.metrics import roc_curve
 
 from .base_classes import Attack, TrainableThresholdAttack
-from .distances import DistanceMetric
+from .distances import DistanceMetric, HammingDistance
 from ..threat_models import TargetedMIA
 
 
@@ -31,27 +31,25 @@ class ClosestDistanceAttack(TrainableThresholdAttack):
 
     def __init__(
         self,
-        distance_function: DistanceMetric = None,
-        criterion: dict = "accuracy",
-        metric_name="default",
+        distance: DistanceMetric = HammingDistance(),
+        criterion: tuple = "accuracy",
     ):
         """
         Create the attack with chosen parameters.
 
         Parameters
         ----------
-        distance_function (callable): maps (record1, record2) to a positive
-            float. If left None (default), this is self._default_distance.
+        distance: DistanceMetric
+            Distance to use between records for the attack.
         criterion: tuple
-            Criterion to select the threshold (see TrainableThresholdAttack for details)
-        metric_name (optional): name of the distance metric used.
+            Criterion to select the threshold (see TrainableThresholdAttack for details).
 
         Exactly one of threshold, fpr or tpr must be not None.
 
         """
         TrainableThresholdAttack.__init__(self, criterion)
-        self.distance_function = distance_function or self._default_distance
-        self.__name__ = f"ClosestDistance({metric_name}, {criterion})"
+        self.distance = distance
+        self.__name__ = f"ClosestDistance({distance.label}, {criterion})"
 
     def attack_score(self, datasets: list[Dataset]):
         """
@@ -72,26 +70,11 @@ class ClosestDistanceAttack(TrainableThresholdAttack):
         target_record = self.threat_model.target_record
         scores = []
         for ds in datasets:
-            # Use the __iter__ function of Dataset to iterate over records.
-            distances = [self.distance_function(record, target_record) for record in ds]
+            # This returns an np.array of size (1, len(ds)) with pairwise distances
+            # between target_record and records in ds.
+            distances = self.distance(target_record, ds)[0]
             # The attack score is the NEGATIVE min distance to the target record.
             # This is because larger scores are associated with higher probability
             # of membership, whereas distances do the opposite.
             scores.append(-np.min(distances))
         return np.array(scores)
-
-    def _default_distance(self, x: Dataset, y: Dataset):
-        """
-        Hamming distance between two records.
-
-        Parameters
-        ----------
-        x, y: the records to compare.
-
-        Returns
-        -------
-        distance between x and y.
-
-        """
-        # TODO: check the dataset description.
-        return (x.data.values != y.data.values).mean()
