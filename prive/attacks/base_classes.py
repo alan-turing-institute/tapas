@@ -45,9 +45,13 @@ class Attack(ABC):
         """
         pass
 
+    @property
+    def label(self):
+        """
+        A label to describe this attack in reports.
 
-# TODO(design)
-# For later discussion: not sure if we want to keep classes for different types
-#  of attacks. For instance, we can implement the Groundhog attack for MIAs and
-#  AIAs with the exact same code (since the sampling logic of train/test is in
-#  the threat model).
+        """
+        return "Unnamed Attack"
+
+    def __str__(self):
+        return self.label

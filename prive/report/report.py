@@ -1,6 +1,12 @@
-"""Classes to report summary of attacks"""
-from abc import ABC, abstractmethod
+"""
+Classes to produce reports summarising the success of attacks.
 
+Reports combine several attack summaries together to produce a more
+comprehensive picture of the robustness of a generator against attacks.
+
+"""
+
+from abc import ABC, abstractmethod
 import pandas as pd
 
 from prive.report import MIAttackSummary
@@ -23,14 +29,23 @@ class MIAttackReport(Report):
 
     """
 
-    def __init__(self, df, metrics=None):
+    # List of all metrics that can be used in a report.
+    ALL_METRICS = [
+        "accuracy",
+        "true_positive_rate",
+        "false_positive_rate",
+        "mia_advantage",
+        "privacy_gain",
+    ]
+
+    def __init__(self, summaries, metrics=None):
         """
         Initialise MIAttackReport class.
 
         Parameters
         ----------
-        df: dataframe Dataframe where each row is the result of a given attack as obtained from
-        the MIASummaryAttack class. The dataframe must have the following structure.
+        summaries: dataframe Dataframe where each row is the result of a given attack as obtained
+        from the MIASummaryAttack class. The dataframe must have the following structure.
             Index:
                 RangeIndex
             Columns:
@@ -43,21 +58,20 @@ class MIAttackReport(Report):
                 false_positive_rate: float
                 mia_advantage: float
                 privacy_gain: float
+            Alternatively, this can be passed as an iterable of MIAttackSummary objects, in
+            which case .get_metrics() is called on each object, and the results are concatenated.
 
         metrics: list[str]
             List of metrics to be used in the report, these can be any of the following:
-        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
+            "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
+            If left as None, all metrics are used.
 
 
         """
-        self.attacks_data = df
-        self.metrics = metrics or [
-            "accuracy",
-            "true_positive_rate",
-            "false_positive_rate",
-            "mia_advantage",
-            "privacy_gain",
-        ]
+        if not isinstance(summaries, pd.DataFrame):
+            summaries = pd.concat([s.get_metrics() for s in summaries])
+        self.attacks_data = summaries
+        self.metrics = metrics or MIAttackReport.ALL_METRICS
 
     @classmethod
     def load_summary_statistics(cls, attacks, metrics=None):

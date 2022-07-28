@@ -26,7 +26,7 @@ print("Loading dataset...")
 # We attack the 1% Census Microdata file, available at:
 #  https://www.ons.gov.uk/census/2011census/2011censusdata/censusmicrodata/microdatateachingfile
 # We have created a .json description file, so that prive.Dataset.read can load both.
-data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File")
+data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File", label="Census")
 
 # We attack the (trivial) Raw generator, which outputs its training dataset.
 generator = prive.generators.Raw()
@@ -38,7 +38,7 @@ data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
     # The attacker has access to 50% of the data as auxiliary information.
     # This information will be used to generate training datasets.
     data,
-    sample_real_frac=0.5,
+    auxiliary_split=0.5,
     # The attacker knows that the real dataset contains 5000 samples. This thus
     # reflects the attacker's knowledge about the real data.
     num_training_records=5000,
@@ -74,20 +74,7 @@ threat_model = prive.threat_models.TargetedMIA(
 
 # Next step: initialise an attacker. Here, we just apply the GroundHog attack
 # with standard parameters (from Stadler et al., 2022).
-attacker = prive.attacks.GroundhogAttack(
-    # The GroundhogAttack attacker is mostly a wrapper over a set classifier.
-    # We here use, as in Stadler et al., a feature-based set classifier, which
-    #  (1) computes a vector of (fixed) features of the set to classify.
-    #  (2) trains a vector-based classifier using these features.
-    prive.attacks.FeatureBasedSetClassifier(
-        # We use the F_naive, F_hist and F_corr fatures (from the paper).
-        prive.attacks.NaiveSetFeature()
-        + prive.attacks.HistSetFeature()
-        + prive.attacks.CorrSetFeature(),
-        # We use a random forest with 100 trees and default parameters.
-        RandomForestClassifier(n_estimators=100),
-    )
-)
+attacker = prive.attacks.GroundhogAttack()
 
 print("Training the attack...")
 # Having defined all the objects that we need, we can train the attack.
@@ -104,21 +91,8 @@ attacker.train(
 print("Testing the attack...")
 # The attack is trained! Evaluate it within the test model.
 # [explain why we split this way.]
-attack_labels, truth_labels = threat_model.test(attacker, num_samples=1000)
-
-print("Generating summary...")
-# Finally, generate a report to evaluate the results.
-attack_summary = prive.report.MIAttackSummary(
-    # The summary requires these
-    attack_labels,
-    truth_labels,
-    # And some metadata for nicer displays.
-    generator_info="raw",
-    attack_info=attacker.__name__,
-    dataset_info="Census",
-    target_id="0",
-)
+attack_summary = threat_model.test(attacker, num_samples = 1000)
 
 # Output nice, printable metrics that evaluate the attack.
 metrics = attack_summary.get_metrics()
-print("Results:", metrics)
+print("Results:\n", metrics.head())
