@@ -5,15 +5,19 @@ A represention of the metadata describing a dataset.
 # TODO: this is only for tabular data?
 
 class DataDescription:
-    def __init__(self, schema):
+
+    def __init__(self, schema, label = None):
         """
         Parameters
         ----------
         schema: list[dict]
             A list of metadata about each column. Each column is represented by a dictionary whose
             values are the ``name``, ``type``, and on-disk ``representation`` of the column.
+        label: str (optional)
+            The name to use to describe this dataset in reports.
         """
         self.schema = schema
+        self._label = label or "Unnamed dataset"
 
     @property
     def num_features(self):
@@ -90,3 +94,12 @@ class DataDescription:
 
     def __repr__(self):
         return 'Data Description\n' + f'Columns: {list(cdict["name"] for cdict in self)}'
+
+    @property
+    def label(self):
+        """
+        A label that describes the underlying dataset (and children).
+
+        """
+        return self._label
+    

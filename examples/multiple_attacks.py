@@ -14,18 +14,21 @@ import prive.report
 from prive.attacks import LpDistance
 
 import pandas
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 # Load the data.
-data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File")
+data = prive.datasets.TabularDataset.read(
+    "data/2011 Census Microdata Teaching File", label="Census"
+)
 
 # Create a dummy generator.
 generator = prive.generators.Raw()
 
 # Select the auxiliary data + black-box attack model.
 data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
-    data, sample_real_frac=0.5, num_training_records=1000,
+    data, auxiliary_split=0.5, num_training_records=1000,
 )
 
 sdg_knowledge = prive.threat_models.BlackBoxKnowledge(
@@ -40,48 +43,37 @@ threat_model = prive.threat_models.TargetedMIA(
     replace_target=True,
 )
 
-# We define a simple wrapper for groundhog, since it's otherwise a bit wordy.
-groundhog = lambda features, model: prive.attacks.GroundhogAttack(
-    prive.attacks.FeatureBasedSetClassifier(features, model)
-)
+
 # We here create a range of attacks to test.
 attacks = [
-    groundhog(
-        prive.attacks.NaiveSetFeature(), RandomForestClassifier(n_estimators=100)
+    prive.attacks.GroundhogAttack(
+        use_hist=False, use_corr=False, label="NaiveGroundhog"
     ),
-    groundhog(prive.attacks.HistSetFeature(), RandomForestClassifier(n_estimators=100)),
-    groundhog(prive.attacks.CorrSetFeature(), RandomForestClassifier(n_estimators=100)),
-    groundhog(prive.attacks.CorrSetFeature(), LogisticRegression()),
-    # prive.attacks.ClosestDistanceAttack(criterion="accuracy"),
-    prive.attacks.ClosestDistanceAttack(distance=LpDistance(2), criterion="accuracy")
-]
-
-attack_names = [
-    "NaiveGroundhog",
-    "HistGroundhog",
-    "CorrGroundhog",
-    "LogisticGroundhog",
-    "Closest-Distance",
+    prive.attacks.GroundhogAttack(
+        use_naive=False, use_corr=False, label="HistGroundhog"
+    ),
+    prive.attacks.GroundhogAttack(
+        use_naive=False, use_hist=False, label="CorrGroundhog"
+    ),
+    prive.attacks.GroundhogAttack(
+        model=LogisticRegression(), label="LogisticGroundhog"
+    ),
+    prive.attacks.ClosestDistanceAttack(
+        criterion="accuracy", label="ClosestDistance-Hamming"
+    ),
+    prive.attacks.ClosestDistanceAttack(
+        distance=LpDistance(2), criterion="accuracy", label="ClosestDistance-L2"
+    ),
 ]
 
 # Train, evaluate, and summarise all attacks.
 summaries = []
-for attack, name in zip(attacks, attack_names):
-    print(f"Evaluating attack {name}...")
+for attack in attacks:
+    print(f"Evaluating attack {attack.label}...")
     attack.train(threat_model, num_samples=100)
-    attack_labels, truth_labels = threat_model.test(attack, num_samples=100)
-    summaries.append(
-        prive.report.MIAttackSummary(
-            attack_labels,
-            truth_labels,
-            generator_info="raw",
-            attack_info=name,
-            dataset_info="Census",
-            target_id="0",
-        ).get_metrics()
-    )
+    summaries.append(threat_model.test(attack, num_samples=100))
 
 # Finally, group together the summaries as a report.
 print("Publishing a report.")
-report = prive.report.MIAttackReport(pandas.concat(summaries))
+report = prive.report.MIAttackReport(summaries)
 report.create_report("multiple_attacks_raw")

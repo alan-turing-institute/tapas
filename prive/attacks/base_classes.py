@@ -55,6 +55,17 @@ class Attack(ABC):
         """
         pass
 
+    @property
+    def label(self):
+        """
+        A label to describe this attack in reports.
+
+        """
+        return "Unnamed Attack"
+
+    def __str__(self):
+        return self.label
+
 
 # Many attacks are based around an `attack_score` (potentially trainable), with
 # the decision threshold then tailored for a specific task, e.g., max accuracy,
@@ -76,6 +87,7 @@ class TrainableThresholdAttack(Attack):
     # To implement a specific attack from this generic class, you must
     # instantiate the `attack_score` function from Attack. Additionally,
     # you may implement _train_attack_score if relevant.
+    # Also, implement the .label property.
 
     def __init__(self, criterion: tuple):
         """

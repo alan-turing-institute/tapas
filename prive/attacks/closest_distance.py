@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from ..datasets import Dataset, DataDescription
     from ..threat_models import ThreatModel
 
+
 import numpy as np
 from sklearn.metrics import roc_curve
 
@@ -33,6 +34,7 @@ class ClosestDistanceAttack(TrainableThresholdAttack):
         self,
         distance: DistanceMetric = HammingDistance(),
         criterion: tuple = "accuracy",
+        label: str = None,
     ):
         """
         Create the attack with chosen parameters.
@@ -43,13 +45,12 @@ class ClosestDistanceAttack(TrainableThresholdAttack):
             Distance to use between records for the attack.
         criterion: tuple
             Criterion to select the threshold (see TrainableThresholdAttack for details).
-
-        Exactly one of threshold, fpr or tpr must be not None.
+        label (optional): name of this attack, for reporting.
 
         """
         TrainableThresholdAttack.__init__(self, criterion)
         self.distance = distance
-        self.__name__ = f"ClosestDistance({distance.label}, {criterion})"
+        self._label = label or f"ClosestDistance({distance.label}, {criterion})"
 
     def attack_score(self, datasets: list[Dataset]):
         """
@@ -78,3 +79,7 @@ class ClosestDistanceAttack(TrainableThresholdAttack):
             # of membership, whereas distances do the opposite.
             scores.append(-np.min(distances))
         return np.array(scores)
+
+    @property
+    def label(self):
+        return self._label

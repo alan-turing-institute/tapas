@@ -54,7 +54,7 @@ class TestClosestDistance(TestCase):
     def _make_mia(self, a, b):
         """Helper function to generate a MIA threat model."""
         return TargetedMIA(
-            AuxiliaryDataKnowledge(self.dataset, sample_real_frac=0.5),
+            AuxiliaryDataKnowledge(self.dataset, auxiliary_split=0.5),
             self._make_target(a, b),
             None,
         )
@@ -95,7 +95,7 @@ class TestClosestDistance(TestCase):
         # This merely checks that the code runs, not that it is correct.
         mia = TargetedMIA(
             AuxiliaryDataKnowledge(
-                self.dataset, sample_real_frac=0.5, num_training_records=2
+                self.dataset, auxiliary_split=0.5, num_training_records=2
             ),
             self._make_target(0, 4),
             BlackBoxKnowledge(generator=Raw(), num_synthetic_records=2),
@@ -311,19 +311,12 @@ class TestGroundHog:
         )
         mia = TargetedMIA(
             AuxiliaryDataKnowledge(
-                total_dataset, sample_real_frac=0.5, num_training_records=200
+                total_dataset, auxiliary_split=0.5, num_training_records=200
             ),
             total_dataset.sample(1),  # Random target.
             BlackBoxKnowledge(Raw(), num_synthetic_records=200),
         )
-        attack = GroundhogAttack(
-            FeatureBasedSetClassifier(
-                NaiveSetFeature()
-                + HistSetFeature(num_bins=10, bounds=(0, 1))
-                + CorrSetFeature(),
-                LogisticRegression(),
-            )
-        )
+        attack = GroundhogAttack()
         attack.train(mia)
 
 
