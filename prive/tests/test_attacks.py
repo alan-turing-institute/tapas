@@ -18,7 +18,7 @@ from prive.generators import Raw
 
 # The classes being tested.
 from prive.attacks import (
-    ClosestDistanceAttack,
+    ClosestDistanceMIA,
     GroundhogAttack,
     NaiveSetFeature,
     HistSetFeature,
@@ -71,7 +71,7 @@ class TestClosestDistance(TestCase):
 
         # Take a record that is not in the dataset (distance 1/2).
         mia = self._make_mia(0, 0)
-        attack = ClosestDistanceAttack(criterion=("threshold", -0.3))
+        attack = ClosestDistanceMIA(criterion=("threshold", -0.3))
         attack.train(mia)
         # Check that the training worked as intended.
         self.assertEqual(attack._threshold, -0.3)
@@ -85,7 +85,7 @@ class TestClosestDistance(TestCase):
         self.assertEqual(attack.attack([self.dataset])[0], False)
 
         # Perform the attack for a user *in* the dataset.
-        attack = ClosestDistanceAttack(criterion=("threshold", -0.3))
+        attack = ClosestDistanceMIA(criterion=("threshold", -0.3))
         attack.train(self._make_mia(0, 1))
         print("attack")
         self.assertEqual(attack.attack([self.dataset])[0], True)
@@ -101,9 +101,9 @@ class TestClosestDistance(TestCase):
             BlackBoxKnowledge(generator=Raw(), num_synthetic_records=2),
             replace_target=True,
         )
-        attack_tpr = ClosestDistanceAttack(criterion=("tpr", 0.1))
+        attack_tpr = ClosestDistanceMIA(criterion=("tpr", 0.1))
         attack_tpr.train(mia)
-        attack_fpr = ClosestDistanceAttack(criterion=("fpr", 0.1))
+        attack_fpr = ClosestDistanceMIA(criterion=("fpr", 0.1))
         attack_fpr.train(mia)
 
     def test_distances(self):

@@ -136,6 +136,7 @@ class TrainableThresholdAttack(Attack):
         num_samples: int (default, 100).
             Number of training samples to generate to select the threshold.
         (optionally), additional keyword arguments, passed to _train_attack_score.
+
         """
         # First, optionally train the score.
         assert isinstance(

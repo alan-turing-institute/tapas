@@ -6,9 +6,9 @@ import io
 import numpy as np
 import pandas as pd
 
-
 from prive.datasets.data_description import DataDescription
 from .utils import encode_data, index_split, get_dtype
+
 
 # Helper function for parsing file-like objects
 def _parse_csv(fp, schema, label=None):
