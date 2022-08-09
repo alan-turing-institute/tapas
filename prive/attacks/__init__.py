@@ -4,6 +4,7 @@ from .closest_distance import (
     ClosestDistanceAIA,
     LocalNeighbourhoodAttack,
 )
+from .distances import DistanceMetric, HammingDistance, LpDistance
 from .direct_linkage import DirectLinkage
 from .shadow_modelling import ShadowModellingAttack
 from .set_classifiers import (
@@ -14,6 +15,11 @@ from .set_classifiers import (
     HistSetFeature,
     CorrSetFeature,
 )
-from .distances import DistanceMetric, HammingDistance, LpDistance
+from .synthinference import (
+    ProbabilityEstimationAttack,
+    DensityEstimator,
+    sklearnDensityEstimator,
+    SyntheticPredictorAttack,
+)
 from .groundhog import GroundhogAttack
 from .utils import load_attack

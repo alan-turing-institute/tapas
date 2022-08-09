@@ -266,7 +266,7 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
 # where the attacker aims to infer the "label" of the private dataset. The
 # label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
 
-
+# TODO: add output class.
 class LabelInferenceThreatModel(TrainableThreatModel):
     def __init__(
         self,

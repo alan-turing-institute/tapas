@@ -76,6 +76,7 @@ import numpy as np
 from sklearn.metrics import roc_curve
 
 
+# TODO: extend to multi-class labels. Currently assumes binary labels.
 class TrainableThresholdAttack(Attack):
     """
     Generic class to represent attacks that rely on a score, combined with a

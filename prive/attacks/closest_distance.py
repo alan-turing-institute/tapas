@@ -1,11 +1,15 @@
-"""Closest-distance attacks """
+"""Closest-distance attacks.
+
+These attacks use the local neighbourhood of real records in the synthetic data
+to make inferences about those real records.
+
+"""
 
 # Imports for type annotations.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from ..datasets import Dataset, DataDescription
     from ..threat_models import ThreatModel
 
@@ -158,7 +162,7 @@ class ClosestDistanceAIA(ClosestDistanceMIA):
             # For binary choices, only return the second element (score for 1).
             if len(s) == 2:
                 s = s[1]
-            scores.append(- s)
+            scores.append(-s)
         return np.array(scores)
 
 

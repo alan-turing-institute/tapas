@@ -75,12 +75,16 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         labels (arbitrary ints or bools).
 
         """
+        if self.generate_pairs and num_samples // 2:
+            num_samples += 1  # Make num_samples dividable by 1.
         # Generate the datasets from the attacker knowledge.
-        datasets = self.attacker_knowledge.generate_datasets(num_samples, training)
+        datasets = self.attacker_knowledge.generate_datasets(
+            num_samples // 2 if self.generate_pairs else num_samples, training
+        )
         if self.generate_pairs:
             # If pairs are required, duplicate the list and assign labels 0 and 1.
             datasets = datasets + datasets
-            labels = [0] * num_samples + [1] * num_samples
+            labels = [0] * (num_samples // 2) + [1] * (num_samples // 2)
         else:
             # Pick random labels for each dataset.
             labels = list(np.random.random(size=(num_samples,)) <= 0.5)
@@ -100,7 +104,6 @@ class MIALabeller(AttackerKnowledgeWithLabel):
     @property
     def label(self):
         return self.attacker_knowledge.label
-    
 
 
 class TargetedMIA(LabelInferenceThreatModel):
@@ -146,8 +149,8 @@ class TargetedMIA(LabelInferenceThreatModel):
         return MIAttackSummary(
             truth_labels,
             pred_labels,
-            generator_info = self.atk_know_gen.label,
-            attack_info = attack.label,
-            dataset_info = self.atk_know_data.label,
-            target_id = self.target_record.label,
+            generator_info=self.atk_know_gen.label,
+            attack_info=attack.label,
+            dataset_info=self.atk_know_data.label,
+            target_id=self.target_record.label,
         )
