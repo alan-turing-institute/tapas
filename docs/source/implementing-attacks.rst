@@ -40,11 +40,13 @@ This *can* take a dataset description as argument, although it is better not to.
 
 ``generate_training_samples``
 
+``TrainableThresholdAttack``
+
 
 
 Set Classifiers
 ---------------
 
-For attacks based on *shadow modelling*, the base class of
+For attacks based on *shadow modelling*, the base class of 
 
 ``GroundhogAttack``

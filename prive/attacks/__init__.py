@@ -15,11 +15,11 @@ from .set_classifiers import (
     HistSetFeature,
     CorrSetFeature,
 )
+from .groundhog import GroundhogAttack
 from .synthinference import (
     ProbabilityEstimationAttack,
     DensityEstimator,
     sklearnDensityEstimator,
     SyntheticPredictorAttack,
 )
-from .groundhog import GroundhogAttack
 from .utils import load_attack

@@ -63,6 +63,9 @@ attacks = [
         criterion="accuracy", label="ClosestDistance-Hamming"
     ),
     prive.attacks.ClosestDistanceMIA(
+        criterion=("threshold", 0), label="Direct Lookup"
+    ),
+    prive.attacks.ClosestDistanceMIA(
         distance=LpDistance(2), criterion="accuracy", label="ClosestDistance-L2"
     ),
     prive.attacks.ProbabilityEstimationAttack(
