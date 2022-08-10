@@ -7,10 +7,49 @@ For this reason, ``PrivE`` implements a large range of attacks.
 While some of these attacks are technically involved, many are straightforward and are intended mostly as safety checks.
 We here present the different attacks implemented in ``PrivE``, grouped by theme. For each attack, we specify the additional parameters it requires, and the attack models (see `Modelling Threats <modelling-threats.rst>`) it applies to.
 ``PrivE`` attacks inherit from the ``prive.attacks.Attack`` abstract class (see `Implementing Attacks <implementing-attacks.rst>` for details).
-Note that the constuctor of *all* the attacks described below allows for an optional ``label`` parameters, which we exclude from the descriptions for the sake of concision.
+Note that the constructor of *all* the attacks described below allows for an optional ``label`` parameters, which we exclude from the descriptions for the sake of concision.
 
 *Notations*: we denote by :math:`D^{(r)}` the real, private dataset, and :math:`D^{(s)}` the synthetic dataset obtained with the generation method :math:`\mathcal{G}`. For targeted attacks, the attacker aims to learn information about a record :math:`x`, either membership (:math:`x \in D^{(r)}`) or the value of a sensitive attribute :math:`s` (:math:`v~\text{s.t.}~x|v \in D^{(r)}`).
 
+Summary
+-------
+
+.. list-table::
+	:widths: 10 10 10 70
+	:header-rows: 1
+
+	* - Class
+	  - Threat Model
+	  - Parameters
+	  - Decision uses
+	* - ``ClosestDistanceMIA``
+	  - MIA
+	  - ``distance``, ``criterion``
+	  - Distance of closest record to target record :math:`x` in :math:`D^{(s)}`.
+	* - ``ClosestDistanceAIA``
+	  - AIA
+	  - ``distance``, ``criterion``
+	  - For each value, distance of closest record to target record :math:`x|b` in :math:`D^{(s)}`.
+	* - ``LocalNeighbourhoodAttack``
+	  - MIA/AIA
+	  - ``distance``, ``radius``, ``criterion``
+	  - Sphere of given radius around the target record, :math:`B[x,radius]`. For MIA, use the fraction of records that are in the sphere. For AIA, use the fraction of records in the sphere with a given value :math:`v`.
+	* - ``ShadowModellingAttack``
+	  - MIA/AIA
+	  - ``SetClassifier``
+	  - Train a set classifier :math:`\mathcal{F}_\theta` from pairs :math:`(D^{(r)}_i, D^{(s)}_i)` to predict membership or the sensitive attribute for the sensitive data.
+	* - ``GroundhogAttack``
+	  - MIA/AIA
+	  - ``features``, ``classifier``
+	  - Shadow modelling attack using a random forest classifier over simple features extracted from datasets, proposed by Stadler et al. [1]_.
+	* - ``ProbabilityEstimationAttack``
+	  - MIA
+	  - ``estimator``, ``criterion``
+	  - Density estimator fit on synthetic records :math:`p_\theta`, and the density estimated in the target record :math:`p_\theta(x)`.
+	* - ``SyntheticPredictorAttack``
+	  - AIA
+	  - ``estimator``, ``criterion``
+	  - Classifier fit on synthetic records to predict the sensitive attribute :math:`x_s` from other attributes :math:`x_{-s}`.
 
 Trainable-threshold attacks
 ---------------------------
@@ -24,6 +63,8 @@ The constructor of these attacks takes an argument ``criterion`` that describes 
 - ``criterion = ("tp", value)``: the threshold is selected such that the true positive rate of the method is approximately equal to ``value``.
 - ``criterion = ("fp", value)``: (similarly, but for the false positive rate).
 - ``criterion = ("threshold", value)``: the threshold is set to ``value``. In this case, no further training is required.
+
+*Note*: this attack generally applies to the black-box setting, but if ``criterion[0] = "threshold"``, then the attack can be applied *without* access to the generator (the no-box setting).
 
 
 Closest-distance Attacks
@@ -72,7 +113,7 @@ For attribute inference, the score for value :math:`v` is the fraction of record
 Parameters:
 
 - ``distance``: a ``DistanceMetric`` object describing the distance to use between records.
-- ``radius``: nonnegative float, the radius of the local neighbourhood.
+- ``radius``: non-negative float, the radius of the local neighbourhood.
 - ``criterion`` (see `above <Trainable-threshold attacks>`_).
 
 
@@ -80,28 +121,106 @@ Parameters:
 Shadow Modelling Attacks
 ------------------------
 
-Shadow modelling is a technique th
-Intuitively, 
-This technique has been used for synthetic data in the paper by Stadler et al.
-Groundhog [1]_
+Shadow modelling is a common technique to build privacy attacks against privacy-enhancing technologies.
+The idea is to generate a large number of training "real" datasets :math:`(D_1^{(r)}, \dots, D_N^{(r)})` according to the attacker's knowledge (usually as subsets from an auxiliary dataset), then generate synthetic datasets from each of these: :math:`(D_1^{(s)}, \dots, D_N^{(s)})`.
+For a function :math:`\phi` that the attacker is trying to learn (e.g., :math:`phi(D) = I\{x \in D\})`), they train a machine learning model :math:`\mathcal{F}_\theta` to infer the value of :math:`\phi` over real datasets from the synthetic dataset: :math:`\mathcal{F}_\theta(D^{(s)}) = \phi(D^{(r)})`.
+
+The key design decision of a shadow modelling attack (``prive.attacks.ShadowModellingAttack``) is in the choice of the classifier :math:`\mathcal{F}_\theta`.
+A challenge of applying shadow modelling to synthetic datasets is that the input of the classifier is *the whole synthetic dataset*, and is thus very high-dimensional.
+The first attack using shadow modelling for synthetic data is by Stadler et al.[1]_, an attack which we refer to as the Groundhog attack (``prive.attacks.GroundhogAttack``).
+
 
 ShadowModellingAttack
 ~~~~~~~~~~~~~~~~~~~~~
 
-Requires
+This class implements the logic of shadow modelling (in ``.train`` and ``.attack``) for membership and attribute inference attacks.
+It takes one parameter, ``classifier``, a ``SetClassifier`` object that represents a classifier over *sets*.
+
+A ``SetClassifier`` has an interface similar to ``scikit-learn`` classifiers, with ``.fit``, ``.predict`` and ``.predict_proba`` methods, except the inputs are lists of ``prive.datasets.Dataset`` objects.
+
+
+FeatureBasedSetClassifier
++++++++++++++++++++++++++
+
+The main ``SetClassifier`` implemented by ``PrivE`` is ``FeatureBasedSetClassifier``, a classifier that groups together two independent components:
+
+1. ``features``: A ``SetFeature`` object that extracts a vector of features (a ``numpy.array``) from a ``Dataset``. This object is a fixed function :math:`psi` and is not trainable.
+2. ``classifier``: A classifier from ``scikit-learn``, :math:`C_\theta`. This classifier is then trained (choosing :math:`\theta`) to infer the sensitive function :math:`\phi(D)` from the features extracted from a dataset.
+
+The corresponding classifier is obtained by combining these two elements as :math:`\mathcal{F}_\theta = C_\theta \circ \psi`.
+
+``SetFeature`` objects primarily consist of a ``.extract`` method mapping datasets to a ``numpy.array`` of size (len(datasets), k) for some size k. Implementing a custom ``SetFeature`` only requires to create an object inhering from ``prive.attacks.SetFeature`` and defining the ``.extract`` method.
+``PrivE`` implements several simple ``SetFeature``.
+
+.. list-table::
+	:widths: 20 20 60
+	:header-rows: 1
+
+	* - Class
+	  - Parameters
+	  - Description
+	* - ``NaiveSetFeature``
+	  - /
+	  - Computes the median, mean and variance of each column, with categorical columns 1-hot encoded. This is :math:`F_\text{naive}` from [1]_.
+	* - ``HistSetFeature``
+	  - :math:`n_\text{bins} =10`, :math:`bounds = (0,1)`
+	  - Computes histograms for each attribute. For continuous attributes, the histogram is computed with :math:`n_\text{bins}`, over the interval :math:`bounds`. This is :math:`F_\text{hist}` from [1]_.
+	* - ``CorrSetFeature``
+	  - /
+	  - Computes the correlation coefficient between all attributes, with categorical columns 1-hot encoded. This is :math:`F_\text{corr}` from [1]_.
+
 
 GroundhogAttack
 ~~~~~~~~~~~~~~~
 
+This class implements the attack from Stadler et al.[1]_. In ``PrivE``, this is a ``FeatureBasedSetClassifier`` with, by default:
+
+1. ``feature = NaiveSetFeature() + HistSetFeature() + CorrSetFeature()``
+2. ``classifier = sklearn.ensemble.RandomForestClassifier()``.
+
+The behaviour of this attack can be modified with four optional parameters:
+
+- ``use_naive``: boolean, whether to use the Naive feature set (default True).
+- ``use_hist``: boolean, whether to use the Histogram feature set (default True).
+- ``use_corr``: boolean, whether to use the Correlations feature set (default True).
+- ``model``: a ``scikit-learn`` classifier to use instead of the random forest (default None).
+
+
 Inference-on-Synthetic Attacks
 ------------------------------
 
-Link to CAP [2]_
+Inference-on-Synthetic attacks consist of attacks that make inference on the target record :math:`x` from a machine learning model trained on the synthetic data.
+These are simple attacks based on traditional ``scikit-learn`` models, and are all instances of ``TrainableThresholdAttack``.
+
+ProbabilityEstimationAttack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Probability-Estimation attacks are membership inference attacks that use a density estimator fit to the synthetic data, :math:`p_\theta`. The score used by the attack is the density estimated in the target point, :math:`p_\theta(x)`. The intuition is that the presence of :math:`x` in the real dataset will bias the distribution from which synthetic records are sampled in such a way that synthetic records are more likely to "look like" :math:`x`.
+The density estimated on the synthetic data can be seen as an approximation of the density of the generating distribution.
+
+Parameters:
+
+- ``estimator``: a ``DensityEstimator`` object, or a kernel density estimator from ``scikit-learn``.
+- ``criterion`` (see `above <Trainable-threshold attacks>`_).
+
+``DensityEstimator`` objects implement a ``.fit`` method, training parameters :math:`\theta` from a dataset, and a ``.score`` method, returning a density :math:`y\in\mathbb{R}` for records :math:`y`.
+The main ``DensityEstimator`` provided by ``PrivE`` is the internal class ``sklearnDensityEstimator``, which wraps a ``scikit-learn`` density estimator, and is used by the constructor of ``ProbabilityEstimationAttack``.
+
+
+SyntheticPredictorAttack
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Synthetic predictor attacks are attribute inference attacks that train a machine learning model to predict the value of :math:`x_s` from known attributes :math:`x_{-s}`, :math:`C_\theta`, on records in the synthetic data. This is a common privacy attack, where correlations between attributes are exploited to predict the sensitive attribute (see, e.g., Correct Attribution Probability CAP [2]_). However, whether such attacks present a privacy risk is controversial, as an attacker can make a guess with accuracy better than random *even if* the target user is not in the dataset. ``PrivE`` circumvents this issue by randomising the sensitive attribute independently from other attributes.
+
+Disclaimer
+
+- ``estimator``: a ``scikit-learn`` classifier to infer the sensitive attribute from other attributes. Categorical attributes of the data are 1-hot encoded before learning, so any classifier on real-valued data can be applied.
+- ``criterion`` (see `above <Trainable-threshold attacks>`_).
 
 
 References
 ----------
 
-.. TODO: add the Usenix reference when it comes out.
+.. TODO: add the Usenix reference when the paper comes out.
 .. [1] Stadler, T., Oprisanu, B. and Troncoso, C., 2021. Synthetic data–anonymisation groundhog day. arXiv preprint arXiv:2011.07018.
 .. [2] Elliot, M., 2015. Final report on the disclosure risk associated with the synthetic data produced by the sylls team. Report 2015, 2.
