@@ -149,8 +149,8 @@ class TargetedMIA(LabelInferenceThreatModel):
         return MIAttackSummary(
             truth_labels,
             pred_labels,
-            generator_info=self.atk_know_gen.label,
-            attack_info=attack.label,
-            dataset_info=self.atk_know_data.label,
-            target_id=self.target_record.label,
+            generator_info = self.atk_know_gen.label,
+            attack_info = attack.label,
+            dataset_info = self.atk_know_data.label,
+            target_id = self.target_record.label,
         )
