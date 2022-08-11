@@ -199,12 +199,12 @@ class TargetedMIA(LabelInferenceThreatModel):
         )
         # Post-process this as a MIAttackSummary.
         return MIAttackSummary(
-            pred_labels,
             truth_labels,
-            generator_info=self.atk_know_gen.label,
-            attack_info=attack.label,
-            dataset_info=self.atk_know_data.label,
-            target_id=self.target_record.label,
+            pred_labels,
+            generator_info = self.atk_know_gen.label,
+            attack_info = attack.label,
+            dataset_info = self.atk_know_data.label,
+            target_id = self.target_record.label,
         )
 
     def set_label(self, label):
