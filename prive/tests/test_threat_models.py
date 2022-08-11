@@ -2,6 +2,7 @@
 
 from unittest import TestCase
 
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -54,7 +55,7 @@ class TestMIA(TestCase):
         # Check that we generate the correct number of samples.
         num_samples = 100
         datasets, labels = mia.generate_training_samples(num_samples)
-        self.assertEqual(len(datasets), num_samples * (1 + generate_pairs))
+        self.assertEqual(len(datasets), num_samples)
         self.assertEqual(len(datasets), len(labels))
         # We here use RAW as a generator, so the datasets generated are the
         # training datasets directly. We can thus check target membership on
@@ -67,10 +68,88 @@ class TestMIA(TestCase):
         self._test_labelling_helper(False, False)
 
     def test_labelling_pairs(self):
-        self._test_labelling_helper(False, True)
+        self._test_labelling_helper(True, False)
 
     def test_labelling_replace(self):
-        self._test_labelling_helper(True, False)
+        self._test_labelling_helper(False, True)
+
+    def test_labelling_replace_pairs(self):
+        self._test_labelling_helper(True, True)
+
+
+class TestMIAMultipleTargets(TestCase):
+    """Test the membership-inference attack with multiple targets."""
+
+    def _test_multiple_targets(self, generate_pairs, replace_target):
+        # Some parameters.
+        num_training_records = 100
+        num_targets = 10
+        # Generate all combinations (so that records are unique!).
+        large_dummy_data = TabularDataset(
+            pd.DataFrame(
+                list(itertools.product(range(10), range(10), range(10))),
+                columns=["a", "b", "c"],
+            ),
+            dummy_data_description,
+        )
+        # Select a large number of targets.
+        target_idxs = np.random.choice(
+            len(large_dummy_data), size=(num_targets,), replace=False
+        )
+        target_records = large_dummy_data.get_records(target_idxs)
+        large_dummy_data.drop_records(target_idxs, in_place=True)
+        # Create the threat model with multiple targets.
+        mia = TargetedMIA(
+            AuxiliaryDataKnowledge(
+                large_dummy_data,
+                auxiliary_split=0.5,
+                num_training_records=num_training_records,
+            ),
+            target_records,
+            knowledge_on_sdg,
+            replace_target=replace_target,
+            generate_pairs=generate_pairs,
+        )
+        # Generate datasets and check the labelling.
+        for r, threat_model_targeted in zip(target_records, mia):
+            # Check that the target record is properly set.
+            self.assertEqual(len(threat_model_targeted.target_record), 1)
+            for x, y in zip(
+                threat_model_targeted.target_record.data.values[0], r.data.values[0]
+            ):
+                self.assertEqual(x, y)
+            # Generate some datasets (unchanged through raw).
+            num_generated_samples = 20
+            datasets, labels = threat_model_targeted.generate_training_samples(
+                num_generated_samples
+            )
+            self.assertEqual(len(datasets), num_generated_samples)
+            self.assertEqual(len(labels), num_generated_samples)
+            # Check that the datasets are properly labelled.
+            for ds, target_in in zip(datasets, labels):
+                # If targets are replaced, the dataset should always have the
+                # same numbers of records.
+                if replace_target:
+                    self.assertEqual(len(ds), num_training_records)
+                elif target_in:
+                    # If not replacing, and this record has been *added* to the
+                    # dataset, the size of ds is larger than the number of records.
+                    # Note that we can't know the expected size without having
+                    # access to all labels.
+                    self.assertGreater(len(ds), num_training_records)
+                self.assertEqual(r in ds, target_in)
+
+    def test_labelling_basic(self):
+        self._test_multiple_targets(False, False)
+
+    def test_labelling_pairs(self):
+        self._test_multiple_targets(True, False)
+
+    def test_labelling_replace(self):
+        self._test_multiple_targets(False, True)
+
+    def test_labelling_replace_pairs(self):
+        self._test_multiple_targets(True, True)
 
 
 class TestAIA(TestCase):

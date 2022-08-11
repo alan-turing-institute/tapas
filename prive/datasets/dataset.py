@@ -361,6 +361,13 @@ class TabularDataset(Dataset):
             # drop n random records if none provided
             record_ids = np.random.choice(self.data.index, size=n).tolist()
 
+        else:
+            # TODO: the indices expected by pandas are the ones used by .loc,
+            # whereas in this file we use mostly .iloc. This needs to be
+            # cleaned in some way. At the moment, we renumber record_ids to
+            # be absolute indices (in 0, ..., len(dataset)-1).
+            record_ids = [self.data.index[i] for i in record_ids]
+
         new_data = self.data.drop(record_ids)
 
         if in_place:
