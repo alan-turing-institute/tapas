@@ -167,9 +167,61 @@ class TestAIA(TestCase):
         for ds, target_value in zip(datasets, labels):
             record = target_record.copy()
             record.set_value("c", target_value)
-            print(ds.data, "\n", target_record.data, target_value)
             self.assertEqual(record in ds, True)
 
+    def test_multiple_targets(self):
+        """Test whether the datasets are correctly labelled, for multiple targets."""
+        num_training_records = 100
+        num_targets = 10
+        # Generate all combinations (so that records are unique!), but with many more
+        # values for (a,b) --> 900 records, and "c" being binary.
+        large_dummy_data = TabularDataset(
+            pd.DataFrame(
+                list(itertools.product(range(30), range(30), (0, 1))),
+                columns=["a", "b", "c"],
+            ),
+            dummy_data_description,
+        )
+        # Select a large number of targets.
+        target_idxs = np.random.choice(
+            len(large_dummy_data), size=(num_targets,), replace=False
+        )
+        target_records = large_dummy_data.get_records(target_idxs)
+        large_dummy_data.drop_records(target_idxs, in_place=True)
+        # Create the threat model.
+        aia = TargetedAIA(
+            AuxiliaryDataKnowledge(
+                large_dummy_data,
+                auxiliary_split=0.5,
+                num_training_records=num_training_records,
+            ),
+            target_records,
+            "c",
+            [0, 1],
+            knowledge_on_sdg,
+        )
+        # Generate datasets and check the labelling.
+        for r, threat_model_targeted in zip(target_records, aia):
+            # Check that the target record is found in the dataset.
+            self.assertEqual(len(threat_model_targeted.target_record), 1)
+            for x, y, col in zip(
+                threat_model_targeted.target_record.data.values[0], r.data.values[0], ["a", "b", "c"],
+            ):
+                # Check equality for non-sensitive attributes.
+                if col != "c":
+                    self.assertEqual(x, y)
+            # Generate some datasets (unchanged through raw).
+            num_generated_samples = 20
+            datasets, labels = threat_model_targeted.generate_training_samples(
+                num_generated_samples
+            )
+            self.assertEqual(len(datasets), num_generated_samples)
+            self.assertEqual(len(labels), num_generated_samples)
+            # Check that the record with the correct value is found in the dataset.
+            for ds, value in zip(datasets, labels):
+                record = r.copy()
+                record.set_value("c", value)
+                self.assertEqual(record in ds, True)
 
 class TestAttackerKnowledge(TestCase):
     """Test the attacker knowledge."""

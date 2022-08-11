@@ -53,10 +53,10 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         -----
         attacker_knowledge: AttackerKnowledgeOnData
             The data knowledge from which datasets are generated.
-        target_record: Dataset
-            The target record to append half of the time. This dataset can
-            contain more than one record, in which case the records are
-            randomly added independently of one another.
+        target_records: Dataset
+            The target records to append to the dataset. If several records
+            are provided, these records are randomly added to the dataset
+            independently from each other.
         generate_pairs: bool, default True
             Whether to output pairs of datasets differing only by the presence
             of the target record, or randomly choose for each dataset.
@@ -93,8 +93,8 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         # Compute modified datasets and corresponding labels by adding records
         # according to the labels. If self.generate_pairs, each iteration of
         # the loop creates two paired datasets.
-        app_datasets = []
-        app_labels = []
+        mod_datasets = []
+        mod_labels = []
         for i_ds, dataset in enumerate(datasets):
             # Copy the datasets to be modified in place.
             dataset = dataset.copy()
@@ -135,13 +135,13 @@ class MIALabeller(AttackerKnowledgeWithLabel):
                     dataset2.add_records(record, in_place=True)
             # Labels need to be converted, either as lists or int/float (if only one).
             _convert = list if len(self.target_records) > 1 else lambda x: x[0]
-            app_datasets.append(dataset)
-            app_labels.append(_convert(labels))
+            mod_datasets.append(dataset)
+            mod_labels.append(_convert(labels))
             if self.generate_pairs:
-                app_datasets.append(dataset2)
-                app_labels.append(_convert(labels == False))  # Negation.
+                mod_datasets.append(dataset2)
+                mod_labels.append(_convert(labels == False))  # Negation.
 
-        return app_datasets, app_labels
+        return mod_datasets, mod_labels
 
     @property
     def label(self):
