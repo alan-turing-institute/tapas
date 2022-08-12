@@ -266,6 +266,10 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
 # where the attacker aims to infer the "label" of the private dataset. The
 # label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
 
+# This is not a lambda for pickling purposes.
+def _silent_iterator( x):
+    """Identity function, equivalent to lambda x: x."""
+    return x
 
 class LabelInferenceThreatModel(TrainableThreatModel):
     def __init__(
@@ -290,7 +294,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         iterator_tracker: Callable list L -> Iterable over L.
             A callable used to track iterations. The method __next__ is called
             whenever a dataset needs to be generated. This can be used to track
-            progress, e.g. with tqdm. Default is lambda x: x (silent).
+            progress, e.g. with tqdm. Default is (silent).
             Note that this iterator is only called for synthetic data generation,
             which is often the bottleneck, and not training data generation.
 
@@ -299,7 +303,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         self.atk_know_gen = attacker_knowledge_generator
         # Also, handle the memoisation to prevent recomputing datasets.
         self.memorise_datasets = memorise_datasets
-        self.iterator_tracker = iterator_tracker or (lambda x: x)
+        self.iterator_tracker = iterator_tracker or _silent_iterator
         # maps training = True/False -> list of datasets, list of labels.
         self._memory = {True: ([], []), False: ([], [])}
 

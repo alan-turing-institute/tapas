@@ -18,6 +18,9 @@ from which training datasets are sampled, with or without the target record.
 
 from abc import ABC, abstractmethod
 
+# For
+import pickle
+
 
 class ThreatModel(ABC):
     """
@@ -40,6 +43,49 @@ class ThreatModel(ABC):
         """
 
         abstract
+
+    @classmethod
+    def load(cls, name):
+        """
+        Load a ThreatModel saved with self.save(name).
+
+        Parameters
+        ----------
+        name: str
+            The prefix of the filename (`name`.pkl) to which the threat model
+            was saved.
+
+        """
+        filename = name + ".pkl"
+        with open(filename, "rb") as ff:
+            threat_model = pickle.load(ff)
+        # Check that the object retrieved from disk is a threat model.
+        if not isinstance(threat_model, ThreatModel):
+            raise Exception("Pickled object is not a ThreatModel.")
+        # Set the name of the threat model.
+        threat_model._name = name
+        return threat_model
+
+    def save(self, name=None):
+        """
+        Save a copy of this ThreatModel, including all internal variables.
+
+        Parameters
+        ----------
+        name: str (default None)
+            The prefix of the filename (`name`.pkl) to which this threat model
+            is saved. If self.name is None, then this attempts to use self._name,
+            which is set exclusively by ThreatModel.load(name).
+
+        """
+        if name is None:
+            if hasattr(self, "_name"):
+                name = self._name
+            else:
+                raise Exception("Name is required to save this ThreatModel.")
+        filename = name + ".pkl"
+        with open(filename, "wb") as ff:
+            pickle.dump(self, ff)
 
 
 class TrainableThreatModel(ThreatModel):

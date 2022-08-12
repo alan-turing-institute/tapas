@@ -10,3 +10,4 @@ docs/build
 docs/source/_autosummary
 *~
 */prive_report*
+prive/tests/output/*
