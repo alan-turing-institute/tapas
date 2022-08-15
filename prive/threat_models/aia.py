@@ -22,6 +22,7 @@ from .attacker_knowledge import (
     AttackerKnowledgeWithLabel,
     LabelInferenceThreatModel,
 )
+from ..report import AIAttackSummary, BinaryAIAttackSummary
 
 import numpy as np
 
@@ -115,6 +116,10 @@ class AIALabeller(AttackerKnowledgeWithLabel):
         # Replace the records in each dataset, and return the labels.
         return mod_datasets, all_labels
 
+    @property
+    def label(self):
+        return self.attacker_knowledge.label
+
 
 class TargetedAIA(LabelInferenceThreatModel):
     """
@@ -126,7 +131,7 @@ class TargetedAIA(LabelInferenceThreatModel):
     def __init__(
         self,
         attacker_knowledge_data: AttackerKnowledgeOnData,
-        target_records: TabularDataset,
+        target_record: TabularDataset,
         sensitive_attribute: str,
         attribute_values: list,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
@@ -138,7 +143,7 @@ class TargetedAIA(LabelInferenceThreatModel):
             self,
             AIALabeller(
                 attacker_knowledge_data,
-                target_records,
+                target_record,
                 sensitive_attribute,
                 attribute_values,
                 distribution,
@@ -146,18 +151,39 @@ class TargetedAIA(LabelInferenceThreatModel):
             attacker_knowledge_generator,
             memorise_datasets,
             iterator_tracker=iterator_tracker,
-            num_labels=len(target_records),
+            num_labels=len(target_record),
         )
         self.sensitive_attribute = sensitive_attribute
         self.attribute_values = attribute_values
         self.distribution = distribution
         # See mia.py for the following bit of code.
         if self.multiple_label_mode:
-            self._target_records = [r for r in target_records]
+            self._target_records = [r for r in target_record]
             self.set_label(0)
         else:
-            self.target_record = target_records
+            self.target_record = target_record
 
+    # Wrap the test method to output a AIAttackSummary.
+    def _wrap_output(self, pred_labels, truth_labels, attack):
+        # If only two values are possible, use the binary valued report.
+        # The second value is treated as the positive label.
+        if len(self.attribute_values) == 2:
+            ReportClass = BinaryAIAttackSummary
+            kwargs = {"positive_value": self.attribute_values[1]}
+        # Otherwise, we use the more general class.
+        else:
+            ReportClass = AIAttackSummary
+            kwargs = {}
+        return ReportClass(
+            truth_labels,
+            pred_labels,
+            generator_info=self.atk_know_gen.label,
+            attack_info=attack.label,
+            dataset_info=self.atk_know_data.label,
+            target_id=self.target_record.label,
+            sensitive_attribute=self.sensitive_attribute,
+            **kwargs
+        )
 
     def set_label(self, label):
         """

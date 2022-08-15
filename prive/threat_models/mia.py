@@ -21,7 +21,6 @@ from .attacker_knowledge import (
     AttackerKnowledgeWithLabel,
     LabelInferenceThreatModel,
 )
-
 from ..report import MIAttackSummary
 
 import numpy as np
@@ -185,27 +184,17 @@ class TargetedMIA(LabelInferenceThreatModel):
             self.target_record = target_records
 
     # Wrap the test method to output a MIAttackSummary.
-    def test(
-        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False,
-    ) -> MIAttackSummary:
-        """
-        see prive.threat_models.LabelInferenceThreatModel.test for more information.
-        """
-        # Run the test method from LabelInferenceThreatModel, unchanged.
-        pred_labels, truth_labels = LabelInferenceThreatModel.test(
-            self, attack, num_samples, ignore_memory
-        )
-        # Post-process this as a MIAttackSummary.
+    def _wrap_output(self, pred_labels, truth_labels, attack):
         return MIAttackSummary(
             truth_labels,
             pred_labels,
-            generator_info = self.atk_know_gen.label,
-            attack_info = attack.label,
-            dataset_info = self.atk_know_data.label,
-            target_id = self.target_record.label,
+            generator_info=self.atk_know_gen.label,
+            attack_info=attack.label,
+            dataset_info=self.atk_know_data.label,
+            target_id=self.target_record.label,
         )
 
-    def set_label(self, label):
+    def set_label(self, label: str):
         """
         If the attack is performed against multiple targets, this sets the
         target record to use when outputting labels.

@@ -22,7 +22,7 @@ class Report(ABC):
         """
         pass
 
-
+# TODO: Binary label report? (weird to have MIA as name!)
 class MIAttackReport(Report):
     """
     Report and visualise performance of a series of Membership inference attacks.

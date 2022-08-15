@@ -46,22 +46,24 @@ threat_model = prive.threat_models.TargetedAIA(
 # We here create a range of attacks to test.
 attacks = [
     prive.attacks.GroundhogAttack(),
-    prive.attacks.ClosestDistanceAIA(criterion="accuracy"),
-    prive.attacks.ClosestDistanceAIA(
-        distance=prive.attacks.LpDistance(2), criterion="accuracy"
-    ),
-    prive.attacks.LocalNeighbourhoodAttack(radius=1),
-    prive.attacks.LocalNeighbourhoodAttack(radius=2),
-    prive.attacks.SyntheticPredictorAttack(LogisticRegression(), criterion="accuracy"),
+    # prive.attacks.ClosestDistanceAIA(criterion="accuracy"),
+    # prive.attacks.ClosestDistanceAIA(
+    #     distance=prive.attacks.LpDistance(2), criterion="accuracy"
+    # ),
+    # prive.attacks.LocalNeighbourhoodAttack(radius=1),
+    # prive.attacks.LocalNeighbourhoodAttack(radius=2),
+    # prive.attacks.SyntheticPredictorAttack(LogisticRegression(), criterion="accuracy"),
 ]
 
 # Train, evaluate, and summarise all attacks.
-results = []
+summaries = []
 for attack in attacks:
     print(f"Evaluating attack {attack.label}...")
     attack.train(threat_model, num_samples=100)
-    results.append(threat_model.test(attack, num_samples=100))
+    summaries.append(threat_model.test(attack, num_samples=100))
+    print(summaries[-1].get_metrics())
 
-import numpy as np
-for yt, yp in results:
-	print(np.mean(yt==yp))
+# Finally, group together the summaries as a report.
+print("Publishing a report.")
+report = prive.report.MIAttackReport(summaries)
+report.create_report("multiple_aia")

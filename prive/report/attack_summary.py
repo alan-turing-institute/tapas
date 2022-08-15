@@ -197,7 +197,8 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
                         "privacy_gain",
                     ],
                 ),
-            ]
+            ],
+            axis=1
         )
 
 
@@ -271,11 +272,16 @@ class MIAttackSummary(BinaryLabelInferenceAttackSummary):
                     columns=["dataset", "target_id", "generator", "attack"],
                 ),
                 BinaryLabelInferenceAttackSummary.get_metrics(self),
-            ]
+            ],
+            axis=1
         )
 
 
 class AIAttackSummary(LabelInferenceAttackSummary):
+    """
+    Class summarising the outputs of an attribute inference attack.
+
+    """
     def __init__(
         self,
         labels,
@@ -356,7 +362,8 @@ class AIAttackSummary(LabelInferenceAttackSummary):
 
         """
         return pd.concat(
-            [self.get_header(), LabelInferenceAttackSummary.get_metrics(self)]
+            [self.get_header(), LabelInferenceAttackSummary.get_metrics(self)],
+            axis=1
         )
 
     def get_metric_filename(self, postfix=""):
@@ -368,6 +375,11 @@ class AIAttackSummary(LabelInferenceAttackSummary):
 
 
 class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
+    """
+    Class summarising the outputs of an attribute inference attack with binary values.
+
+    """
+
     def __init__(
         self,
         labels,
@@ -440,5 +452,6 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
 
         """
         return pd.concat(
-            [self.get_header(), BinaryLabelInferenceAttackSummary.get_metrics(self),]
+            [self.get_header(), BinaryLabelInferenceAttackSummary.get_metrics(self),],
+            axis=1
         )
