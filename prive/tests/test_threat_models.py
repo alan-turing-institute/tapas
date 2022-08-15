@@ -52,6 +52,7 @@ class TestMIA(TestCase):
             generate_pairs=generate_pairs,
             replace_target=replace_target,
         )
+        self.assertEqual(mia.multiple_label_mode, False)
         # Check that we generate the correct number of samples.
         num_samples = 100
         datasets, labels = mia.generate_training_samples(num_samples)
@@ -64,7 +65,7 @@ class TestMIA(TestCase):
             self.assertEqual(len(ds), 2 if (replace_target or not target_in) else 3)
             self.assertEqual(target_record in ds, target_in)
 
-    def test_labelling_basic(self):
+    def test_labelling_default(self):
         self._test_labelling_helper(False, False)
 
     def test_labelling_pairs(self):
@@ -110,6 +111,7 @@ class TestMIAMultipleTargets(TestCase):
             replace_target=replace_target,
             generate_pairs=generate_pairs,
         )
+        self.assertEqual(mia.multiple_label_mode, True)
         # Generate datasets and check the labelling.
         for r, threat_model_targeted in zip(target_records, mia):
             # Check that the target record is properly set.
@@ -139,7 +141,7 @@ class TestMIAMultipleTargets(TestCase):
                     self.assertGreater(len(ds), num_training_records)
                 self.assertEqual(r in ds, target_in)
 
-    def test_labelling_basic(self):
+    def test_labelling_default(self):
         self._test_multiple_targets(False, False)
 
     def test_labelling_pairs(self):

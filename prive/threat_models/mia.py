@@ -100,7 +100,7 @@ class MIALabeller(AttackerKnowledgeWithLabel):
                 dataset2 = dataset.copy()
             # For each target, assign a random label.
             labels = np.random.randint(2, size=len(self.target_records)) == 1
-            # If replace_target, then we first remove entries for
+            # If replace_target, then we first remove entries for the targets.
             if self.replace_target:
                 # We first choose an entry e for each target record such that if
                 # the target x is in the data, then e is removed (and vice versa).
@@ -122,7 +122,7 @@ class MIALabeller(AttackerKnowledgeWithLabel):
                         in_place=True,
                         n=0,  # Same as above.
                     )
-            #
+            # Add the target records.
             for record, label in zip(self.target_records, labels):
                 # If the label is 1, modify dataset.
                 if label:

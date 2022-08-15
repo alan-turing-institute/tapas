@@ -364,28 +364,29 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         use_memory = (not ignore_memory) and self.memorise_datasets
         if use_memory:
             mem_datasets, mem_labels = self._memory[training]
-            if num_samples <= len(mem_datasets):
-                # No samples are needed! Return what is in memory:
-                return mem_datasets[:num_samples], mem_labels[:num_samples]
-            # Decrease the number of samples (= number of samples to generate).
             num_samples -= len(mem_datasets)
         else:
             mem_datasets = []
             mem_labels = []
-        # Generate sample: first, produce the original datasets with labels.
-        training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
-            num_samples, training=training
-        )
-        # Then, generate synthetic data from each original dataset.
-        gen_datasets = [
-            self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
-        ]
-        # Add the entries generated to the memory.
-        if use_memory:
-            self._memory[training] = (
-                mem_datasets + gen_datasets,
-                mem_labels + gen_labels,
+        # If there are samples to generate:
+        if num_samples > 0:
+            # Generate sample: first, produce the original datasets with labels.
+            training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
+                num_samples, training=training
             )
+            # Then, generate synthetic data from each original dataset.
+            gen_datasets = [
+                self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
+            ]
+            # Add the entries generated to the memory.
+            if use_memory:
+                self._memory[training] = (
+                    mem_datasets + gen_datasets,
+                    mem_labels + gen_labels,
+                )
+        else:
+            gen_datasets = []
+            gen_labels = []
         # Finally, if in multiple-label mode, filter labels to only current.
         # This only changes the output of this function, and not the memory.
         all_labels = mem_labels + gen_labels
