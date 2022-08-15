@@ -6,7 +6,7 @@ import numpy as np
 from prive.attacks.set_classifiers import LRClassifier, RFClassifier, \
     SetReprClassifier, NaiveRep
 from prive.threat_models.mia import TargetedAuxiliaryDataMIA
-from prive.attacks import Groundhog, ClosestDistanceAttack
+from prive.attacks import Groundhog, ClosestDistanceMIA
 from prive.datasets import TabularDataset, TabularRecord
 
 from prive.generators import ReturnRaw
@@ -55,7 +55,7 @@ test_labels, predictions = threat_model.test(attack, num_test_samples,
                                              replace_target=True, save_datasets=True)
 
 # We can also define a second attack, which will reuse memoized datasets.
-#attack_cd = ClosestDistanceAttack(threat_model)
+#attack_cd = ClosestDistanceMIA(threat_model)
 #attack_cd.train(num_samples = 100)
 #test_labels_cd, predictions_cd = threat_model.test(attack_cd, num_test_samples)
 

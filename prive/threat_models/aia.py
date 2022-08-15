@@ -77,13 +77,11 @@ class AIALabeller(AttackerKnowledgeWithLabel):
         # Generate the datasets from the attacker knowledge.
         datasets = self.attacker_knowledge.generate_datasets(num_samples, training)
         # Sample target attributes iid.
-        labels = list(
-            np.random.choice(
+        labels = np.random.choice(
                 self.attribute_values,
                 size=(num_samples,),
                 replace=True,
                 p=self.distribution,
-            )
         )
         # Modify the record with all possible values, and save.
         modified_records = {}
@@ -91,13 +89,17 @@ class AIALabeller(AttackerKnowledgeWithLabel):
             r = self.target_record.copy()
             r.set_value(self.sensitive_attribute, value)
             modified_records[value] = r
+        # Encode the labels as integers (0, ..., num_values-1).
+        enc_labels = np.zeros(labels.shape, dtype=int)
+        for i, v in enumerate(self.attribute_values):
+            enc_labels[labels == v] = i
         # Replace the records in each dataset, and return the labels.
         return (
             [
                 ds.replace(modified_records[v], in_place=False)
                 for ds, v in zip(datasets, labels)
             ],
-            labels,
+            list(enc_labels),
         )
 
 

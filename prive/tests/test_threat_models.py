@@ -54,7 +54,7 @@ class TestMIA(TestCase):
         # Check that we generate the correct number of samples.
         num_samples = 100
         datasets, labels = mia.generate_training_samples(num_samples)
-        self.assertEqual(len(datasets), num_samples * (1 + generate_pairs))
+        self.assertEqual(len(datasets), num_samples)
         self.assertEqual(len(datasets), len(labels))
         # We here use RAW as a generator, so the datasets generated are the
         # training datasets directly. We can thus check target membership on
