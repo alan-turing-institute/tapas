@@ -25,7 +25,7 @@ The target function :math:`f`, and the quality of the approximation :math:`\appr
 
 In ``PrivE``, an ``Attack`` is thus defined by two elements:
 
-1. *Evaluation*: what the attack does, the "function call" of :math:`\mathcal{A}_\theta(\circ)`. This is defined by the ``.attack`` and ``.attack_score`` functions, taking a list of synthetic datasets as argument, and outputting a decision per dataset. The ``.attack`` method outputs a "decision" on :math:`f\left(D^{(r)}\right)`, while ``.attack_score``
+1. *Evaluation*: what the attack does, the "function call" of :math:`\mathcal{A}_\theta(\circ)`. This is defined by the ``.attack`` and ``.attack_score`` functions, taking a list of synthetic datasets as argument, and outputting a decision per dataset. The ``.attack`` method outputs a "decision" on :math:`f\left(D^{(r)}\right)`, while ``.attack_score`` computes the confidence of the decision.
 2. *Training*: how to choose the parameters :math:`\theta` of the attack. This behaviour is defined by the ``.train`` method, which takes as input a threat model. This threat model captures all the information available to an attacker.
 
 The evaluation of the success rate attack is performed by the ``ThreatModel`` object itself, through its ``.test`` function.
@@ -40,6 +40,7 @@ In particular, there are three dimensions to consider when designing an attack:
 3. Attacker knowledge: what information about the real dataset is required for the attack? What information about the generator is required?
 
 All of these aspects are defined by the ``ThreatModel`` object. A good design practice is to check in the ``.train`` method whether the attack can be applied in this threat model.
+
 
 
 Implementing a new ``Attack``
@@ -59,6 +60,7 @@ Additionally, the following methods are useful to implement:
 ``PrivE`` provides several tools to implement attacks, which we detail here.
 
 
+
 Training an Attack
 ~~~~~~~~~~~~~~~~~~
 
@@ -74,21 +76,62 @@ How is the attacker knowledge used to generate these samples?
 See the documentation page on `Modelling Threats <modelling-threats>`_ for more details.
 
 
-Label-Inference Attacks
-~~~~~~~~~~~~~~~~~~~~~~~
 
-``TargetedMIA``, ``TargetedAIA``
+Training against a ThreatModels
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``LabelInferenceThreatModel``
+Attacks are trained against a specific threat model. The threat model holds information related to the specific task at hand, which can be used for training. We here describe what parameters ``PrivE`` threat models contain.
+
+LabelInferenceThreatModel
++++++++++++++++++++++++++
+
+Many common attacks can be modelled as *label-inference* attacks, where the decision set is finite (a *label*), :math:`\mathcal{S} = \{1, \dots, k\}`. Notably, this includes membership inference attacks (MIA), where the label is binary :math:`\mathcal{S} = \{0,1\}`, and attribute inference attacks (AIA), where the label can take any value allowed for the sensitive attribute :math:`s`: :math:`\mathcal{S} = \mathcal{V}_s`.
+
+In ``PrivE``, such threat models inherit from the class ``LabelInferenceThreatModel``, which implements ``.test`` and ``.generate_training_samples`` for attacks whose goal is to predict the label. The latter method is implemented to return a pair ``(synthetic_datasets, corresponding_labels)``.
+The common attack classes, ``TargetedMIA`` and ``TargetedAIA``, inherit from this class, and implement the logic of MIA/AIA with purpose-specific ``AttackerKnowledgeWithLabel`` objects.
+If the attack you are implementing is agnostic to the *semantics* of the label and can treat the attack task as a classification problem, you may have a label-inference attack.
+
+In addition to ``.generate_training_samples``, these threat models have the following (mostly technical) parameters:
+
+- ``atk_know_data``: an ``AttackerKnowledgeWithLabel`` object, that implements ``.generate_datasets_with_label``. Unless your attack is tailored to specific classes of attacker knowledge, refrain from using this explicitly.
+- ``atk_know_gen``: an ``AttackerKnowledgeOnGenerator`` object, that implements ``.generate``. Similarly, unless your attack requires specific knowledge of the generator, refrain from using this explicitly.
+
+TargetedMIA
++++++++++++
+
+Targeted Membership Inference Attacks aim at inferring whether a specific *target* record :math:`x` is in the real data. Such threat models are implemented in ``PrivE`` as ``LabelInferenceThreatModel`` where the label is membership of the target records, :math:`l = x \in D^{(r)}`.
+In addition to the attributes inherited from the parent, these threat models also have the following attributes:
+
+- ``target_record``: a ``Dataset`` object with one entry, the record of the target user.
+
+
+TargetedAIA
++++++++++++
+
+Targeted Attribute Inference Attacks aim at inferring the value of a *sensitive* attribute :math:`s` of a specific *target* record :math:`x`. Similarly, such threat models are ``LabelInferenceThreatModel`` objects, where the label is the value :math:`x_s \in \mathcal{V}_s`.
+A key difference is that these threat models require the notion of attribute to be well-defined, and thus mostly apply to tabular datasets.
+In addition to the attributes inherited from the parent, these threat models also have the following attributes:
+
+- ``target_record``: a ``Dataset`` object with one entry, the record of the target user. The value of the sensitive attribute of this object is uninformative and should be ignored.
+- ``sensitive_attribute``: the name (``str``) of the sensitive attribute.
+- ``attribute_values``: a list of possible values for the sensitive attribute.
+
 
 
 Trainable-Threshold Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Many attacks can be defined by a non-trainable score
+Many binary label-inference attacks can be defined solely by a non-trainable score :math:`s: \mathcal{D} \rightarrow \mathbb{R}`. The decision made by ``.attack`` is based on a threshold :math:`\tau`,  :math:`\mathcal{A}_\theta(D^{(s)}) = 1 \Leftrightarrow s(D^{(s)}) \geq \tau`.
+Training the attack thus only involves *selecting a threshold* that leads to good results, according to some criterion.
+``PrivE`` provides a ``TrainableThresholdAttack`` class for these attacks, that only requires the attack designer to implement ``.attack_score``.
+The constructor of these attacks has an additional parameter, a tuple ``criterion``, which defines how the threshold is selected.
+There are several options, detailed in the documentation page on `Library of Attacks <library-of-attacks>`_.
 
 
 ShadowModellingAttack
 ~~~~~~~~~~~~~~~~~~~~~
 
-For attacks based on *shadow modelling*, the base class of ``ShadowModellingAttack``
+Shadow-modelling attacks are label-inference attacks where the attacker trains a classifier :math:`C_\theta` over synthetic datasets to predict the label of the real dataset. 
+``PrivE`` implements shadow-modelling attacks with the ``ShadowModellingAttack`` class. This class takes as argument a ``PrivE.attacks.SetClassifier`` object.
+If you wish to implement a shadow-modelling attack, the easiest way if to implement a custom ``SetClassifier`` object.
+For more details on shadow-modelling attacks, see the documentation page on `Library of Attacks <library-of-attacks>`_.
