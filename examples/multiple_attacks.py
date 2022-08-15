@@ -11,8 +11,13 @@ import prive.threat_models
 import prive.attacks
 import prive.report
 
+from prive.attacks import LpDistance
+
+import pandas
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KernelDensity
 
 # Load the data.
 data = prive.datasets.TabularDataset.read(
@@ -54,7 +59,18 @@ attacks = [
     prive.attacks.GroundhogAttack(
         model=LogisticRegression(), label="LogisticGroundhog"
     ),
-    prive.attacks.ClosestDistanceAttack(fpr=0.1, label="Closest-Distance"),
+    prive.attacks.ClosestDistanceMIA(
+        criterion="accuracy", label="ClosestDistance-Hamming"
+    ),
+    prive.attacks.ClosestDistanceMIA(
+        criterion=("threshold", 0), label="Direct Lookup"
+    ),
+    prive.attacks.ClosestDistanceMIA(
+        distance=LpDistance(2), criterion="accuracy", label="ClosestDistance-L2"
+    ),
+    prive.attacks.ProbabilityEstimationAttack(
+        KernelDensity(), criterion="accuracy", label="KernelEstimator"
+    ),
 ]
 
 # Train, evaluate, and summarise all attacks.

@@ -6,9 +6,9 @@ import io
 import numpy as np
 import pandas as pd
 
-
 from prive.datasets.data_description import DataDescription
 from .utils import encode_data, index_split, get_dtype
+
 
 # Helper function for parsing file-like objects
 def _parse_csv(fp, schema, label=None):
@@ -503,6 +503,39 @@ class TabularDataset(Dataset):
 
         """
         return TabularDataset(self.data.copy(), self.description)
+
+    def view(self, columns = None, exclude_columns = None):
+        """
+        Create a TabularDataset object that contains a subset of the columns of
+        this TabularDataset. The resulting object only has a copy of the data,
+        and can thus be modified without affecting the original data.
+
+        Parameters
+        ----------
+        Exactly one of `columns` and `exclude_columns` must be defined.
+
+        columns: list, or None
+            The columns to include in the view.
+        exclude_columns: list, or None
+            The columns to exclude from the view, with all other columns included.
+
+        Returns
+        -------
+        TabularDataset
+            A subset of this data, restricted to some columns.
+
+        """
+        assert (
+            columns is not None or exclude_columns is not None
+        ), "Empty view: specify either columns or exclude_columns."
+        assert (
+            columns is None or exclude_columns is None
+        ), "Overspecified view: only one of columns and exclude_columns can be given."
+
+        if exclude_columns is not None:
+            columns = [c for c in self.description.columns if c not in exclude_columns]
+
+        return TabularDataset(self.data[columns], self.description.view(columns))
 
     @property
     def as_numeric(self):

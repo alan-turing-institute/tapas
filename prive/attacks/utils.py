@@ -1,5 +1,5 @@
 from .groundhog import GroundhogAttack
-from .closest_distance import ClosestDistanceAttack
+from .closest_distance import ClosestDistanceMIA
 
 from .set_classifiers import FeatureBasedSetClassifier, NaiveSetFeature, HistSetFeature
 
@@ -38,7 +38,7 @@ def load_attack(name, params, dataset):
         fpr = params.get("fpr", None)
         tpr = params.get("tpr", None)
         convert = lambda s: None if s in None else float(s)
-        attack = ClosestDistanceAttack(
+        attack = ClosestDistanceMIA(
             fpr=convert(fpr), tpr=convert(tpr), threshold=convert(threshold),
         )
 

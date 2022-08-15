@@ -84,12 +84,10 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         # If generating pairs, make num_samples dividable by 2.
         if self.generate_pairs and num_samples // 2:
             num_samples += 1
-
         # Generate the datasets from the attacker knowledge.
         datasets = self.attacker_knowledge.generate_datasets(
             num_samples // 2 if self.generate_pairs else num_samples, training
         )
-
         # Compute modified datasets and corresponding labels by adding records
         # according to the labels. If self.generate_pairs, each iteration of
         # the loop creates two paired datasets.

@@ -64,6 +64,7 @@ Contents
    quickstart
    dataset-schema
    modelling-threats
+   library-of-attacks
    implementing-attacks
 
 

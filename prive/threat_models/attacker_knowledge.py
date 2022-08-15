@@ -266,7 +266,7 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
 # where the attacker aims to infer the "label" of the private dataset. The
 # label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
 
-
+# TODO: add output class.
 class LabelInferenceThreatModel(TrainableThreatModel):
     """
     Label-inference Threat Model.
@@ -357,19 +357,21 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         training: bool (default, True)
             whether to generate samples from the training or test distribution.
         ignore_memory: bool, default False
-            Whether to use the memoised datasets, or ignore them.
+            Whether to ignore the memoised datasets.
 
         """
         # Retrieve memoized samples (if needed).
-        if not ignore_memory:
+        use_memory = (not ignore_memory) and self.memorise_datasets
+        if use_memory:
+            mem_datasets, mem_labels = self._memory[training]
+            if num_samples <= len(mem_datasets):
+                # No samples are needed! Return what is in memory:
+                return mem_datasets[:num_samples], mem_labels[:num_samples]
+            # Decrease the number of samples (= number of samples to generate).
+            num_samples -= len(mem_datasets)
+        else:
             mem_datasets = []
             mem_labels = []
-        else:
-            mem_datasets, mem_labels = self._memory[training]
-            num_samples -= len(mem_datasets)
-            # No samples are needed! Return what is in memory:
-            if num_samples <= 0:
-                return mem_datasets[:num_samples], mem_labels[:num_samples]
         # Generate sample: first, produce the original datasets with labels.
         training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
             num_samples, training=training
@@ -379,7 +381,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
         ]
         # Add the entries generated to the memory.
-        if not ignore_memory:
+        if use_memory:
             self._memory[training] = (
                 mem_datasets + gen_datasets,
                 mem_labels + gen_labels,
