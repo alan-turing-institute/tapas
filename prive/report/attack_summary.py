@@ -14,58 +14,62 @@ import pandas as pd
 
 
 class AttackSummary(ABC):
+    """Summarise the results of an attack in a specific threat model."""
+
     @abstractmethod
     def get_metrics(self):
         """
-        Calculate metrics relevant for an attack
+        Calculate metrics relevant for an attack.
 
         """
         pass
 
     @abstractmethod
-    def write_metrics(self, output_path):
+    def get_metric_filename(self, postfix=""):
+        """
+        Returns the name of the file to save to.
+
+        Parameters
+        ----------
+        postfix: str
+            An optional string to append to the filename.
+
+        """
+
+    def write_metrics(self, output_path, postfix=""):
         """
         Write metrics to file.
 
+        Parameters
+        ----------
+        output_path: str
+            The prefix of the path where the metrics should be saved.
+        postfix: str
+            An optional string to append to the filename
+
         """
-        pass
+        file_name = self.get_metric_filename(postfix)
+        self.get_metrics().to_csv(os.path.join(output_path, file_name), index=False)
 
 
-class MIAttackSummary(AttackSummary):
+class LabelInferenceAttackSummary(AttackSummary):
     """
-    Class summarising main performance metrics of a membership inference attack.
+    Class summarising main performance metrics of a label-inference attack.
 
     """
-    def __init__(
-        self, labels, predictions, generator_info, attack_info, dataset_info, target_id
-    ):
+
+    def __init__(self, labels, predictions):
         """
-
-        Initialise the MIAttackSummary Class.
-
         Parameters
         ----------
         labels: list[int]
             List with true labels of the target membership in the dataset.
         predictions: list[int]
             List with the predicted labels of the target membership in the dataset.
-        generator_info: str
-            Metadata with information about the method used to generate the dataset.
-        attack_info: str
-            Metadata with information about the attacked used to infer membership of the target on the dataset.
-        dataset_info: str
-            Metadata with information about the original raw dataset.
-        target_id: str
-            Metadata with information about the target record used on the attack.
 
         """
-
         self.labels = np.array(labels)
         self.predictions = np.array(predictions)
-        self.generator = generator_info
-        self.attack = attack_info
-        self.dataset = dataset_info
-        self.target_id = target_id
 
     @property
     def accuracy(self):
@@ -78,6 +82,52 @@ class MIAttackSummary(AttackSummary):
 
         """
         return np.mean(self.predictions == self.labels)
+
+    def get_metrics(self):
+        """
+        Calculates all MIA relevant metrics and returns it as a dataframe.
+
+        Returns
+        -------
+        A dataframe
+            A dataframe with attack info and metrics.  The dataframe has the following structure.
+            Index:
+                RangeIndex
+            Columns:
+                accuracy: float
+
+        """
+
+        return pd.DataFrame([[self.accuracy,]], columns=["accuracy",],)
+
+    def get_metric_filename(self, postfix=""):
+        return f"result_labelIA_{postfix}.csv"
+
+
+class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
+    """
+    LabelInferenceAttackSummary, where the label is binary.
+
+    """
+
+    def __init__(self, labels, predictions, positive_label=1):
+        """
+        Parameters
+        ----------
+        labels: list[int]
+            List with true labels of the target membership in the dataset.
+        predictions: list[int]
+            List with the predicted labels of the target membership in the dataset.
+        positive_label: int
+            Value to associate with the positive label (1). All other values are
+            considered to be negative (0).
+
+        """
+        # Modifier for the positive value, that transforms the labels as binary {0,1}.
+        transform = lambda x: (np.array(x) == positive_label).astype(int)
+        LabelInferenceAttackSummary.__init__(
+            self, transform(labels), transform(predictions)
+        )
 
     @property
     def tp(self):
@@ -131,9 +181,66 @@ class MIAttackSummary(AttackSummary):
         """
         return 1 - self.mia_advantage
 
+    def get_metric_filename(self, postfix=""):
+        return f"BinaryLIAttack_result_{postfix}.csv"
+
+    def get_metrics(self):
+        return pd.DataFrame(
+            [[self.accuracy, self.tp, self.fp, self.mia_advantage, self.privacy_gain]],
+            columns=[
+                "accuracy",
+                "true_positive_rate",
+                "false_positive_rate",
+                "mia_advantage",
+                "privacy_gain",
+            ],
+        )
+
+
+class MIAttackSummary(BinaryLabelInferenceAttackSummary):
+    """
+    Class summarising main performance metrics of a membership inference attack.
+
+    """
+
+    def __init__(
+        self, labels, predictions, generator_info, attack_info, dataset_info, target_id
+    ):
+        """
+        Parameters
+        ----------
+        labels: list[int]
+            List with true labels of the target membership in the dataset.
+        predictions: list[int]
+            List with the predicted labels of the target membership in the dataset.
+        generator_info: str
+            Metadata with information about the method used to generate the dataset.
+        attack_info: str
+            Metadata with information about the attacked used to infer membership of the target on the dataset.
+        dataset_info: str
+            Metadata with information about the original raw dataset.
+        target_id: str
+            Metadata with information about the target record used on the attack.
+
+        """
+        BinaryLabelInferenceAttackSummary.__init__(
+            self, labels, predictions, positive_label=1
+        )
+        self.generator = generator_info
+        self.attack = attack_info
+        self.dataset = dataset_info
+        self.target_id = target_id
+
+    def get_metric_filename(self, postfix=""):
+        """
+        Returns the file name to which results should be saved.
+
+        """
+        return f"result_mia_{self.dataset}_{self.attack}_{self.generator}_Target{self.target_id}_{postfix}.csv"
+
     def get_metrics(self):
         """
-        Calculates all MIA relevant metrics and returns it as a dataframe.
+        Calculates all MIA relevant metrics and returns them as a dataframe.
 
         Returns
         -------
@@ -153,51 +260,108 @@ class MIAttackSummary(AttackSummary):
                 privacy_gain: float
 
         """
-
-        return pd.DataFrame(
+        return pd.concat(
             [
-                [
-                    self.dataset,
-                    self.target_id,
-                    self.generator,
-                    self.attack,
-                    self.accuracy,
-                    self.tp,
-                    self.fp,
-                    self.mia_advantage,
-                    self.privacy_gain,
-                ]
-            ],
-            columns=[
-                "dataset",
-                "target_id",
-                "generator",
-                "attack",
-                "accuracy",
-                "true_positive_rate",
-                "false_positive_rate",
-                "mia_advantage",
-                "privacy_gain",
-            ],
+                pd.DataFrame(
+                    [[self.dataset, self.target_id, self.generator, self.attack,]],
+                    columns=["dataset", "target_id", "generator", "attack"],
+                ),
+                BinaryLabelInferenceAttackSummary.get_metrics(self),
+            ]
         )
 
-    def write_metrics(self, filepath, attack_iter):
-        """
-        Write metrics to a CSV file
 
+class BinaryAIAttackSummary(BinaryLabelInferenceAttackSummary):
+    def __init__(
+        self,
+        labels,
+        predictions,
+        generator_info,
+        attack_info,
+        dataset_info,
+        target_id,
+        sensitive_attribute,
+        positive_value=1,
+    ):
+        """
         Parameters
         ----------
-        filepath: str
-            Path where the CSV is to be saved.
-        attack_iter: int
-            id of the iteration of the attack (to distinguish file from others).
+        labels: list[int]
+            List with true labels of the target membership in the dataset.
+        predictions: list[int]
+            List with the predicted labels of the target membership in the dataset.
+        generator_info: str
+            Metadata with information about the method used to generate the dataset.
+        attack_info: str
+            Metadata with information about the attacked used to infer membership of the target on the dataset.
+        dataset_info: str
+            Metadata with information about the original raw dataset.
+        target_id: str
+            Metadata with information about the target record used on the attack.
+        sensitive_attribute: str
+            The name of the sensitive attribute that the attack aims to infer.
+        positive_value: int (default 1)
+            The value of the sensitive attribute to mark as positive.
+
+        """
+        BinaryLabelInferenceAttackSummary.__init__(
+            self, labels, predictions, positive_label=positive_value
+        )
+        self.generator = generator_info
+        self.attack = attack_info
+        self.dataset = dataset_info
+        self.target_id = target_id
+        self.sensitive_attribute = sensitive_attribute
+
+    def get_metric_filename(self, postfix=""):
+        """
+        Returns the file name to which results should be saved.
+
+        """
+        return f"result_aia_{self.dataset}_{self.attack}_{self.generator}_Target{self.target_id}_{self.sensitive_attribute}_{postfix}.csv"
+
+    def get_metrics(self):
+        """
+        Calculates all AIA relevant metrics and returns them as a dataframe.
 
         Returns
         -------
-        None
+        A dataframe
+            A dataframe with attack info and metrics.  The dataframe has the following structure.
+            Index:
+                RangeIndex
+            Columns:
+                dataset: str
+                target_id: str
+                generator: str
+                attack: str
+                accuracy: float
+                true_positive_rate: float
+                false_positive_rate: float
+                mia_advantage: float
+                privacy_gain: float
 
         """
-
-        file_name = f"result_{self.dataset}_{self.attack}_{self.generator}_Target{self.target_id}_{attack_iter}.csv"
-
-        self.get_metrics().to_csv(os.path.join(filepath, file_name), index=False)
+        return pd.concat(
+            [
+                pd.DataFrame(
+                    [
+                        [
+                            self.dataset,
+                            self.target_id,
+                            self.generator,
+                            self.attack,
+                            self.sensitive_attribute,
+                        ]
+                    ],
+                    columns=[
+                        "dataset",
+                        "target_id",
+                        "generator",
+                        "attack",
+                        "sensitive_attribute",
+                    ],
+                ),
+                BinaryLabelInferenceAttackSummary.get_metrics(self),
+            ]
+        )
