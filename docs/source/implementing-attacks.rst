@@ -19,7 +19,7 @@ We here first explain the philosophy behind ``PrivE``'s design of threat models 
 Philosophy
 ----------
 
-An attack can be modelled as a randomised function of a synthetic dataset :math:`\mathcal{A}_\theta: D^{(s)} \rightarrow a \in \mathcal{S}`, possibly with some parameters :math:`\theta`.
+An attack can be modelled as a randomised function of a synthetic dataset :math:`\mathcal{A}_\theta: D^{(s)} \mapsto a \in \mathcal{S}`, possibly with some parameters :math:`\theta`.
 The output of an attack aims at approximating a *sensitive* function :math:`f` of the *real* dataset, :math:`a \approx f\left(D^{(r)}\right)`.
 The target function :math:`f`, and the quality of the approximation :math:`\approx` depend on the specific threat model.
 
@@ -49,7 +49,7 @@ Implementing a new ``Attack``
 As discussed above, an ``Attack`` object requires the implementation of three methods:
 
 1. ``.train(threat_model, **kwargs)``: checks that the threat model is compatible, and (optionally) set internal parameters from the information available to the attacker. See `below <Training an Attack_>`_  for more details.
-2. ``.attack(datasets)``: performs the attack on each *synthetic* dataset, and returns a *decision* for each of them. The nature of this decision depends on the specific threat model. We discuss a common family of threat models `below <Label-Inference Attacks_>`_, where the decision is a countable value.
+2. ``.attack(datasets)``: performs the attack on each *synthetic* dataset, and returns a *decision* for each of them. The nature of this decision depends on the specific threat model. We discuss a common family of threat models `below <LabelInferenceThreatModel_>`_, where the decision is a countable value.
 3. ``.attack_score(datasets)``: similar to ``.attack``, except a (typically real-valued) *score* is returned for each dataset. This score typically reflects the confidence of the attacker for each possible decision. The output of ``attack_score`` should be compatible with ``attack``. This method is *optional*: if the attack you implement does not have a meaningful notion of score, returning a constant score for all datasets is allowed. However, some reporting methods will not work if a score is not provided.
 
 Additionally, the following methods are useful to implement:
@@ -65,7 +65,7 @@ Training an Attack
 ~~~~~~~~~~~~~~~~~~
 
 Training an attack "from the information available to the attacker" seems fairly abstract. However, most threat models can be represented by the class ``TrainableThreatModel``, which extends ``ThreatModel`` with a ``.generate_training_samples(num_samples)`` method.
-This function generates ``num_samples`` sample synthetic datasets on which to train the attack. In all generality, this method can output pairs of real and synthetic datasets :math:`\left(D^{(r)}_i, D^{(s)}_i)`, but typically only the value of :math:`f` on the real data is returned, :math:`\left(f\left(D^{(r)}_i\right), D^{(s)}_i)`.
+This function generates ``num_samples`` sample synthetic datasets on which to train the attack. In all generality, this method can output pairs of real and synthetic datasets :math:`\left(D^{(r)}_i, D^{(s)}_i\right)`, but typically only the value of :math:`f` on the real data is returned, :math:`\left(f\left(D^{(r)}_i\right), D^{(s)}_i\right)`.
 These synthetic dataset samples can then be used to train the attack, e.g. using classical supervised learning methods.
 
 How is the attacker knowledge used to generate these samples?
@@ -73,7 +73,7 @@ How is the attacker knowledge used to generate these samples?
 - Intuitively, the attacker knowledge on the dataset can be seen as a prior :math:`\pi_D`, from which training "real" datasets :math:`\left(D^{(r)}_1, \dots, D^{(r)}_{\text{num}_\text{samples}}\right)` can be sampled.
 - Then, the attacker knowledge on the generator can be used to simulate the generator and produce training synthetic datasets :math:`D^{(s)}_i = \hat{G}(D^{(r)}_i)`.
 
-See the documentation page on `Modelling Threats <modelling-threats>`_ for more details.
+See the documentation page on `Modelling Threats <modelling-threats.html>`_ for more details.
 
 
 
@@ -99,8 +99,8 @@ In addition to ``.generate_training_samples``, these threat models have the foll
 TargetedMIA
 +++++++++++
 
-Targeted Membership Inference Attacks aim at inferring whether a specific *target* record :math:`x` is in the real data. Such threat models are implemented in ``PrivE`` as ``LabelInferenceThreatModel`` where the label is membership of the target records, :math:`l = x \in D^{(r)}`.
-In addition to the attributes inherited from the parent, these threat models also have the following attributes:
+Targeted Membership Inference Attacks aim at inferring whether a specific *target* record :math:`x` is in the real data. Such threat models are implemented in ``PrivE`` as ``LabelInferenceThreatModel`` where the label is membership of the target records, :math:`l = I\left\{x \in D^{(r)}\right\}`.
+In addition to the attributes inherited from the parent, these threat models also have  the following attributes:
 
 - ``target_record``: a ``Dataset`` object with one entry, the record of the target user.
 
@@ -121,11 +121,11 @@ In addition to the attributes inherited from the parent, these threat models als
 Trainable-Threshold Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Many binary label-inference attacks can be defined solely by a non-trainable score :math:`s: \mathcal{D} \rightarrow \mathbb{R}`. The decision made by ``.attack`` is based on a threshold :math:`\tau`,  :math:`\mathcal{A}_\theta(D^{(s)}) = 1 \Leftrightarrow s(D^{(s)}) \geq \tau`.
+Many binary label-inference attacks can be defined solely by a non-trainable score :math:`s: \mathcal{D} \mapsto \mathbb{R}`. The decision made by ``.attack`` is based on a threshold :math:`\tau`,  :math:`\mathcal{A}_\theta(D^{(s)}) = 1 \Leftrightarrow s(D^{(s)}) \geq \tau`.
 Training the attack thus only involves *selecting a threshold* that leads to good results, according to some criterion.
 ``PrivE`` provides a ``TrainableThresholdAttack`` class for these attacks, that only requires the attack designer to implement ``.attack_score``.
 The constructor of these attacks has an additional parameter, a tuple ``criterion``, which defines how the threshold is selected.
-There are several options, detailed in the documentation page on `Library of Attacks <library-of-attacks>`_.
+There are several options, detailed in the documentation page on `Library of Attacks <library-of-attacks.html>`_.
 
 
 ShadowModellingAttack
@@ -134,4 +134,4 @@ ShadowModellingAttack
 Shadow-modelling attacks are label-inference attacks where the attacker trains a classifier :math:`C_\theta` over synthetic datasets to predict the label of the real dataset. 
 ``PrivE`` implements shadow-modelling attacks with the ``ShadowModellingAttack`` class. This class takes as argument a ``PrivE.attacks.SetClassifier`` object.
 If you wish to implement a shadow-modelling attack, the easiest way if to implement a custom ``SetClassifier`` object.
-For more details on shadow-modelling attacks, see the documentation page on `Library of Attacks <library-of-attacks>`_.
+For more details on shadow-modelling attacks, see the documentation page on `Library of Attacks <library-of-attacks.html>`_.
