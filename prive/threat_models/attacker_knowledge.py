@@ -148,7 +148,7 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
             self.test_data = dataset.copy()
             self.aux_data = self.test_data.create_subsets(
                 n=1, sample_size=aux_size, drop_records=True
-            ) [0]
+            )[0]
             # Add other specified datasets, if any.
             if aux_data is not None:
                 self.aux_data = self.aux_data + aux_data
@@ -272,12 +272,31 @@ def _silent_iterator( x):
     return x
 
 class LabelInferenceThreatModel(TrainableThreatModel):
+    """
+    Label-inference Threat Model.
+
+    Many threat models take the following form: given knowledge on the dataset
+    and the method, for a given sensitive predicate phi, generate training
+    datasets with diverse values of phi (in order to train a model to infer
+    phi(real_data) from synthetic data). For MIAs, phi is membership, i.e., 
+    I{x in data}, while for AIAs, phi is the value of the sensitive attribute
+    of the target.
+
+    This threat model abstracts such threat models by assuming that the
+    knowledge on the dataset generates *labelled* datasets. This label can be
+    anything. To implement specific threat models, it is recommended to create
+    a AttackerKnowledgeWithLabel objects that wraps a AttackerKnowledge object
+    to generate datasets that fit some labels. See, e.g., mia.py for an example.
+
+    """
+
     def __init__(
         self,
         attacker_knowledge_data: AttackerKnowledgeWithLabel,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
         memorise_datasets=True,
         iterator_tracker: Callable[[list], Iterable] = None,
+        num_labels: int = 1,
     ):
         """
         Generate a Label-Inference Threat Model.
@@ -289,7 +308,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             label that the attack aims to predict.
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator
             The knowledge on the generator available to the attacker.
-        memorise_datasets: True
+        memorise_datasets: boolean, default True
             Whether to memoise the synthetic datasets generated,
         iterator_tracker: Callable list L -> Iterable over L.
             A callable used to track iterations. The method __next__ is called
@@ -297,6 +316,13 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             progress, e.g. with tqdm. Default is (silent).
             Note that this iterator is only called for synthetic data generation,
             which is often the bottleneck, and not training data generation.
+        num_labels: int, default 1
+            Number of labels output by attacker_knowledge_data. If >1, the
+            labels are disaggregated and treated as multiple indepedent labels.
+            This enables "multiple-label" mode, where this object can be used
+            as a threat model against any one label at a time. This mode exists
+            for efficiency reasons, allowing the same synthetic datasets to be
+            reused for several threat models.
 
         """
         self.atk_know_data = attacker_knowledge_data
@@ -306,6 +332,14 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         self.iterator_tracker = iterator_tracker or _silent_iterator
         # maps training = True/False -> list of datasets, list of labels.
         self._memory = {True: ([], []), False: ([], [])}
+        # Multiple-label mode.
+        self.num_labels = num_labels
+        self.multiple_label_mode = num_labels > 1
+        if self.multiple_label_mode:
+            # Multiple-label mode: all interactions with this object occur as
+            # if there was only one label: the `self.current_label`th entry
+            # in the label vector returned by samples.
+            self.current_label = 0
 
     def _generate_samples(
         self, num_samples: int, training: bool = True, ignore_memory: bool = False,
@@ -316,6 +350,10 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         the target is in the training dataset used to produce the corresponding
         dataset, and 0 otherwise).
 
+        If this object is in multiple label mode, then this modifies the output
+        to restrict labels to self.current_label. The memory retains the full
+        labels, and memoisation thus works across multiple labels.
+
         Parameters
         ----------
         num_samples: int
@@ -323,35 +361,43 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         training: bool (default, True)
             whether to generate samples from the training or test distribution.
         ignore_memory: bool, default False
-            Whether to use the memoised datasets, or ignore them.
+            Whether to ignore the memoised datasets.
 
         """
         # Retrieve memoized samples (if needed).
-        if not ignore_memory:
-            mem_datasets = []
-            mem_labels = []
-        else:
+        use_memory = (not ignore_memory) and self.memorise_datasets
+        if use_memory:
             mem_datasets, mem_labels = self._memory[training]
             num_samples -= len(mem_datasets)
-            # No samples are needed! Return what is in memory:
-            if num_samples <= 0:
-                return mem_datasets[:num_samples], mem_labels[:num_samples]
-        # Generate sample: first, produce the original datasets with labels.
-        training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
-            num_samples, training=training
-        )
-        # Then, generate synthetic data from each original dataset.
-        gen_datasets = [
-            self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
-        ]
-        # Add the entries generated to the memory.
-        if not ignore_memory:
-            self._memory[training] = (
-                mem_datasets + gen_datasets,
-                mem_labels + gen_labels,
+        else:
+            mem_datasets = []
+            mem_labels = []
+        # If there are samples to generate:
+        if num_samples > 0:
+            # Generate sample: first, produce the original datasets with labels.
+            training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
+                num_samples, training=training
             )
+            # Then, generate synthetic data from each original dataset.
+            gen_datasets = [
+                self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
+            ]
+            # Add the entries generated to the memory.
+            if use_memory:
+                self._memory[training] = (
+                    mem_datasets + gen_datasets,
+                    mem_labels + gen_labels,
+                )
+        else:
+            gen_datasets = []
+            gen_labels = []
+        # Finally, if in multiple-label mode, filter labels to only current.
+        # This only changes the output of this function, and not the memory.
+        all_labels = mem_labels + gen_labels
+        if self.multiple_label_mode:
+            all_labels = [l[self.current_label] for l in all_labels]
         # Combine results from the memory with generated results.
-        return mem_datasets + gen_datasets, mem_labels + gen_labels
+        return mem_datasets + gen_datasets, all_labels
 
     def generate_training_samples(
         self, num_samples: int, ignore_memory: bool = False,
@@ -384,7 +430,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         num_samples : int
             Number of test datasets to generate and test against.
         ignore_memory: bool, default False
-            Whether to use the memoized datasets, or ignore them.
+            Whether to ignore the memoized datasets. Not recommended.
 
         Returns
         -------
@@ -398,3 +444,40 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         )
         pred_labels = attack.attack(test_datasets)
         return pred_labels, truth_labels
+
+    # For multiple-label mode: choosing the current label.
+    def set_label(self, label):
+        """
+        If in multiple label mode, set the *index* of the label to use.
+
+        label: int in {0, ..., self.num_labels-1}.
+            The index of the label to use when outputing datasets.
+
+        """
+        assert (
+            self.multiple_label_mode
+        ), "set_label cannot be used in single-label mode."
+        assert (
+            0 <= label < self.num_labels
+        ), "Label index must be between 0 and self.num_labels-1."
+        self.current_label = label
+
+    def __iter__(self):
+        """
+        In multiple label model, this *yields* itself, modified every time to
+        use a different label. DO NOT use this outside of a generator (e.g.,
+        do *not* list(threat_model)), only in loops.
+
+        Example use:
+            for tm in threat_model:
+                # This uses a different label!
+                attack.train(tm)
+                print(tm.test(attack))
+
+        Note that extensions of this class will often have additional data
+        about the current label, that can be accessed within the loop.
+
+        """
+        for label in range(self.num_labels):
+            self.set_label(label)
+            yield self

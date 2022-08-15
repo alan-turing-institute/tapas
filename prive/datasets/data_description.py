@@ -19,6 +19,13 @@ class DataDescription:
         self.schema = schema
         self._label = label or "Unnamed dataset"
 
+    def view(self, columns):
+        """
+        Returns the same DataDescription restricted to a subset of columns.
+
+        """
+        return DataDescription([c for c in self.schema if (c['name'] in columns)], self.label)
+
     @property
     def num_features(self):
         """
@@ -26,6 +33,15 @@ class DataDescription:
 
         """
         return len(self.schema)
+
+    @property
+    def columns(self):
+        """
+        tuple: name of all columns, in order.
+
+        """
+        return tuple([column['name'] for column in self.schema])
+    
 
     @property
     def encoded_dim(self):

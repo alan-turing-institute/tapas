@@ -42,7 +42,7 @@ class MIALabeller(AttackerKnowledgeWithLabel):
     def __init__(
         self,
         attacker_knowledge: AttackerKnowledgeOnData,
-        target_record: Dataset,
+        target_records: Dataset,
         generate_pairs=True,
         replace_target=False,
     ):
@@ -53,17 +53,23 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         -----
         attacker_knowledge: AttackerKnowledgeOnData
             The data knowledge from which datasets are generated.
-        target_record: Dataset
-            The target record to append half of the time.
+        target_records: Dataset
+            The target records to append to the dataset. If several records
+            are provided, these records are randomly added to the dataset
+            independently from each other.
         generate_pairs: bool, default True
-            Whether to output pairs of datasets (positive and negative) or
-            randomly choose for each dataset.
+            Whether to output pairs of datasets differing only by the presence
+            of the target record, or randomly choose for each dataset.
+            If multiple targets are provided, then the pairs of datasets differ
+            by exactly all of the multiple targets (as in, if a record x from
+            the targets is in D, it is not in D', but the membership of each
+            target is independent from the other targets).
         replace_target: bool, default False
             Whether to replace a record, instead of appending.
 
         """
         self.attacker_knowledge = attacker_knowledge
-        self.target_record = target_record
+        self.target_records = target_records
         self.generate_pairs = generate_pairs
         self.replace_target = replace_target
 
@@ -75,32 +81,69 @@ class MIALabeller(AttackerKnowledgeWithLabel):
         labels (arbitrary ints or bools).
 
         """
+        # If generating pairs, make num_samples dividable by 2.
+        if self.generate_pairs and num_samples // 2:
+            num_samples += 1
         # Generate the datasets from the attacker knowledge.
-        datasets = self.attacker_knowledge.generate_datasets(num_samples, training)
-        if self.generate_pairs:
-            # If pairs are required, duplicate the list and assign labels 0 and 1.
-            datasets = datasets + datasets
-            labels = [0] * num_samples + [1] * num_samples
-        else:
-            # Pick random labels for each dataset.
-            labels = list(np.random.random(size=(num_samples,)) <= 0.5)
-        # Produce a list of datasets with appended target where label = 1.
-        app_datasets = [
-            (
-                ds.replace(self.target_record)
-                if self.replace_target
-                else ds.add_records(self.target_record)
-            )
-            if l
-            else ds
-            for ds, l in zip(datasets, labels)
-        ]
-        return app_datasets, labels
+        datasets = self.attacker_knowledge.generate_datasets(
+            num_samples // 2 if self.generate_pairs else num_samples, training
+        )
+        # Compute modified datasets and corresponding labels by adding records
+        # according to the labels. If self.generate_pairs, each iteration of
+        # the loop creates two paired datasets.
+        mod_datasets = []
+        mod_labels = []
+        for i_ds, dataset in enumerate(datasets):
+            # Copy the datasets to be modified in place.
+            dataset = dataset.copy()
+            if self.generate_pairs:
+                dataset2 = dataset.copy()
+            # For each target, assign a random label.
+            labels = np.random.randint(2, size=len(self.target_records)) == 1
+            # If replace_target, then we first remove entries for the targets.
+            if self.replace_target:
+                # We first choose an entry e for each target record such that if
+                # the target x is in the data, then e is removed (and vice versa).
+                # This is to avoid replacing other target records. The reason we
+                # do not use .replace_records is to be able to generate pairs.
+                replace_indices = np.random.choice(
+                    len(dataset), size=len(self.target_records), replace=False
+                )
+                # Remove the indices where label=1.
+                dataset.drop_records(
+                    [idx for idx, l in zip(replace_indices, labels) if l],
+                    in_place=True,
+                    n=0,  # Ensures that no records are dropped if the list is empty.
+                )
+                if self.generate_pairs:
+                    # If generating pairs, remove indices where label=0 in dataset2.
+                    dataset2.drop_records(
+                        [idx for idx, l in zip(replace_indices, labels) if not l],
+                        in_place=True,
+                        n=0,  # Same as above.
+                    )
+            # Add the target records.
+            for record, label in zip(self.target_records, labels):
+                # If the label is 1, modify dataset.
+                if label:
+                    dataset.add_records(record, in_place=True)
+                # If generating pairs and the label is 0, the label is 1 for
+                # the other dataset in the pair. Modify dataset2
+                elif self.generate_pairs:
+                    dataset2.add_records(record, in_place=True)
+            # Labels need to be converted, either as lists or int/float (if only one).
+            _convert = list if len(self.target_records) > 1 else lambda x: x[0]
+            mod_datasets.append(dataset)
+            mod_labels.append(_convert(labels))
+            if self.generate_pairs:
+                mod_datasets.append(dataset2)
+                mod_labels.append(_convert(labels == False))  # Negation.
+
+        return mod_datasets, mod_labels
 
     @property
     def label(self):
         return self.attacker_knowledge.label
-    
 
 
 class TargetedMIA(LabelInferenceThreatModel):
@@ -113,7 +156,7 @@ class TargetedMIA(LabelInferenceThreatModel):
     def __init__(
         self,
         attacker_knowledge_data: AttackerKnowledgeOnData,
-        target_record: Dataset,
+        target_records: Dataset,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
         generate_pairs: bool = True,
         replace_target: bool = False,
@@ -123,13 +166,23 @@ class TargetedMIA(LabelInferenceThreatModel):
         LabelInferenceThreatModel.__init__(
             self,
             MIALabeller(
-                attacker_knowledge_data, target_record, generate_pairs, replace_target
+                attacker_knowledge_data, target_records, generate_pairs, replace_target
             ),
             attacker_knowledge_generator,
             memorise_datasets,
             iterator_tracker=iterator_tracker,
+            num_labels=len(target_records),
         )
-        self.target_record = target_record
+        # Save the target recordS, and the current record (0).
+        if self.multiple_label_mode:
+            # Since calling .get_records creates a new Dataset object every
+            # time, and involves indices, we instead compute the records once
+            # and for all.
+            self._target_records = [r for r in target_records]
+            # This sets self.target_record.
+            self.set_label(0)
+        else:
+            self.target_record = target_records
 
     # Wrap the test method to output a MIAttackSummary.
     def test(
@@ -151,3 +204,15 @@ class TargetedMIA(LabelInferenceThreatModel):
             dataset_info = self.atk_know_data.label,
             target_id = self.target_record.label,
         )
+
+    def set_label(self, label):
+        """
+        If the attack is performed against multiple targets, this sets the
+        target record to use when outputting labels.
+
+        """
+        # Use the parent class's set_label. The main reason we override this
+        # method is to also modify self.target_record.
+        LabelInferenceThreatModel.set_label(self, label)
+        # We also set self.target_record, to be used by .
+        self.target_record = self._target_records[label]
