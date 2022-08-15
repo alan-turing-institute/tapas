@@ -34,7 +34,7 @@ class MIAReport(unittest.TestCase):
     def test_create_report(self):
         filepath_timestamp = os.path.join(
             os.path.dirname(__file__),
-            f'prive_report_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}',
+            f'outputs/prive_report_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}',
         )
 
         self.report.create_report(filepath_timestamp)

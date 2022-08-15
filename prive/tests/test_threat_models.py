@@ -1,5 +1,6 @@
 """A test for threat models."""
 
+import os
 from unittest import TestCase
 
 import itertools
@@ -9,6 +10,7 @@ import pandas as pd
 from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 from prive.threat_models import (
+    ThreatModel,
     TargetedMIA,
     TargetedAIA,
     AuxiliaryDataKnowledge,
@@ -254,3 +256,47 @@ class TestAttackerKnowledge(TestCase):
             # Check that sizes are as expected.
             self.assertEqual(len(threat_model.aux_data), aux_size + aux_split_size)
             self.assertEqual(len(threat_model.test_data), test_size + test_split_size)
+
+
+class TestSaveLoad(TestCase):
+    """Check whether saving/loading threat models works."""
+
+    def test_save_then_load(self):
+        name = os.path.join(os.path.dirname(__file__), "outputs/threat_model_test")
+        threat_model = TargetedMIA(
+            knowledge_on_data,
+            target_record,
+            knowledge_on_sdg,
+            generate_pairs=False,
+            replace_target=False,
+        )
+        training_samples = 103
+        testing_samples = 42
+        threat_model.generate_training_samples(training_samples)
+        threat_model._generate_samples(testing_samples, False)
+        threat_model.save(name)
+        threat_model_2 = ThreatModel.load(name)
+        # Check that the models are identical:
+        self.assertIsInstance(threat_model_2, TargetedMIA)
+        # Check that the target records are the same.
+        for x, y in zip(
+            threat_model.target_record.data, threat_model_2.target_record.data
+        ):
+            self.assertEqual(x, y)
+        # The following is specific to TargetedMIA, and checks that the internal
+        # memory of the object is properly set. This is the most important
+        # feature of .save and .load: to not have to recompute the datasets.
+        self.assertEqual(len(threat_model_2._memory[True][0]), training_samples)
+        self.assertEqual(len(threat_model_2._memory[False][0]), testing_samples)
+        # Check that the samples are identical (from memory:).
+        datasets1, labels1 = threat_model._memory[True]
+        datasets2, labels2 = threat_model_2._memory[True]
+        for l1, l2 in zip(labels1, labels2):
+            self.assertEqual(l1, l2)
+        for d1, d2 in zip(datasets1, datasets2):
+            self.assertEqual(len(d1), len(d2))
+            for x, y in zip(d1, d2):
+                for v1, v2 in zip(x.data.values[0], y.data.values[0]):
+                    self.assertEqual(v1, v2)
+        # Finally, check that the name is properly set.
+        self.assertEqual(threat_model_2._name, name)
