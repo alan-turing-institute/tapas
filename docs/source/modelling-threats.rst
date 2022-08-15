@@ -22,8 +22,8 @@ As a quick overview of this framework, here is a generic attack that applies to 
 
 1. Sample **training** datasets that reflect knowledge on the private dataset: :math:`\tilde{D}_1, \dots, \tilde{D}_k`.
 2. Generate **synthetic training** datasets from these training datasets, using knowledge of the generation method: :math:`\tilde{D}_i^{(s)} = G(\tilde{D}_i)`
-3. Train a model :math:`\phi` to predict some sensitive function :math:`f` of the training dataset from the sensitive dataset: :math:`\phi(\tilde{D}_i^{(s)}) \approx f(\tilde{D}_i):
-4. Apply this model to the **target synthetic dataset** :math:$D^{(s)}$ to infer the value of the sensitive function over the **private dataset**: :math:`Attack(D^{(s)}) = \phi(D^{(s)}) \approx f(D)`
+3. Train a model :math:`\phi` to predict some sensitive function :math:`f` of the training dataset from the sensitive dataset: :math:`\phi(\tilde{D}_i^{(s)}) \approx f(\tilde{D}_i)`:
+4. Apply this model to the **target synthetic dataset** :math:`D^{(s)}` to infer the value of the sensitive function over the **private dataset**: :math:`Attack(D^{(s)}) = \phi(D^{(s)}) \approx f(D)`
 
 While this framework covers a variety of situations, you may find that it does not cover your specific use case. In that case, you will need to implement ``ThreatModel`` by hand, as well as attacks applied to it.
 
