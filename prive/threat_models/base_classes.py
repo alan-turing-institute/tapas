@@ -52,6 +52,6 @@ class TrainableThreatModel(ThreatModel):
     def generate_training_samples(self, num_samples):
         """
         Generate synthetic datasets (and potentially associated labels) to
-        train an attacl.
+        train an attack.
 
         """
