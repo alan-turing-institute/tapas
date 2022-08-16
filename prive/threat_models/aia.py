@@ -164,7 +164,7 @@ class TargetedAIA(LabelInferenceThreatModel):
             self.target_record = target_record
 
     # Wrap the test method to output a AIAttackSummary.
-    def _wrap_output(self, pred_labels, truth_labels, attack):
+    def _wrap_output(self, truth_labels, pred_labels, scores, attack):
         # If only two values are possible, use the binary valued report.
         # The second value is treated as the positive label.
         if len(self.attribute_values) == 2:
@@ -177,6 +177,7 @@ class TargetedAIA(LabelInferenceThreatModel):
         return ReportClass(
             truth_labels,
             pred_labels,
+            scores,
             generator_info=self.atk_know_gen.label,
             attack_info=attack.label,
             dataset_info=self.atk_know_data.label,

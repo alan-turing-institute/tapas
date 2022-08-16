@@ -444,15 +444,16 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             num_samples, False, ignore_memory
         )
         pred_labels = attack.attack(test_datasets)
-        return self._wrap_output(pred_labels, truth_labels, attack)
+        scores = attack.attack_score(test_datasets)
+        return self._wrap_output(truth_labels, pred_labels, scores, attack)
 
-    def _wrap_output(self, pred_labels, truth_labels, attack):
+    def _wrap_output(self, truth_labels, pred_labels, scores, attack):
         """
         Modifies the output of an attack (predicted and true labels). By default,
         this returns the output unchanged. Overwrite this in children classes.
 
         """
-        return pred_labels, truth_labels
+        return truth_labels, pred_labels, scores
 
     # For multiple-label mode: choosing the current label.
     def set_label(self, label):

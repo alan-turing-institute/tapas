@@ -120,6 +120,7 @@ class MIAttackReport(Report):
             mia_summary = MIAttackSummary(
                 attack["labels"],
                 attack["predictions"],
+                attack["scores"],
                 attack["generator"],
                 attack["attack"],
                 attack["dataset"],

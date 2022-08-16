@@ -12,6 +12,8 @@ import numpy as np
 import os
 import pandas as pd
 
+from sklearn.metrics import roc_auc_score
+
 
 class AttackSummary(ABC):
     """Summarise the results of an attack in a specific threat model."""
@@ -58,7 +60,7 @@ class LabelInferenceAttackSummary(AttackSummary):
 
     """
 
-    def __init__(self, labels, predictions):
+    def __init__(self, labels, predictions, scores=None):
         """
         Parameters
         ----------
@@ -66,10 +68,13 @@ class LabelInferenceAttackSummary(AttackSummary):
             List with true labels of the target membership in the dataset.
         predictions: list[int]
             List with the predicted labels of the target membership in the dataset.
+        scores: list[float]
+            List with the scores related to each prediction.
 
         """
         self.labels = np.array(labels)
         self.predictions = np.array(predictions)
+        self.scores = np.array(scores)
 
     @property
     def accuracy(self):
@@ -110,7 +115,7 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
 
     """
 
-    def __init__(self, labels, predictions, positive_label=1):
+    def __init__(self, labels, predictions, scores=None, positive_label=1):
         """
         Parameters
         ----------
@@ -118,6 +123,8 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
             List with true labels of the target membership in the dataset.
         predictions: list[int]
             List with the predicted labels of the target membership in the dataset.
+        scores: list[float]
+            List with the scores related to each prediction.
         positive_label: int
             Value to associate with the positive label (1). All other values are
             considered to be negative (0).
@@ -125,11 +132,8 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
         """
         # Modifier for the positive value, that transforms the labels as binary {0,1}.
         transform = lambda x: (np.array(x) == positive_label).astype(int)
-        print(labels)
-        print(predictions)
-        print(positive_label, type(positive_label))
         LabelInferenceAttackSummary.__init__(
-            self, transform(labels), transform(predictions)
+            self, transform(labels), transform(predictions), np.array(scores)
         )
 
     @property
@@ -184,6 +188,20 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
         """
         return 1 - self.mia_advantage
 
+    @property
+    def auc(self):
+        """
+        Area under the Receiver Operating Characteristic curve (ROC).
+        If scores are not provided, this uses self.predictions as score.
+
+        Returns
+        -------
+        float
+
+        """
+        scores = self.scores if self.scores is not None else self.predictions
+        return roc_auc_score(self.labels, scores)
+
     def get_metric_filename(self, postfix=""):
         return f"BinaryLIAttack_result_{postfix}.csv"
 
@@ -192,16 +210,25 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
             [
                 LabelInferenceAttackSummary.get_metrics(self),
                 pd.DataFrame(
-                    [[self.tp, self.fp, self.mia_advantage, self.privacy_gain]],
+                    [
+                        [
+                            self.tp,
+                            self.fp,
+                            self.mia_advantage,
+                            self.privacy_gain,
+                            self.auc,
+                        ]
+                    ],
                     columns=[
                         "true_positive_rate",
                         "false_positive_rate",
                         "mia_advantage",
                         "privacy_gain",
+                        "auc",
                     ],
                 ),
             ],
-            axis=1
+            axis=1,
         )
 
 
@@ -212,7 +239,14 @@ class MIAttackSummary(BinaryLabelInferenceAttackSummary):
     """
 
     def __init__(
-        self, labels, predictions, generator_info, attack_info, dataset_info, target_id
+        self,
+        labels,
+        predictions,
+        scores=None,
+        generator_info="",
+        attack_info="",
+        dataset_info="",
+        target_id="",
     ):
         """
         Parameters
@@ -221,6 +255,8 @@ class MIAttackSummary(BinaryLabelInferenceAttackSummary):
             List with true labels of the target membership in the dataset.
         predictions: list[int]
             List with the predicted labels of the target membership in the dataset.
+        scores: list[float]
+            List with the scores related to each prediction.
         generator_info: str
             Metadata with information about the method used to generate the dataset.
         attack_info: str
@@ -232,7 +268,7 @@ class MIAttackSummary(BinaryLabelInferenceAttackSummary):
 
         """
         BinaryLabelInferenceAttackSummary.__init__(
-            self, labels, predictions, positive_label=1
+            self, labels, predictions, scores, positive_label=True
         )
         self.generator = generator_info
         self.attack = attack_info
@@ -276,7 +312,7 @@ class MIAttackSummary(BinaryLabelInferenceAttackSummary):
                 ),
                 BinaryLabelInferenceAttackSummary.get_metrics(self),
             ],
-            axis=1
+            axis=1,
         )
 
 
@@ -285,15 +321,17 @@ class AIAttackSummary(LabelInferenceAttackSummary):
     Class summarising the outputs of an attribute inference attack.
 
     """
+
     def __init__(
         self,
         labels,
         predictions,
-        generator_info,
-        attack_info,
-        dataset_info,
-        target_id,
-        sensitive_attribute,
+        scores=None,
+        generator_info="",
+        attack_info="",
+        dataset_info="",
+        target_id="",
+        sensitive_attribute="",
     ):
         """
         Parameters
@@ -302,6 +340,8 @@ class AIAttackSummary(LabelInferenceAttackSummary):
             List with true labels of the target membership in the dataset.
         predictions: list[int]
             List with the predicted labels of the target membership in the dataset.
+        scores: list[float]
+            List with the scores related to each prediction.
         generator_info: str
             Metadata with information about the method used to generate the dataset.
         attack_info: str
@@ -314,7 +354,7 @@ class AIAttackSummary(LabelInferenceAttackSummary):
             The name of the sensitive attribute that the attack aims to infer.
 
         """
-        LabelInferenceAttackSummary.__init__(self, labels, predictions)
+        LabelInferenceAttackSummary.__init__(self, labels, predictions, scores)
         self.generator = generator_info
         self.attack = attack_info
         self.dataset = dataset_info
@@ -365,8 +405,7 @@ class AIAttackSummary(LabelInferenceAttackSummary):
 
         """
         return pd.concat(
-            [self.get_header(), LabelInferenceAttackSummary.get_metrics(self)],
-            axis=1
+            [self.get_header(), LabelInferenceAttackSummary.get_metrics(self)], axis=1
         )
 
     def get_metric_filename(self, postfix=""):
@@ -387,11 +426,12 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
         self,
         labels,
         predictions,
-        generator_info,
-        attack_info,
-        dataset_info,
-        target_id,
-        sensitive_attribute,
+        scores=None,
+        generator_info="",
+        attack_info="",
+        dataset_info="",
+        target_id="",
+        sensitive_attribute="",
         positive_value=1,
     ):
         """
@@ -401,6 +441,8 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
             List with true labels of the target membership in the dataset.
         predictions: list[int]
             List with the predicted labels of the target membership in the dataset.
+        scores: list[float]
+            List with the scores related to each prediction.
         generator_info: str
             Metadata with information about the method used to generate the dataset.
         attack_info: str
@@ -419,6 +461,7 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
             self,
             labels,  # overwritten under
             predictions,  # overwritten under
+            scores,  # idem
             generator_info,
             attack_info,
             dataset_info,
@@ -426,7 +469,7 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
             sensitive_attribute,
         )
         BinaryLabelInferenceAttackSummary.__init__(
-            self, labels, predictions, positive_label=positive_value
+            self, labels, predictions, scores, positive_label=positive_value
         )
 
     # get_metric_filename is inherited from AIAttackSummary.
@@ -456,5 +499,5 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
         """
         return pd.concat(
             [self.get_header(), BinaryLabelInferenceAttackSummary.get_metrics(self),],
-            axis=1
+            axis=1,
         )

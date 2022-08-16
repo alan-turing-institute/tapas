@@ -155,7 +155,7 @@ class TargetedMIA(LabelInferenceThreatModel):
     def __init__(
         self,
         attacker_knowledge_data: AttackerKnowledgeOnData,
-        target_records: Dataset,
+        target_record: Dataset,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
         generate_pairs: bool = True,
         replace_target: bool = False,
@@ -165,29 +165,30 @@ class TargetedMIA(LabelInferenceThreatModel):
         LabelInferenceThreatModel.__init__(
             self,
             MIALabeller(
-                attacker_knowledge_data, target_records, generate_pairs, replace_target
+                attacker_knowledge_data, target_record, generate_pairs, replace_target
             ),
             attacker_knowledge_generator,
             memorise_datasets,
             iterator_tracker=iterator_tracker,
-            num_labels=len(target_records),
+            num_labels=len(target_record),
         )
         # Save the target recordS, and the current record (0).
         if self.multiple_label_mode:
             # Since calling .get_records creates a new Dataset object every
             # time, and involves indices, we instead compute the records once
             # and for all.
-            self._target_records = [r for r in target_records]
+            self._target_records = [r for r in target_record]
             # This sets self.target_record.
             self.set_label(0)
         else:
-            self.target_record = target_records
+            self.target_record = target_record
 
     # Wrap the test method to output a MIAttackSummary.
-    def _wrap_output(self, pred_labels, truth_labels, attack):
+    def _wrap_output(self, truth_labels, pred_labels, scores, attack):
         return MIAttackSummary(
             truth_labels,
             pred_labels,
+            scores,
             generator_info=self.atk_know_gen.label,
             attack_info=attack.label,
             dataset_info=self.atk_know_data.label,

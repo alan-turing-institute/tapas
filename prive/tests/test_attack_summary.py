@@ -10,8 +10,9 @@ class MIAttackSummaryTest(unittest.TestCase):
         np.random.seed(0)
         self.predictions = np.random.randint(2, size=100)
         self.labels = np.random.randint(2, size=100)
+        self.scores = np.random.random(size=100)
         self.attack_summary = MIAttackSummary(
-            self.labels, self.predictions, "Random", "Groundhog", "Test", "1"
+            self.labels, self.predictions, self.scores, "Random", "Groundhog", "Test", "1"
         )
 
     def test_accuracy(self):
@@ -61,8 +62,9 @@ class AIAttackSummaryTest(unittest.TestCase):
         np.random.seed(0)
         self.predictions = np.random.randint(2, size=100)
         self.labels = np.random.randint(2, size=100)
+        self.scores = np.random.random(size=100)
         self.attack_summary = BinaryAIAttackSummary(
-            self.labels, self.predictions, "Random", "Groundhog", "Test", "1", "sensitive"
+            self.labels, self.predictions, self.scores, "Random", "Groundhog", "Test", "1", "sensitive"
         )
 
     def test_accuracy(self):
