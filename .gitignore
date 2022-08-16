@@ -10,3 +10,5 @@ docs/build
 docs/source/_autosummary
 *~
 */prive_report*
+examples/multiple_aia
+examples/multiple_mia

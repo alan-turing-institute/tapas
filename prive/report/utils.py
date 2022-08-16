@@ -3,6 +3,8 @@ import os
 import seaborn as sns
 import numpy as np
 
+from sklearn.metrics import roc_curve
+
 # configurable axis ranges
 axis_ranges = {
     "accuracy": (0, 1),
@@ -10,6 +12,7 @@ axis_ranges = {
     "false_positive_rate": (0, 1),
     "mia_advantage": (-0.2, 1.2),
     "privacy_gain": (-0.2, 1.2),
+    "auc": (0, 1),
 }
 color_pal = sns.color_palette("colorblind", 10)
 
@@ -32,7 +35,7 @@ def metric_comparison_plots(
              Columns in dataframe to fix (groupby) for a given figure in order to make meaningful comparisons. It can be any pair
     metrics:  list[str]
         List of metrics to be used in the report, these can be any of the following:
-        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
+        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain", "auc".
     marker_label: str
         Column in dataframe that be used to as marker in a point plot comparison. It can be either: 'generator',
     'attack' or 'target_id'.
@@ -85,6 +88,45 @@ def metric_comparison_plots(
         plt.savefig(os.path.join(output_path, filename))
 
         plt.close(fig)
+
+
+def plot_roc_curve(data, names, title, output_path):
+    """
+    Parameters
+    ----------
+    data: list of pairs (labels, scores), both np.arrays of same lengths
+        The true labels and the scores of each attack.
+    names: list of str of the same length
+        The label for each curve.
+
+    """
+    set_style()
+
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.subplots()
+
+    # Plot the "baseline".
+    ax.plot([0, 1], [0, 1], "--", color=(0.7, 0.7, 0.7))
+
+    for (labels, scores), name in zip(data, names):
+        fpr, tpr, thresholds = roc_curve(labels, scores)
+        ax.plot(fpr, tpr, label=name)
+
+    ax.legend(loc="lower right")
+
+    # We add a small margin to protect [0,1].
+    margin = 0.01
+    ax.set_xlim([0-margin, 1])
+    ax.set_ylim([0, 1+margin])
+    ax.set_xlabel("False-Positive Rate")
+    ax.set_ylabel("True-Positive Rate")
+
+    fig.suptitle(title)
+
+    filename = "ROC_curve.png"
+    plt.savefig(os.path.join(output_path, filename))
+
+    plt.close(fig)
 
 
 def set_style():

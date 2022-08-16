@@ -10,22 +10,24 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from prive.report import MIAttackSummary
-from .utils import metric_comparison_plots
+from .utils import metric_comparison_plots, plot_roc_curve
 
 
+# TODO: what is a Report? (a way to compare attack summaries?)
 class Report(ABC):
     @abstractmethod
     def compare(self, output_path):
         """
-        Plot different generators for same attack-data.
+        Compare the outcome of attacks, potentially on different threat models.
 
         """
         pass
 
-# TODO: Binary label report? (weird to have MIA as name!)
-class MIAttackReport(Report):
+
+class BinaryLabelAttackReport(Report):
     """
-    Report and visualise performance of a series of Membership inference attacks.
+    Report and visualise the results of a series of label-inference attacks
+    with binary target.
 
     """
 
@@ -36,16 +38,17 @@ class MIAttackReport(Report):
         "false_positive_rate",
         "mia_advantage",
         "privacy_gain",
+        "auc",
     ]
 
     def __init__(self, summaries, metrics=None):
         """
-        Initialise MIAttackReport class.
-
         Parameters
         ----------
-        summaries: dataframe Dataframe where each row is the result of a given attack as obtained
-        from the MIASummaryAttack class. The dataframe must have the following structure.
+        summaries: dataframe
+            Dataframe where each row is the result of a given attack as obtained from 
+            he BinaryLabelInferenceAttackSummary class. The dataframe must have the
+            following structure:
             Index:
                 RangeIndex
             Columns:
@@ -58,78 +61,22 @@ class MIAttackReport(Report):
                 false_positive_rate: float
                 mia_advantage: float
                 privacy_gain: float
-            Alternatively, this can be passed as an iterable of MIAttackSummary objects, in
-            which case .get_metrics() is called on each object, and the results are concatenated.
+                auc: float
+
+            Alternatively, this can be passed as an iterable of BinaryLabelInferenceAttackSummary
+            objects, in which case .get_metrics() is called on each object, and the results are
+            concatenated as one DataFrame.
 
         metrics: list[str]
             List of metrics to be used in the report, these can be any of the following:
-            "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
-            If left as None, all metrics are used.
-
+            "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage",
+            "privacy_gain", and "auc". If left as None, all metrics are used.
 
         """
         if not isinstance(summaries, pd.DataFrame):
             summaries = pd.concat([s.get_metrics() for s in summaries])
         self.attacks_data = summaries
         self.metrics = metrics or MIAttackReport.ALL_METRICS
-
-    @classmethod
-    def load_summary_statistics(cls, attacks, metrics=None):
-        """
-        Load attacks data, calculate summary statistics, merge into a single dataframe and initialise object.
-
-        Parameters
-        ----------
-        attacks: list[dict]
-            List of dictionaries with results of attacks. Each dictionary should contain the following keys:
-
-            dict:
-            labels: list[int]
-                List with true labels of the target membership in the dataset.
-            predictions: list[int]
-                List with the predicted labels of the target membership in the dataset.
-            generator_info: str
-                Metadata with information about the method used to generate the dataset.
-            attack_info: str
-                Metadata with information about the attacked used to infer membership of the target on the dataset.
-            dataset_info: str
-                Metadata with information about the original raw dataset.
-            target_id: str
-                Metadata with information about the target record used on the attack.
-
-        metrics: list[str] List of metrics to be included in the report, these can be any of the following:
-        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain".
-
-        Returns
-        -------
-        MIAReport class
-
-        """
-
-        if metrics is None:
-            metrics = [
-                "accuracy",
-                "true_positive_rate",
-                "false_positive_rate",
-                "mia_advantage",
-                "privacy_gain",
-            ]
-        df_list = []
-
-        for attack in attacks:
-            mia_summary = MIAttackSummary(
-                attack["labels"],
-                attack["predictions"],
-                attack["scores"],
-                attack["generator"],
-                attack["attack"],
-                attack["dataset"],
-                attack["target_id"],
-            ).get_metrics()
-
-            df_list.append(mia_summary)
-
-        return cls(pd.concat(df_list), metrics)
 
     def compare(self, comparison_column, fixed_pair_columns, marker_column, filepath):
         """
@@ -198,3 +145,100 @@ class MIAttackReport(Report):
         self.compare("target_id", ["dataset", "generator"], "attack", filepath)
 
         print(f"All figures saved to directory {filepath}")
+
+
+class MIAttackReport(BinaryLabelAttackReport):
+    """
+    Report for a Membership Inference Attack.
+
+    """
+
+    @classmethod
+    def load_summary_statistics(cls, attacks, metrics=None):
+        """
+        Load attacks data, calculate summary statistics, merge into a single dataframe and initialise object.
+
+        Parameters
+        ----------
+        attacks: list[dict]
+            List of dictionaries with results of attacks. Each dictionary should contain the following keys:
+
+            dict:
+            labels: list[int]
+                List with true labels of the target membership in the dataset.
+            predictions: list[int]
+                List with the predicted labels of the target membership in the dataset.
+            generator_info: str
+                Metadata with information about the method used to generate the dataset.
+            attack_info: str
+                Metadata with information about the attacked used to infer membership of the target on the dataset.
+            dataset_info: str
+                Metadata with information about the original raw dataset.
+            target_id: str
+                Metadata with information about the target record used on the attack.
+
+        metrics: list[str] List of metrics to be included in the report, these can be any of the following:
+        "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain", "auc".
+
+        Returns
+        -------
+        MIAReport class
+
+        """
+
+        metrics = metrics or MIAttackReport.ALL_METRICS
+        df_list = []
+
+        for attack in attacks:
+            mia_summary = MIAttackSummary(
+                attack["labels"],
+                attack["predictions"],
+                attack["scores"],
+                attack["generator"],
+                attack["attack"],
+                attack["dataset"],
+                attack["target_id"],
+            ).get_metrics()
+
+            df_list.append(mia_summary)
+
+        return cls(pd.concat(df_list), metrics)
+
+
+class BinaryAIAttackReport(MIAttackReport):
+    """
+    Report for an Attribute Inference Attack for binary attributes.
+
+    """
+
+    # This is functionally identical to MIAttackReport.
+
+
+class ROCReport(Report):
+    """
+    Report the Receiver Operating Characteristic curves for several attacks.
+
+    """
+
+    def __init__(self, attack_summaries):
+        """
+        Parameters
+        ----------
+        attack_summaries: list[BinaryLabelInferenceAttackSummary]
+            The output of binary label-inference attacks. These can have
+            been applied to different threat models (including datasets).
+
+        """
+        self.summaries = attack_summaries
+
+    def compare(self, filepath):
+        """
+        Plot the ROC curves and save them to disk.
+
+        """
+        plot_roc_curve(
+            [(s.labels, s.scores) for s in self.summaries],
+            [s.attack for s in self.summaries],
+            "Comparison of ROC curves",
+            filepath,
+        )

@@ -1,2 +1,7 @@
 from .attack_summary import MIAttackSummary, AIAttackSummary, BinaryAIAttackSummary
-from .report import MIAttackReport
+from .report import (
+    BinaryLabelAttackReport,
+    MIAttackReport,
+    BinaryAIAttackReport,
+    ROCReport,
+)

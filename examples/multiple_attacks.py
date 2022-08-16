@@ -84,3 +84,7 @@ for attack in attacks:
 print("Publishing a report.")
 report = prive.report.MIAttackReport(summaries)
 report.create_report("multiple_mia")
+
+# Also publish the ROC curve.
+report = prive.report.ROCReport(summaries)
+report.compare("multiple_mia")

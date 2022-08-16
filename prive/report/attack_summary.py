@@ -88,6 +88,8 @@ class LabelInferenceAttackSummary(AttackSummary):
         """
         return np.mean(self.predictions == self.labels)
 
+    # TODO: add the metrics from Stadler et al. (privacy gain etc.)
+
     def get_metrics(self):
         """
         Calculates all MIA relevant metrics and returns it as a dataframe.
