@@ -125,6 +125,9 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
         """
         # Modifier for the positive value, that transforms the labels as binary {0,1}.
         transform = lambda x: (np.array(x) == positive_label).astype(int)
+        print(labels)
+        print(predictions)
+        print(positive_label, type(positive_label))
         LabelInferenceAttackSummary.__init__(
             self, transform(labels), transform(predictions)
         )

@@ -46,13 +46,13 @@ threat_model = prive.threat_models.TargetedAIA(
 # We here create a range of attacks to test.
 attacks = [
     prive.attacks.GroundhogAttack(),
-    # prive.attacks.ClosestDistanceAIA(criterion="accuracy"),
-    # prive.attacks.ClosestDistanceAIA(
-    #     distance=prive.attacks.LpDistance(2), criterion="accuracy"
-    # ),
-    # prive.attacks.LocalNeighbourhoodAttack(radius=1),
-    # prive.attacks.LocalNeighbourhoodAttack(radius=2),
-    # prive.attacks.SyntheticPredictorAttack(LogisticRegression(), criterion="accuracy"),
+    prive.attacks.ClosestDistanceAIA(criterion="accuracy"),
+    prive.attacks.ClosestDistanceAIA(
+        distance=prive.attacks.LpDistance(2), criterion="accuracy"
+    ),
+    prive.attacks.LocalNeighbourhoodAttack(radius=1),
+    prive.attacks.LocalNeighbourhoodAttack(radius=2),
+    prive.attacks.SyntheticPredictorAttack(LogisticRegression(), criterion="accuracy"),
 ]
 
 # Train, evaluate, and summarise all attacks.
@@ -65,5 +65,5 @@ for attack in attacks:
 
 # Finally, group together the summaries as a report.
 print("Publishing a report.")
-report = prive.report.MIAttackReport(summaries)
+report = prive.report.MIAttackReport(summaries)  # TODO: fix.
 report.create_report("multiple_aia")
