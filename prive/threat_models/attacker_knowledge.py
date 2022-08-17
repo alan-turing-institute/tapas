@@ -286,7 +286,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
     knowledge on the dataset generates *labelled* datasets. This label can be
     anything. To implement specific threat models, it is recommended to create
     a AttackerKnowledgeWithLabel objects that wraps a AttackerKnowledge object
-    to generate datasets that fit some labels. See, e.g., mia.py for an example.
+    to generate datasets that fit some labels. See mia.py for an example.
 
     """
 
@@ -375,7 +375,10 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         # If there are samples to generate:
         if num_samples > 0:
             # Generate sample: first, produce the original datasets with labels.
-            training_datasets, gen_labels = self.atk_know_data.generate_datasets_with_label(
+            (
+                training_datasets,
+                gen_labels,
+            ) = self.atk_know_data.generate_datasets_with_label(
                 num_samples, training=training
             )
             # Then, generate synthetic data from each original dataset.
@@ -438,12 +441,24 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             Tuple of (true_labels, pred_labels), where true_labels indicates
             the true label of the original datasets and pred_labels are the
             labels predicted by the attack from the synthetic datasets.
+            Note that this is only the *default* behaviour, and children classes
+            will have different outputs, as implemented in self._wrap_output.
+
         """
         test_datasets, truth_labels = self._generate_samples(
             num_samples, False, ignore_memory
         )
         pred_labels = attack.attack(test_datasets)
-        return pred_labels, truth_labels
+        scores = attack.attack_score(test_datasets)
+        return self._wrap_output(truth_labels, pred_labels, scores, attack)
+
+    def _wrap_output(self, truth_labels, pred_labels, scores, attack):
+        """
+        Modifies the output of an attack (predicted and true labels). By default,
+        this returns the output unchanged. Overwrite this in children classes.
+
+        """
+        return truth_labels, pred_labels, scores
 
     # For multiple-label mode: choosing the current label.
     def set_label(self, label):

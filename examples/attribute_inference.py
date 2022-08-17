@@ -56,12 +56,14 @@ attacks = [
 ]
 
 # Train, evaluate, and summarise all attacks.
-results = []
+summaries = []
 for attack in attacks:
     print(f"Evaluating attack {attack.label}...")
     attack.train(threat_model, num_samples=100)
-    results.append(threat_model.test(attack, num_samples=100))
+    summaries.append(threat_model.test(attack, num_samples=100))
+    print(summaries[-1].get_metrics())
 
-import numpy as np
-for yt, yp in results:
-	print(np.mean(yt==yp))
+# Finally, group together the summaries as a report.
+print("Publishing a report.")
+report = prive.report.MIAttackReport(summaries)  # TODO: fix.
+report.create_report("multiple_aia")

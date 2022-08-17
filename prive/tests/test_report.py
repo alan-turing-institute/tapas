@@ -16,6 +16,7 @@ class MIAReport(unittest.TestCase):
             attack_dict = {
                 "labels": np.random.randint(2, size=100),
                 "predictions": np.random.randint(2, size=100),
+                "scores": np.random.random(size=100),
                 "generator": np.random.choice(
                     ["RandomGenerator1", "RandomGenerator2", "RandomGenerator3"]
                 ),

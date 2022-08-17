@@ -54,9 +54,9 @@ class TestClosestDistance(TestCase):
     def _make_mia(self, a, b):
         """Helper function to generate a MIA threat model."""
         return TargetedMIA(
-            AuxiliaryDataKnowledge(self.dataset, auxiliary_split=0.5),
+            AuxiliaryDataKnowledge(self.dataset, auxiliary_split=0.5, num_training_records=2),
             self._make_target(a, b),
-            None,
+            BlackBoxKnowledge(Raw(), num_synthetic_records=None),
         )
 
     def _make_target(self, a, b):
@@ -71,6 +71,7 @@ class TestClosestDistance(TestCase):
 
         # Take a record that is not in the dataset (distance 1/2).
         mia = self._make_mia(0, 0)
+        print(mia.generate_training_samples(100))
         attack = ClosestDistanceMIA(criterion=("threshold", -0.3))
         attack.train(mia)
         # Check that the training worked as intended.

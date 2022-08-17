@@ -78,6 +78,8 @@ class ShadowModellingAttack(Attack):
             threat_model, LabelInferenceThreatModel
         ), "Shadow-modelling attacks require a label-inference threat model."
 
+        self.threat_model = threat_model
+
         # Generate data from threat model if no data is provided
         synthetic_datasets, labels = threat_model.generate_training_samples(num_samples)
 
@@ -106,14 +108,14 @@ class ShadowModellingAttack(Attack):
 
         return self.classifier.predict(datasets)
 
-    def attack_score(self, synT: list[Dataset]) -> list[float]:
+    def attack_score(self, datasets: list[Dataset]) -> list[float]:
         """
         Calculate classifier's raw probability about the presence of the target.
         Output is a probability in [0, 1].
 
         Parameters
         ----------
-        synT : list[Dataset]
+        datasets : list[Dataset]
             List of (synthetic) datasets to make a guess for.
 
         Returns
@@ -124,7 +126,12 @@ class ShadowModellingAttack(Attack):
         """
         assert self.trained, "Attack must first be trained."
 
-        return self.classifier.predict_proba(datasets)
+        scores = self.classifier.predict_proba(datasets)
+
+        # If there are only two possible values, output the score for the positive label.
+        if scores.shape[1] == 2:
+            return scores[:,1]
+        return scores
 
     @property
     def label(self):
