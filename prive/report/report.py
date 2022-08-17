@@ -39,6 +39,7 @@ class BinaryLabelAttackReport(Report):
         "mia_advantage",
         "privacy_gain",
         "auc",
+        "effective_epsilon"
     ]
 
     def __init__(self, summaries, metrics=None):
@@ -62,6 +63,7 @@ class BinaryLabelAttackReport(Report):
                 mia_advantage: float
                 privacy_gain: float
                 auc: float
+                effective_epsilon: float
 
             Alternatively, this can be passed as an iterable of BinaryLabelInferenceAttackSummary
             objects, in which case .get_metrics() is called on each object, and the results are

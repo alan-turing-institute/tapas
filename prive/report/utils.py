@@ -13,6 +13,7 @@ axis_ranges = {
     "mia_advantage": (-0.2, 1.2),
     "privacy_gain": (-0.2, 1.2),
     "auc": (0, 1),
+    "effective_epsilon": (0, 10)
 }
 color_pal = sns.color_palette("colorblind", 10)
 
