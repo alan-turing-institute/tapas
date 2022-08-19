@@ -32,13 +32,13 @@ class MIAReport(unittest.TestCase):
     def test_setup(self):
         self.assertTrue(self.report.attacks_data.shape, [9, 10])
 
-    def test_create_report(self):
+    def test_publish(self):
         filepath_timestamp = os.path.join(
             os.path.dirname(__file__),
             f'outputs/prive_report_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}',
         )
 
-        self.report.create_report(filepath_timestamp)
+        self.report.publish(filepath_timestamp)
 
         self.assertTrue(os.path.exists(filepath_timestamp))
 
@@ -67,7 +67,7 @@ class EffectiveEpsilon(unittest.TestCase):
             report = EffectiveEpsilonReport(
                 [summary], validation_split=0.0001, confidence_levels=(0.9, 0.95, 0.99)
             )
-            result = report.compare(os.path.join(os.path.dirname(__file__), 'outputs'))
+            result = report.publish(os.path.join(os.path.dirname(__file__), 'outputs'))
             print(result)
             self.assertEqual(result.shape, (3, 2))
             # Check that the highest prediction is close to the real value.

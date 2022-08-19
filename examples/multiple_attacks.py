@@ -87,4 +87,4 @@ report.create_report("multiple_mia")
 
 # Also publish the ROC curve.
 report = prive.report.ROCReport(summaries)
-report.compare("multiple_mia")
+report.publish("multiple_mia")

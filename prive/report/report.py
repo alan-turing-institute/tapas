@@ -25,7 +25,7 @@ class Report(ABC):
     """
 
     @abstractmethod
-    def compare(self, output_path):
+    def publish(self, filepath):
         """
         Compare the outcome of attacks, potentially on different threat models.
 
@@ -125,7 +125,7 @@ class BinaryLabelAttackReport(Report):
 
         return None
 
-    def create_report(self, filepath):
+    def publish(self, filepath):
         """
         Make all comparison plots and save them to disk.
 
@@ -242,7 +242,7 @@ class ROCReport(Report):
         """
         self.summaries = attack_summaries
 
-    def compare(self, filepath):
+    def publish(self, filepath):
         """
         Plot the ROC curves and save them to disk.
 
@@ -301,7 +301,7 @@ class EffectiveEpsilonReport(Report):
             confidence_levels = [confidence_levels]
         self.confidence_levels = confidence_levels
 
-    def compare(self, filepath):
+    def publish(self, filepath):
         """
         Returns a Pandas DataFrame with the Clopper-Pearson estimate of the
         effective epsilon for a range of confidence levels.
