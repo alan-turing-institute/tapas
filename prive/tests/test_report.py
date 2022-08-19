@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import datetime
 
-from prive.report import MIAttackReport
+from prive.report import MIAttackSummary, MIAttackReport, EffectiveEpsilonReport
 
 
 class MIAReport(unittest.TestCase):
@@ -51,3 +51,27 @@ class MIAReport(unittest.TestCase):
         )
 
         self.assertEqual(n_figures, 16)
+
+
+class EffectiveEpsilon(unittest.TestCase):
+    def test_clopper_pearson(self):
+        # Construct an artificial setup where the Clopper-Pearson bound should
+        # be close to epsilon = 1.
+        num_trials = int(1e7)  # A lot of samples for accurate bound.
+        for epsilon in [0.1, 1, 10]:
+            labels = np.random.randint(2, size=(num_trials,))
+            scores = labels + np.random.laplace(
+                loc=0, scale=1 / epsilon, size=(num_trials,)
+            )
+            summary = MIAttackSummary(labels, scores > 0.5, scores)
+            report = EffectiveEpsilonReport(
+                [summary], validation_split=0.0001, confidence_levels=(0.9, 0.95, 0.99)
+            )
+            result = report.compare(os.path.join(os.path.dirname(__file__), 'outputs'))
+            print(result)
+            self.assertEqual(result.shape, (3, 2))
+            # Check that the highest prediction is close to the real value.
+            # The 0.75 tolerance is quite tight, as the bound tends to be very loose.
+            self.assertGreaterEqual(result.epsilon.values[0], 0.75 * epsilon)
+            # Check that the prediction never exceeds the true value.            
+            self.assertLessEqual(result.epsilon.values[-1], epsilon)

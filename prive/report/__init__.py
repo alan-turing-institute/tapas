@@ -4,4 +4,5 @@ from .report import (
     MIAttackReport,
     BinaryAIAttackReport,
     ROCReport,
+    EffectiveEpsilonReport,
 )

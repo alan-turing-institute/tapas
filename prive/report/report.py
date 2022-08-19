@@ -7,14 +7,23 @@ comprehensive picture of the robustness of a generator against attacks.
 """
 
 from abc import ABC, abstractmethod
+import numpy as np
+import os
 import pandas as pd
+from scipy.stats import binomtest
 
 from prive.report import MIAttackSummary
 from .utils import metric_comparison_plots, plot_roc_curve
 
 
-# TODO: what is a Report? (a way to compare attack summaries?)
 class Report(ABC):
+    """
+    A report groups together the outputs of a range of attacks, potentially
+    in different threat models (dataset etc), and summarises the output of
+    these attacks in a concise and useful way.
+
+    """
+
     @abstractmethod
     def compare(self, output_path):
         """
@@ -39,7 +48,7 @@ class BinaryLabelAttackReport(Report):
         "mia_advantage",
         "privacy_gain",
         "auc",
-        "effective_epsilon"
+        "effective_epsilon",
     ]
 
     def __init__(self, summaries, metrics=None):
@@ -244,3 +253,125 @@ class ROCReport(Report):
             "Comparison of ROC curves",
             filepath,
         )
+
+
+class EffectiveEpsilonReport(Report):
+    """
+    Estimate the effective epsilon of a *generator* from a library of attacks.
+
+    This first selects an attack (score) and a threshold (tau) that are likely
+    to lead to the highest effective epsilon, then compute Clopper-Pearson
+    bounds for the selected attack. The two parts are performed on disjoint
+    subsets of the results (validation and test) to avoid bias.
+
+    This analysis is based on "Jagielski, M., Ullman, J. and Oprea, A., 2020.
+    Auditing differentially private machine learning: How private is private sgd?.
+    Advances in Neural Information Processing Systems, 33, pp.22205-22216.""
+
+    Recommendations:
+    - Use ExactDataKnowledge as auxiliary data knowledge.
+    - Have a large enough number of test samples.
+
+    """
+
+    def __init__(
+        self,
+        attack_summaries,
+        validation_split=0.1,
+        confidence_levels=(0.9, 0.95, 0.99),
+    ):
+        """
+        Parameters
+        ----------
+        attack_summaries: list[BinaryLabelInferenceAttackSummary]
+            The summaries of Attacks that have been applied against the same
+            threat model. One of these attacks (the one with highest TP/FP) will
+            be used to estimate the effective epsilon.
+        validation_split: float in (0,1)
+            Fraction of each summary to use as validation, to select the attack
+            and threshold to use in the estimation.
+        confidence_levels: list[float in (0,1)], or a float.
+            The confidence levels for which to compute the estimate.
+
+        """
+        self.summaries = attack_summaries
+        self.split = validation_split
+        assert 0 < validation_split < 1, "validation_split should be in (0,1)."
+        if isinstance(confidence_levels, float):
+            confidence_levels = [confidence_levels]
+        self.confidence_levels = confidence_levels
+
+    def compare(self, filepath):
+        """
+        Returns a Pandas DataFrame with the Clopper-Pearson estimate of the
+        effective epsilon for a range of confidence levels.
+
+        Parameters
+        ----------
+        filepath: str
+            Path of the folder where the DataFrame is to be saved.
+
+        """
+        # First, select an attack and threshold.
+        index, threshold = self._select_attack()
+        summary = self.summaries[index]
+        # Compute the effective epsilon for each confidence level.
+        split_index = int(self.split * len(summary.scores))
+        epsilons = [
+            (
+                c,
+                self._estimate_effective_epsilon(
+                    summary.scores[split_index :],
+                    summary.labels[split_index :],
+                    threshold,
+                    c,
+                ),
+            )
+            for c in self.confidence_levels
+        ]
+        # Compile these in one single DataFrame.
+        df_epsilons = pd.DataFrame(epsilons, columns=["confidence", "epsilon"])
+        df_epsilons.to_csv(os.path.join(filepath, "effective_epsilon.csv"))
+        return df_epsilons
+
+    def _select_attack(self, conf_level=0.9):
+        """
+        Select an attack and threshold from the summaries. This uses the CP
+        bounds to estimate effective epsilon with relatively low confidence
+        (to allow for smaller sample size).
+
+        """
+        # Best effective epsilon found so far, and the corresponding (index, threshold).
+        best_eps = -1
+        best_selection = None
+        for index, summary in enumerate(self.summaries):
+            # Compute the validation scores and labels.
+            split_index = int(self.split * len(summary.scores))
+            s = summary.scores[: split_index]
+            l = summary.labels[: split_index]
+            for threshold in np.sort(np.unique(s)):
+                # Estimate effective epsilon for this threshold, using the CP procedure.
+                eps = self._estimate_effective_epsilon(s, l, threshold, conf_level)
+                if np.isfinite(eps) and not np.isnan(eps) and eps > best_eps:
+                    best_selection = (index, threshold)
+        return best_selection
+
+    def _estimate_effective_epsilon(self, scores, labels, threshold, confidence_level):
+        """
+        Use the Clopper-Pearson confidence interval over the true and false positive
+        rates (with confidence 1 - (1-confidence_level)/2) to obtain a high confidence
+        lower bound on TPR and upper bound on FPR.
+
+        """
+        num_samples = len(scores)
+        confidence_level_half = 1 - (1 - confidence_level) / 2
+        # Compute the number of true and false positives out of these samples.
+        tp = np.sum(scores[labels == True] >= threshold)
+        fp = np.sum(scores[labels == False] >= threshold)
+        # Use binomial tests to determine Clopper-Pearson bounds.
+        bi_tpr = binomtest(k=tp, n=num_samples, p=tp / num_samples)
+        ci_tpr = bi_tpr.proportion_ci(confidence_level_half)
+        bi_fpr = binomtest(k=fp, n=num_samples, p=fp / num_samples)
+        ci_fpr = bi_fpr.proportion_ci(confidence_level_half)
+        # Effective epsilon is estimated as log(tpr/fpr).
+        return np.log(ci_tpr.low / ci_fpr.high)
