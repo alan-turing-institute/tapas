@@ -98,13 +98,13 @@ class BinaryLabelAttackReport(Report):
         ----------
         comparison_column: str
             Column in dataframe that be used to make point plot comparison in the x axis. It can be either: 'generator',
-        'dataset', 'attack' or 'target_id'.
+            'dataset', 'attack' or 'target_id'.
         fixed_pair_columns: list[str]
              Columns in dataframe to fix for a given figure in order to make meaningful comparisons. It can be any pair
-        of the following:'generator', 'dataset', 'attack' or 'target_id'.
+             of the following:'generator', 'dataset', 'attack' or 'target_id'.
         marker_column: str
             Column in dataframe that be used to as marker in a point plot comparison. It can be either: 'generator',
-        'attack' or 'target_id'.
+            'attack' or 'target_id'.
         filepath: str
             Path where the figure is to be saved.
 
@@ -321,8 +321,8 @@ class EffectiveEpsilonReport(Report):
             (
                 c,
                 self._estimate_effective_epsilon(
-                    summary.scores[split_index :],
-                    summary.labels[split_index :],
+                    summary.scores[split_index:],
+                    summary.labels[split_index:],
                     threshold,
                     c,
                 ),
@@ -347,8 +347,8 @@ class EffectiveEpsilonReport(Report):
         for index, summary in enumerate(self.summaries):
             # Compute the validation scores and labels.
             split_index = int(self.split * len(summary.scores))
-            s = summary.scores[: split_index]
-            l = summary.labels[: split_index]
+            s = summary.scores[:split_index]
+            l = summary.labels[:split_index]
             for threshold in np.sort(np.unique(s)):
                 # Estimate effective epsilon for this threshold, using the CP procedure.
                 eps = self._estimate_effective_epsilon(s, l, threshold, conf_level)
