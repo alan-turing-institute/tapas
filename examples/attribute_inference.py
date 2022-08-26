@@ -66,4 +66,4 @@ for attack in attacks:
 # Finally, group together the summaries as a report.
 print("Publishing a report.")
 report = prive.report.MIAttackReport(summaries)  # TODO: fix.
-report.create_report("multiple_aia")
+report.publish("multiple_aia")

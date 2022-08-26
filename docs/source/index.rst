@@ -6,7 +6,8 @@
 Welcome to prive's documentation!
 =================================
 
-**prive** is a Python library for evaluating the privacy of synthetic data.
+**PrivE** is a Python library for evaluating the privacy of synthetic data from
+an adversarial perspective.
 
 .. note::
    This project is under active development.
@@ -19,29 +20,28 @@ Welcome to prive's documentation!
 This library is designed to be an extensible privacy toolbox which should be
 accessible to: 
 
-- Privacy researchers who may want to test and develop me new attacks against
-  synthetic data 
-- Users of synthetic data generators to test their generated synthetic data
-  using said attacks.  
+- Developers or users of synthetic data generators who want to test their
+  generator against a range of known attacks and a diversity of threat models.
+- Privacy researchers who want to test and develop new attacks against
+  synthetic data generators.
 
-We must highlight that an attack failing to find any problems does not mean
-that the data is necessarily safe (i.e. a more sophisticated attack may be
-successful), however if an attack identifies issues under a realistic threat
-model then the level of privacy in your dataset is likely not at the desired
-level. 
+``PrivE`` implements a panoply of diverse attacks in order to extract private
+information about real datasets from synthetic datasets. Importantly, should
+no attack be found to succeed, it does not mean that the generator is safe, as
+more sophisticated/specifically tailored attacks might exist. This package thus
+mostly aims at probing implementations for known vulnerabilities.
+
 
 Using the Package 
 -----------------
 
 To meet the two use cases above we provide two different interfaces into the package. 
-The first is a pure python interface which can be combined directly with
-standard python pipelines, see the example section.
+The first is a pure Python interface which can be combined directly with
+standard python pipelines, see the ``/examples`` folder.
 
-The second is a purely command line interface using the `prive` command which
+The second is a purely command line interface using the ``prive`` command which
 is directly installed when you set up the package. This interface allows you to
 interact with our package without having to develop in a python ecosystem.
-
-
 
 
 API
@@ -66,6 +66,7 @@ Contents
    modelling-threats
    library-of-attacks
    implementing-attacks
+   evaluation
 
 
 

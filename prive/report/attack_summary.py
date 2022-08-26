@@ -204,6 +204,48 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
         scores = self.scores if self.scores is not None else self.predictions
         return roc_auc_score(self.labels, scores)
 
+    @property
+    def effective_epsilon(self):
+        """
+        Computes the "effective epsilon" of the attack, which is estimated as:
+           max_{tau in T*} log(max(TP_tau/FP_tau, (1-FP_tau)/(1-TP_tau))).
+        Where T* is defined as the set of statistically significant thresholds.
+        This is arbitrarily set as T* = {t: count(D <= t) >= 10 ^ count(D > t) >= 10}.
+
+        If there is a threshold t in T* such that FP_t = 0 or TP_0 = 1, then the
+        effective epsilon will be infinite.
+
+        If self.scores is None, this returns max(tp/fp, (1-tp)/(1-fp)).
+
+        For an analysis involving the statistical significance of this result,
+        use TODO report class.
+
+        Returns
+        -------
+        float, potentially inf.
+
+        """
+        if self.scores is None:
+            return np.log(max(self.tp / self.fp, (1 - self.fp) / (1 - self.tp)))
+        else:
+            num_significant = 10
+            thresholds = np.sort(self.scores)
+            # There is on score per entry, so we just remove the first and
+            # last 10 (=num_significant) entries.
+            significant_thresholds = thresholds[num_significant:-num_significant]
+            # Remove potential duplicates.
+            significant_thresholds = np.unique(significant_thresholds)
+            # Compute the TP and FP for each threshold.
+            tp = np.array([
+                np.mean(self.scores[self.labels == 1] >= t)
+                for t in significant_thresholds
+            ])
+            fp = np.array([
+                np.mean(self.scores[self.labels == 0] >= t)
+                for t in significant_thresholds
+            ])
+            return np.log(max(np.max(tp/fp), np.max((1-fp)/(1-tp))))
+
     def get_metric_filename(self, postfix=""):
         return f"BinaryLIAttack_result_{postfix}.csv"
 
@@ -219,6 +261,7 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
                             self.mia_advantage,
                             self.privacy_gain,
                             self.auc,
+                            self.effective_epsilon,
                         ]
                     ],
                     columns=[
@@ -227,6 +270,7 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
                         "mia_advantage",
                         "privacy_gain",
                         "auc",
+                        "effective_epsilon",
                     ],
                 ),
             ],
