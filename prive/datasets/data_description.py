@@ -111,6 +111,15 @@ class DataDescription:
     def __repr__(self):
         return 'Data Description\n' + f'Columns: {list(cdict["name"] for cdict in self)}'
 
+    def __eq__(self, other_dataset_description):
+        """
+        Check that the content of the description (schema) is identical. Label is isgnored.
+
+        """
+        if not isinstance(other_dataset_description, DataDescription):
+            return False
+        return self.schema == other_dataset_description.schema
+
     @property
     def label(self):
         """
