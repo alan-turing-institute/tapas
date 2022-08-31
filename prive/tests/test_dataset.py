@@ -11,6 +11,18 @@ from prive.datasets import TabularDataset, TabularRecord
 from prive.datasets.data_description import DataDescription
 
 
+class TestDescription(TestCase):
+    def test_description_equal(self):
+        dummy_descr = [
+            {"name": "a", "type": "finite", "representation": ["A", "B", "C"]},
+            {"name": "B", "type": "countable", "representation": "integer"},
+            {"name": "   ", "type": "finite", "representation": 10},
+        ]
+        description_1 = DataDescription(dummy_descr)
+        description_2 = DataDescription(copy.deepcopy(dummy_descr))
+        self.assertEqual(description_1, description_2)
+
+
 class TestTabularDataset(TestCase):
     def setUp(self):
         self.dataset = TabularDataset.read("tests/data/test_texas")
