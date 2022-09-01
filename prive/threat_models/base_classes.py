@@ -83,6 +83,8 @@ class ThreatModel(ABC):
                 name = self._name
             else:
                 raise Exception("Name is required to save this ThreatModel.")
+        else:
+            self._name = name
         filename = name + ".pkl"
         with open(filename, "wb") as ff:
             pickle.dump(self, ff)
