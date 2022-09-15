@@ -91,7 +91,7 @@ def metric_comparison_plots(
         plt.close(fig)
 
 
-def plot_roc_curve(data, names, title, output_path):
+def plot_roc_curve(data, names, title, output_path, suffix=''):
     """
     Parameters
     ----------
@@ -99,6 +99,10 @@ def plot_roc_curve(data, names, title, output_path):
         The true labels and the scores of each attack.
     names: list of str of the same length
         The label for each curve.
+    title: str
+        Title to display on the figure.
+    output_path: str
+        Path to the folder where the ROC curve should be saved.
 
     """
     set_style()
@@ -122,9 +126,10 @@ def plot_roc_curve(data, names, title, output_path):
     ax.set_xlabel("False-Positive Rate")
     ax.set_ylabel("True-Positive Rate")
 
-    fig.suptitle(title)
+    if title:
+        fig.suptitle(title)
 
-    filename = "ROC_curve.png"
+    filename = f"ROC_curve{suffix}.png"
     plt.savefig(os.path.join(output_path, filename))
 
     plt.close(fig)

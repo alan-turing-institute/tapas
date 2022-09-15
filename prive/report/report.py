@@ -231,7 +231,7 @@ class ROCReport(Report):
 
     """
 
-    def __init__(self, attack_summaries):
+    def __init__(self, attack_summaries, suffix=''):
         """
         Parameters
         ----------
@@ -241,6 +241,7 @@ class ROCReport(Report):
 
         """
         self.summaries = attack_summaries
+        self.suffix = suffix
 
     def publish(self, filepath):
         """
@@ -250,8 +251,9 @@ class ROCReport(Report):
         plot_roc_curve(
             [(s.labels, s.scores) for s in self.summaries],
             [s.attack for s in self.summaries],
-            "Comparison of ROC curves",
+            f"Comparison of ROC curves ({self.suffix})",
             filepath,
+            self.suffix
         )
 
 
