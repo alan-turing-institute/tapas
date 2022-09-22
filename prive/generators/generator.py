@@ -15,7 +15,7 @@ class Generator(ABC):
         self.trained = False
 
     @abstractmethod
-    def generate(self, num_samples, random_state):
+    def generate(self, num_samples, random_state=None):
         """Given an input dataset, output a synthetic dataset with given number of samples."""
         pass
 
@@ -26,8 +26,8 @@ class Generator(ABC):
 
     # The call method should map a dataset to a synthetic dataset.
     def __call__(self, dataset, num_samples):
-        pass
-        #return self.generate(*args, **kwargs)
+        self.fit(dataset)
+        return self.generate(num_samples)
 
     @property
     def label(self):
