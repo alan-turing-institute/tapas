@@ -14,6 +14,7 @@ from .set_classifiers import (
     NaiveSetFeature,
     HistSetFeature,
     CorrSetFeature,
+    RandomTargetedQueryFeature,
 )
 from .groundhog import GroundhogAttack
 from .synthinference import (

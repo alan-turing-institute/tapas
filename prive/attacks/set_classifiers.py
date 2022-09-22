@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..datasets import Dataset, DataDescription, TabularDataset
+    from ..datasets import Dataset, DataDescription, TabularDataset, TabularRecord
     from ..threat_models import LabelInferenceThreatModel
     from sklearn.base import ClassifierMixin
 
@@ -136,7 +136,9 @@ class FeatureBasedSetClassifier(SetClassifier):
         """
         self.features = features
         self.classifier = classifier
-        self._label = label or f"Classifier({self.features.label}, {str(self.classifier)})"
+        self._label = (
+            label or f"Classifier({self.features.label}, {str(self.classifier)})"
+        )
 
     def fit(self, datasets: list[Dataset], labels: list[int]):
         self.classifier.fit(self.features(datasets), labels)
@@ -296,3 +298,95 @@ class CorrSetFeature(SetFeature):
     @property
     def label(self):
         return "F_Corr"
+
+
+# New custom features.
+
+import itertools
+from scipy.special import comb
+
+
+class RandomTargetedQueryFeature(SetFeature):
+    """
+    Features that computes random targeted queries that include the user.
+
+    These queries take the form SUM_{x in D} AND_{a in S} I{x_s = target_s},
+    counting all records that match the target record in all attributes in S.
+    The set S is sampled randomly from all subsets of attributes of a fixed
+    length (order).
+
+    This is equivalent to using entries of the order-way contingency
+    table that count the target user as features. In particular, for 
+    order=1, this is a subset of HistSetFeature().
+
+    """
+
+    def __init__(self, target: TabularRecord, order: int, number: int, num_bins = None):
+        """
+        Parameters
+        ----------
+        target: TabularRecord
+            The record of the target user to attack.
+        order: int
+            The number of conditions in each query.
+        number: int
+            The number of queries to use.
+        num_bins: int
+            How to bin continuous attributes (currently unsupported).
+
+        """
+        # Target user.
+        self.target = target
+        self.target_values = target.data.values
+        # Order (number of conditions) of the queries.
+        self.order = order
+        # Choose the queries.
+        self.queries = []
+        # Do something with num_bins:
+        if num_bins is not None:
+            raise Exception("Only categorical variables are currently allowed.")
+            # TODO: manage continuous variables.
+        # First, check the total number of combinations. If this number if low
+        # enough, we generate all possible queries and sample uniformly from
+        # the full set. If the number is too high, we instead randomly sample
+        # each query independently, which may create duplicates.
+        num_columns = self.target_values.shape[1]
+        total_num_queries = comb(num_columns, order)
+        if total_num_queries < int(1e6):
+            # We can just enumerate everything, and sample uniformly.
+            all_combinations = list(
+                itertools.combinations(range(num_columns), self.order)
+            )
+            self.number = min(number, int(total_num_queries))
+            indices = np.random.choice(
+                len(all_combinations), replace=False, size=(self.number,)
+            )
+            # A query is represented by a np.array of column indices, which
+            # represents all the columns used in the query.
+            self.queries = [all_combinations[idx] for idx in indices]
+        else:
+            # TODO: test this code.
+            self.number = number
+            self.queries = [
+                np.random.choice(num_columns, replace=False, size=(self.order,))
+                for _ in range(self.number)
+            ]
+            # TODO: duplicate detection+removal?
+
+    def extract(self, datasets):
+        """Compute queries on each dataset."""
+        features = []
+        for dataset in datasets:
+            ft = []
+            for columns in self.queries:
+                ft.append(
+                    (dataset.data.values[:, columns] == self.target_values[0, columns])
+                    .prod(axis=1)
+                    .sum(axis=0)
+                )
+            features.append(np.array(ft))
+        return features
+
+    @property
+    def label(self):
+        return f"RandomQueries({self.order}, {self.number})"
