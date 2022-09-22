@@ -64,22 +64,24 @@ def metric_comparison_plots(
                 dodge=True,
                 errwidth=1,
                 linestyles="",
+                errorbar="ci",
             )
             axs[i].legend([], [], frameon=False)
-            axs[i].set_ylabel(metric)
+            axs[i].set_ylabel(metric, fontsize=20)
             axs[i].set_xlabel("")
             axs[i].set_ylim(axis_ranges[metric])
 
-        axs[-1].set_xlabel(f"{comparison_label}s")
+        axs[-1].set_xlabel(f"{comparison_label}s".capitalize(), fontsize=20)
 
         handles, labels = axs[i].get_legend_handles_labels()
-        fig.legend(handles, labels, loc="lower right", prop={"size": 12})
+        fig.legend(handles, labels, loc="center right", prop={"size": 20}, bbox_to_anchor=(0.75, 0.25, 0.25, 0.3))
 
         fig.suptitle(
             f"Comparison of {comparison_label}s and different targets"
             "\n"
             f"{fixed_pair_label[0]}: {pair_name[0]}, {fixed_pair_label[1]}: {pair_name[1]}",
             fontweight="bold",
+            fontsize=24,
         )
         filename = f"{comparison_label}sComparison_Dataset{pair_name[0]}_Attack{pair_name[1]}.png"
 
@@ -91,7 +93,7 @@ def metric_comparison_plots(
         plt.close(fig)
 
 
-def plot_roc_curve(data, names, title, output_path, suffix=''):
+def plot_roc_curve(data, names, title, output_path, suffix='', eff_epsilon=None):
     """
     Parameters
     ----------
@@ -103,6 +105,9 @@ def plot_roc_curve(data, names, title, output_path, suffix=''):
         Title to display on the figure.
     output_path: str
         Path to the folder where the ROC curve should be saved.
+    eff_epsilon: positive float, or None
+        If not None, the value of the effective epsilon for this ROC curve,
+        for which the TP/FP and (1-FP)/(1-TP) curves are plotted.
 
     """
     set_style()
@@ -117,17 +122,45 @@ def plot_roc_curve(data, names, title, output_path, suffix=''):
         fpr, tpr, thresholds = roc_curve(labels, scores)
         ax.plot(fpr, tpr, label=name)
 
-    ax.legend(loc="lower right")
+    if eff_epsilon is not None:
+        assert eff_epsilon > 0, "eff_epsilon must be positive."
+        slope = np.exp(eff_epsilon)
+        tp_inter = slope / (slope+1)
+        fp_inter = 1 / (slope+1)
+        print(tp_inter, fp_inter)
+        ax.plot([0, fp_inter], [0, tp_inter], 'k--')
+        ax.plot([fp_inter, 1], [tp_inter, 1], 'k--')
+
+# 1-fp/1-tp = s
+# 1-fp = s (1-tp) = s - s tp
+# 1 - fp - s = -s tp
+# tp = (s + fp - 1) / s
+
+# fp = 0 ==> tp = (s-1)/s
+
+# tp + fp = 1
+# fp = 1/(s+1)
+# tp = s/(s+1)
+
+# tp = s fp
+# 1 - fp = s - s tp =  s - s2 tp
+# tp = 1 + (fp - 1)/s  = s fp
+# s2 fp = s + fp - 1
+# (s2 - 1) fp = s - 1
+# fp = 1/(s+1)
+
+
+    ax.legend(loc="lower right", fontsize=20)
 
     # We add a small margin to protect [0,1].
     margin = 0.01
     ax.set_xlim([0-margin, 1])
     ax.set_ylim([0, 1+margin])
-    ax.set_xlabel("False-Positive Rate")
-    ax.set_ylabel("True-Positive Rate")
+    ax.set_xlabel("False-Positive Rate", fontsize=20)
+    ax.set_ylabel("True-Positive Rate", fontsize=20)
 
     if title:
-        fig.suptitle(title)
+        fig.suptitle(title, fontweight="bold", fontsize=24)
 
     filename = f"ROC_curve{suffix}.png"
     plt.savefig(os.path.join(output_path, filename))
@@ -158,10 +191,10 @@ def set_style():
             "font.family": "sans-serif",
             "font.sans-serif": "Tahoma",
             "font.size": 10,
-            "xtick.labelsize": 10,
-            "ytick.labelsize": 10,
-            "axes.labelsize": 12,
-            "axes.titlesize": 12,
+            "xtick.labelsize": 14,
+            "ytick.labelsize": 14,
+            "axes.labelsize": 16,
+            "axes.titlesize": 16,
             "savefig.dpi": 75,
             "figure.autolayout": False,
             "figure.figsize": (12, 10),

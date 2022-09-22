@@ -155,6 +155,9 @@ class BinaryLabelAttackReport(Report):
         # compare targets and attacks ids for fixed dataset-generators
         self.compare("target_id", ["dataset", "generator"], "attack", filepath)
 
+        # compare attacks and generators for fixed dataset-targets.
+        self.compare("generator", ["dataset", "target_id"], "attack", filepath)
+
         print(f"All figures saved to directory {filepath}")
 
 
@@ -231,17 +234,23 @@ class ROCReport(Report):
 
     """
 
-    def __init__(self, attack_summaries, suffix=''):
+    def __init__(self, attack_summaries, suffix="", eff_epsilon=None):
         """
         Parameters
         ----------
         attack_summaries: list[BinaryLabelInferenceAttackSummary]
             The output of binary label-inference attacks. These can have
             been applied to different threat models (including datasets).
+        suffix: str
+            Text to display in the title, and filename.
+        eff_epsilon: float or None
+            If not None, the value of effective epsilon used to plot the
+            TP/FP and TN/FN curves. If None, no curves are plotted.
 
         """
         self.summaries = attack_summaries
         self.suffix = suffix
+        self.eff_epsilon = eff_epsilon
 
     def publish(self, filepath):
         """
@@ -253,7 +262,8 @@ class ROCReport(Report):
             [s.attack for s in self.summaries],
             f"Comparison of ROC curves ({self.suffix})",
             filepath,
-            self.suffix
+            self.suffix,
+            eff_epsilon = self.eff_epsilon
         )
 
 
@@ -320,41 +330,62 @@ class EffectiveEpsilonReport(Report):
         # Compute the effective epsilon for each confidence level.
         split_index = int(self.split * len(summary.scores))
         epsilons = [
-            (
+            (c,)
+            + self._estimate_effective_epsilon(
+                summary.scores[split_index:],
+                summary.labels[split_index:],
+                threshold,
                 c,
-                self._estimate_effective_epsilon(
-                    summary.scores[split_index:],
-                    summary.labels[split_index:],
-                    threshold,
-                    c,
-                ),
             )
             for c in self.confidence_levels
         ]
         # Compile these in one single DataFrame.
-        df_epsilons = pd.DataFrame(epsilons, columns=["confidence", "epsilon"])
+        df_epsilons = pd.DataFrame(
+            epsilons, columns=["confidence", "epsilon_low", "epsilon_high"]
+        )
         df_epsilons.to_csv(os.path.join(filepath, "effective_epsilon.csv"))
         return df_epsilons
 
-    def _select_attack(self, conf_level=0.9):
+    def _select_attack(self):
         """
         Select an attack and threshold from the summaries. This uses the CP
         bounds to estimate effective epsilon with relatively low confidence
         (to allow for smaller sample size).
 
         """
+        # Trying out a new heuristic.
+        min_count = 10
         # Best effective epsilon found so far, and the corresponding (index, threshold).
         best_eps = -1
+        best_tp_if_fp0 = 0
         best_selection = None
         for index, summary in enumerate(self.summaries):
             # Compute the validation scores and labels.
             split_index = int(self.split * len(summary.scores))
             s = summary.scores[:split_index]
             l = summary.labels[:split_index]
-            for threshold in np.sort(np.unique(s)):
+            # NEW: do not consider the first and last 10 thresholds, since we allow FP=0.
+            for threshold in np.unique(
+                np.sort(s)[min_count:-min_count]
+            ):  # np.sort(np.unique(s))[min_count:-min_count]:
                 # Estimate effective epsilon for this threshold, using the CP procedure.
-                eps = self._estimate_effective_epsilon(s, l, threshold, conf_level)
-                if np.isfinite(eps) and not np.isnan(eps) and eps > best_eps:
+                # eps = self._estimate_effective_epsilon(s, l, threshold, conf_level)
+                tp = np.sum(s[l == True] >= threshold)
+                fp = np.sum(s[l == False] >= threshold)
+                eps = tp / fp
+                # If fp is 0,
+                if fp == 0:
+                    if tp == 0:
+                        continue
+                    if best_tp_if_fp0 is not None:
+                        if tp >= best_tp_if_fp0:
+                            best_tp_if_fp0 = tp
+                            best_selection = (index, threshold)
+                    else:
+                        best_tp_if_fp0 = tp
+                        best_selection = (index, threshold)
+                # else
+                elif not np.isnan(eps) and eps > best_eps:
                     best_selection = (index, threshold)
         return best_selection
 
@@ -376,4 +407,4 @@ class EffectiveEpsilonReport(Report):
         bi_fpr = binomtest(k=fp, n=num_samples, p=fp / num_samples)
         ci_fpr = bi_fpr.proportion_ci(confidence_level_half)
         # Effective epsilon is estimated as log(tpr/fpr).
-        return np.log(ci_tpr.low / ci_fpr.high)
+        return np.log(ci_tpr.low / ci_fpr.high), np.log(ci_tpr.high / ci_fpr.low)
