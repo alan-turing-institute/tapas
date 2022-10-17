@@ -405,8 +405,7 @@ class EffectiveEpsilonReport(Report):
             min_count_for_num = max(10, int(len(s) * 0.05))
             # Do not consider the first and last 10 thresholds, since we allow FP=0.
             for threshold in np.unique(np.sort(s)[min_count:-min_count]):
-                # Estimate effective epsilon for this threshold, using the CP procedure.
-                # eps = self._estimate_effective_epsilon(s, l, threshold, conf_level)
+                # Compute the ratio TP/FP or TN/FN.
                 true_positives = np.sum(s[l == True] >= threshold)
                 false_positives = np.sum(s[l == False] >= threshold)
                 for inverse in [False, True]:
