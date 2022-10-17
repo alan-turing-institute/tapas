@@ -234,7 +234,7 @@ class ROCReport(Report):
 
     """
 
-    def __init__(self, attack_summaries, suffix="", eff_epsilon=None):
+    def __init__(self, attack_summaries, suffix="", eff_epsilon=None, zooms=[1]):
         """
         Parameters
         ----------
@@ -246,25 +246,39 @@ class ROCReport(Report):
         eff_epsilon: float or None
             If not None, the value of effective epsilon used to plot the
             TP/FP and TN/FN curves. If None, no curves are plotted.
+        zooms: list of floats, default [1]
+            List of zooms of ROC curves to produce. A zoom is a restriction of
+            the ROC curve to [0,zoom_in] x [0,zoom_in]. This allows to visualise
+            the TPR at low FPR for privacy analysis.
 
         """
         self.summaries = attack_summaries
         self.suffix = suffix
         self.eff_epsilon = eff_epsilon
+        self.zooms = zooms
 
     def publish(self, filepath):
         """
         Plot the ROC curves and save them to disk.
 
         """
-        plot_roc_curve(
-            [(s.labels, s.scores) for s in self.summaries],
-            [s.attack for s in self.summaries],
-            f"Comparison of ROC curves ({self.suffix})",
-            filepath,
-            self.suffix,
-            eff_epsilon = self.eff_epsilon
-        )
+        for zoom_in in self.zooms:
+            for low_corner in [True, False] if zoom_in < 1 else [True]:
+                plot_roc_curve(
+                    [(s.labels, s.scores) for s in self.summaries],
+                    [s.attack for s in self.summaries],
+                    f"Comparison of ROC curves ({self.suffix})",
+                    filepath,
+                    self.suffix
+                    + (
+                        f"_zoom={'' if low_corner else '-'}{zoom_in}"
+                        if zoom_in < 1
+                        else ""
+                    ),
+                    eff_epsilon=self.eff_epsilon,
+                    zoom_in=zoom_in,
+                    low_corner=low_corner,
+                )
 
 
 class EffectiveEpsilonReport(Report):
@@ -291,6 +305,7 @@ class EffectiveEpsilonReport(Report):
         attack_summaries,
         validation_split=0.1,
         confidence_levels=(0.9, 0.95, 0.99),
+        heuristic="cp",
     ):
         """
         Parameters
@@ -304,6 +319,10 @@ class EffectiveEpsilonReport(Report):
             and threshold to use in the estimation.
         confidence_levels: list[float in (0,1)], or a float.
             The confidence levels for which to compute the estimate.
+        heuristic: str
+            Which heuristic to use to choose the attack and threshold used for
+            estimation of Clopper-Pearson bounds. Acceptable values are "cp"
+            (max effeps with Clopper-Pearson) and "ratio" (max TP/FP).
 
         """
         self.summaries = attack_summaries
@@ -312,6 +331,12 @@ class EffectiveEpsilonReport(Report):
         if isinstance(confidence_levels, float):
             confidence_levels = [confidence_levels]
         self.confidence_levels = confidence_levels
+        self.heuristic = heuristic
+        assert heuristic in ("cp", "ratio"), "Unsupported heuristic."
+        self._select_attack = {
+            "cp": self._select_attack_cp,
+            "ratio": self._select_attack_ratio,
+        }[heuristic]
 
     def publish(self, filepath):
         """
@@ -325,8 +350,11 @@ class EffectiveEpsilonReport(Report):
 
         """
         # First, select an attack and threshold.
-        index, threshold = self._select_attack()
+        index, threshold, inverse = self._select_attack()
         summary = self.summaries[index]
+        print(
+            f"Using attack {summary.attack} with threshold {threshold} and {inverse}."
+        )
         # Compute the effective epsilon for each confidence level.
         split_index = int(self.split * len(summary.scores))
         epsilons = [
@@ -336,6 +364,7 @@ class EffectiveEpsilonReport(Report):
                 summary.labels[split_index:],
                 threshold,
                 c,
+                inverse,
             )
             for c in self.confidence_levels
         ]
@@ -346,65 +375,126 @@ class EffectiveEpsilonReport(Report):
         df_epsilons.to_csv(os.path.join(filepath, "effective_epsilon.csv"))
         return df_epsilons
 
-    def _select_attack(self):
+    def _select_attack_ratio(self):
         """
-        Select an attack and threshold from the summaries. This uses the CP
-        bounds to estimate effective epsilon with relatively low confidence
-        (to allow for smaller sample size).
+        Select an attack and threshold from the summaries. This uses the ratio TP/FP
+        of the attack as selection criterion. If FP=0 for any attack/threshold, then
+        the attack/threshold with highest TP for FP=0 is selected. In order to avoid
+        the case where FP = 1 by chance, we exclude the first and last10 values of
+        threshold for each attack (or first and last 10% of threshold values,
+        whichever is lowest).
+
+        This heuristic privileges "worst-case" setups where TP>0 for FP=0. Since such
+        situations are forbidden by DP, this is where the highest potential epsilon
+        can be found. This is however quite sensitive to randomness.
 
         """
-        # Trying out a new heuristic.
-        min_count = 10
         # Best effective epsilon found so far, and the corresponding (index, threshold).
         best_eps = -1
-        best_tp_if_fp0 = 0
         best_selection = None
         for index, summary in enumerate(self.summaries):
             # Compute the validation scores and labels.
             split_index = int(self.split * len(summary.scores))
             s = summary.scores[:split_index]
             l = summary.labels[:split_index]
-            # NEW: do not consider the first and last 10 thresholds, since we allow FP=0.
-            for threshold in np.unique(
-                np.sort(s)[min_count:-min_count]
-            ):  # np.sort(np.unique(s))[min_count:-min_count]:
+            positive_count = np.sum(l == True)
+            negative_count = np.sum(l == False)
+            # We adapt in case the min count is too small.
+            min_count = min(10, 1 + int(len(s) * 0.1))
+            # The minimum value of numerator if 
+            min_count_for_num = max(10, int(len(s) * 0.05))
+            # Do not consider the first and last 10 thresholds, since we allow FP=0.
+            for threshold in np.unique(np.sort(s)[min_count:-min_count]):
                 # Estimate effective epsilon for this threshold, using the CP procedure.
                 # eps = self._estimate_effective_epsilon(s, l, threshold, conf_level)
-                tp = np.sum(s[l == True] >= threshold)
-                fp = np.sum(s[l == False] >= threshold)
-                eps = tp / fp
-                # If fp is 0,
-                if fp == 0:
-                    if tp == 0:
-                        continue
-                    if best_tp_if_fp0 is not None:
-                        if tp >= best_tp_if_fp0:
-                            best_tp_if_fp0 = tp
-                            best_selection = (index, threshold)
+                true_positives = np.sum(s[l == True] >= threshold)
+                false_positives = np.sum(s[l == False] >= threshold)
+                for inverse in [False, True]:
+                    if not inverse:
+                        # Normal scenario (compute TP/FP)
+                        num = true_positives / positive_count
+                        denom = false_positives / negative_count
                     else:
-                        best_tp_if_fp0 = tp
-                        best_selection = (index, threshold)
-                # else
-                elif not np.isnan(eps) and eps > best_eps:
-                    best_selection = (index, threshold)
+                        # Inverse (compute TN/FN).
+                        num = (negative_count - false_positives) / negative_count
+                        denom = (positive_count - true_positives) / positive_count
+                    # print(f"{summary.attack}\t{threshold:.3f}\t{num:.3f}/{denom:.3f}")
+                    # If the denominator is 0, only consider this if the numerator is large.
+                    if denom == 0:
+                        if num >= min_count_for_num:
+                            # In this case, this is the star candidate.
+                            best_eps = np.inf
+                            min_count_for_num = num
+                            best_selection = (index, threshold, inverse)
+                    # if fp is not 0, then eps is finite.
+                    elif num / denom > best_eps:
+                        best_eps = num / denom
+                        best_selection = (index, threshold, inverse)
         return best_selection
 
-    def _estimate_effective_epsilon(self, scores, labels, threshold, confidence_level):
+    def _select_attack_cp(self, conf_level=0.9):
+        """
+        Select an attack and threshold from the summaries. This uses the CP
+        bounds to estimate effective epsilon with relatively low confidence
+        (to allow for smaller sample size).
+
+        This heuristic privileges safe values, and tends to consistently find
+        high-ish values of epsilon, but not necessarily the most successful
+        attack (i.e. it is conservative).
+
+        """
+        best_eps = -1
+        best_selection = None
+        for index, summary in enumerate(self.summaries):
+            # Compute the validation scores and labels.
+            split_index = int(self.split * len(summary.scores))
+            s = summary.scores[:split_index]
+            l = summary.labels[:split_index]
+            for threshold in np.sort(np.unique(s)):
+                # Estimate effective epsilon for this threshold, using the CP procedure.
+                for inverse in [False, True]:
+                    eps_bounds = self._estimate_effective_epsilon(
+                        s, l, threshold, conf_level, inverse
+                    )
+                    # If the lower bound is higher than previous estimations, memorise.
+                    eps_low = eps_bounds[0]
+                    if not np.isnan(eps_low) and eps_low > best_eps:
+                        best_eps = eps_low
+                        best_selection = (index, threshold, inverse)
+        return best_selection
+
+    def _estimate_effective_epsilon(
+        self, scores, labels, threshold, confidence_level, inverse=False
+    ):
         """
         Use the Clopper-Pearson confidence interval over the true and false positive
         rates (with confidence 1 - (1-confidence_level)/2) to obtain a high confidence
         lower bound on TPR and upper bound on FPR.
 
+        If inverse is True, swap positives and negatives: instead of using TP/FP for
+        the estimation, use TN/FN.
+
         """
         num_samples = len(scores)
         confidence_level_half = 1 - (1 - confidence_level) / 2
+        # By default, positive label is True and the threshold increases with P[True].
+        positive_label = not inverse
+        test = (lambda x: x <= threshold) if inverse else (lambda x: x >= threshold)
         # Compute the number of true and false positives out of these samples.
-        tp = np.sum(scores[labels == True] >= threshold)
-        fp = np.sum(scores[labels == False] >= threshold)
+        positive_count = np.sum(labels == positive_label)
+        negative_count = np.sum(labels != positive_label)
+        true_positives = np.sum(test(scores[labels == positive_label]))
+        false_positives = np.sum(test(scores[labels != positive_label]))
         # Use binomial tests to determine Clopper-Pearson bounds.
-        bi_tpr = binomtest(k=tp, n=num_samples, p=tp / num_samples)
+        bi_tpr = binomtest(
+            k=true_positives, n=positive_count, p=true_positives / positive_count
+        )
         ci_tpr = bi_tpr.proportion_ci(confidence_level_half)
-        bi_fpr = binomtest(k=fp, n=num_samples, p=fp / num_samples)
+        bi_fpr = binomtest(
+            k=false_positives, n=negative_count, p=false_positives / negative_count
+        )
         ci_fpr = bi_fpr.proportion_ci(confidence_level_half)
-        # Effective epsilon is estimated as log(tpr/fpr).
-        return np.log(ci_tpr.low / ci_fpr.high), np.log(ci_tpr.high / ci_fpr.low)
+        # Effective epsilon is estimated as log(tpr/fpr), and this is thus the confidence interval.
+        low_bound = max(0, np.log(ci_tpr.low / ci_fpr.high))
+        high_bound = np.log(ci_tpr.high / ci_fpr.low) if ci_fpr.low > 0 else np.inf
+        return low_bound, high_bound

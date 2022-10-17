@@ -231,7 +231,7 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
             return np.log(max(self.tp / self.fp, (1 - self.fp) / (1 - self.tp)))
         else:
             # Arbitrary threshold on the minimum count needed for TP/FP comp.
-            num_significant = min(10, int(0.1 * len(self.scores)))
+            num_significant = max(min(10, int(0.1 * len(self.scores))), 1)
             thresholds = np.sort(self.scores)
             # There is on score per entry, so we just remove the first and
             # last 10 (=num_significant) entries.

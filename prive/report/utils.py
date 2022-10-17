@@ -13,7 +13,7 @@ axis_ranges = {
     "mia_advantage": (-0.2, 1.2),
     "privacy_gain": (-0.2, 1.2),
     "auc": (0, 1),
-    "effective_epsilon": (0, 10)
+    "effective_epsilon": (0, 10),
 }
 color_pal = sns.color_palette("colorblind", 10)
 
@@ -74,7 +74,13 @@ def metric_comparison_plots(
         axs[-1].set_xlabel(f"{comparison_label}s".capitalize(), fontsize=20)
 
         handles, labels = axs[i].get_legend_handles_labels()
-        fig.legend(handles, labels, loc="center right", prop={"size": 20}, bbox_to_anchor=(0.75, 0.25, 0.25, 0.3))
+        fig.legend(
+            handles,
+            labels,
+            loc="center right",
+            prop={"size": 20},
+            bbox_to_anchor=(0.75, 0.25, 0.25, 0.3),
+        )
 
         fig.suptitle(
             f"Comparison of {comparison_label}s and different targets"
@@ -93,7 +99,16 @@ def metric_comparison_plots(
         plt.close(fig)
 
 
-def plot_roc_curve(data, names, title, output_path, suffix='', eff_epsilon=None):
+def plot_roc_curve(
+    data,
+    names,
+    title,
+    output_path,
+    suffix="",
+    eff_epsilon=None,
+    zoom_in=1,
+    low_corner=True,
+):
     """
     Parameters
     ----------
@@ -108,6 +123,12 @@ def plot_roc_curve(data, names, title, output_path, suffix='', eff_epsilon=None)
     eff_epsilon: positive float, or None
         If not None, the value of the effective epsilon for this ROC curve,
         for which the TP/FP and (1-FP)/(1-TP) curves are plotted.
+    zoom_in: float, default 1
+        Maximum value of TP and FP shown on the plot. The default of 1 shows
+        the full ROC curve, but this can be used to "zoom in" to the TPR at
+        low FPR, an important quantity for privacy analysis.
+    low_corner: bool, default True
+        Whether to zoom in near (0,0) (True), or (1,1) (False).
 
     """
     set_style()
@@ -116,48 +137,34 @@ def plot_roc_curve(data, names, title, output_path, suffix='', eff_epsilon=None)
     ax = fig.subplots()
 
     # Plot the "baseline".
-    ax.plot([0, 1], [0, 1], "--", color=(0.7, 0.7, 0.7))
+    decorum_color = (0.7, 0.7, 0.7)
+
+    ax.plot([0, 1], [0, 1], "--", color=decorum_color)
+
+    if eff_epsilon is not None:
+        assert eff_epsilon > 0, "eff_epsilon must be positive."
+        slope = np.exp(eff_epsilon)
+        tp_inter = slope / (slope + 1)
+        fp_inter = 1 / (slope + 1)
+        ax.plot([0, fp_inter], [0, tp_inter], "--", color=decorum_color)
+        ax.plot([fp_inter, 1], [tp_inter, 1], "--", color=decorum_color)
 
     for (labels, scores), name in zip(data, names):
         fpr, tpr, thresholds = roc_curve(labels, scores)
         ax.plot(fpr, tpr, label=name)
 
-    if eff_epsilon is not None:
-        assert eff_epsilon > 0, "eff_epsilon must be positive."
-        slope = np.exp(eff_epsilon)
-        tp_inter = slope / (slope+1)
-        fp_inter = 1 / (slope+1)
-        print(tp_inter, fp_inter)
-        ax.plot([0, fp_inter], [0, tp_inter], 'k--')
-        ax.plot([fp_inter, 1], [tp_inter, 1], 'k--')
-
-# 1-fp/1-tp = s
-# 1-fp = s (1-tp) = s - s tp
-# 1 - fp - s = -s tp
-# tp = (s + fp - 1) / s
-
-# fp = 0 ==> tp = (s-1)/s
-
-# tp + fp = 1
-# fp = 1/(s+1)
-# tp = s/(s+1)
-
-# tp = s fp
-# 1 - fp = s - s tp =  s - s2 tp
-# tp = 1 + (fp - 1)/s  = s fp
-# s2 fp = s + fp - 1
-# (s2 - 1) fp = s - 1
-# fp = 1/(s+1)
-
-
     ax.legend(loc="lower right", fontsize=20)
 
     # We add a small margin to protect [0,1].
     margin = 0.01
-    ax.set_xlim([0-margin, 1])
-    ax.set_ylim([0, 1+margin])
-    ax.set_xlabel("False-Positive Rate", fontsize=20)
-    ax.set_ylabel("True-Positive Rate", fontsize=20)
+    if low_corner:
+        ax.set_xlim([0 - margin * zoom_in, zoom_in])
+        ax.set_ylim([0, (1 + margin) * zoom_in])
+    else:
+        ax.set_xlim([1 - zoom_in, 1])
+        ax.set_ylim([1 - zoom_in, 1 + margin * zoom_in])
+    ax.set_xlabel("False Positive Rate", fontsize=20)
+    ax.set_ylabel("True Positive Rate", fontsize=20)
 
     if title:
         fig.suptitle(title, fontweight="bold", fontsize=24)
