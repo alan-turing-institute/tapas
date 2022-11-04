@@ -12,6 +12,8 @@ import numpy as np
 import os
 import pandas as pd
 
+import pickle
+
 from sklearn.metrics import roc_auc_score
 
 
@@ -228,7 +230,8 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
         if self.scores is None:
             return np.log(max(self.tp / self.fp, (1 - self.fp) / (1 - self.tp)))
         else:
-            num_significant = 10
+            # Arbitrary threshold on the minimum count needed for TP/FP comp.
+            num_significant = max(min(10, int(0.1 * len(self.scores))), 1)
             thresholds = np.sort(self.scores)
             # There is on score per entry, so we just remove the first and
             # last 10 (=num_significant) entries.

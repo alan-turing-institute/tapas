@@ -15,7 +15,7 @@ class Generator(ABC):
         self.trained = False
 
     @abstractmethod
-    def generate(self, num_samples, random_state):
+    def generate(self, num_samples, random_state=None):
         """Given an input dataset, output a synthetic dataset with given number of samples."""
         pass
 
@@ -26,8 +26,8 @@ class Generator(ABC):
 
     # The call method should map a dataset to a synthetic dataset.
     def __call__(self, dataset, num_samples):
-        pass
-        #return self.generate(*args, **kwargs)
+        self.fit(dataset)
+        return self.generate(num_samples)
 
     @property
     def label(self):
@@ -115,7 +115,8 @@ class GeneratorFromExecutable(Generator):
         return self._label
     
 
-class ReprosynGenerator(Generator):
+# TODO: This doesn't work on recent versions of reprosyn.
+class ReprosynGeneratorFromCLI(Generator):
     """
     A class which wraps an external executable as a generator. Currently supports
     only tabular datasets.
@@ -175,4 +176,38 @@ class ReprosynGenerator(Generator):
 
     @property
     def label(self):
+        return self._label
+
+
+class ReprosynGenerator(Generator):
+    """A wrapper for reprosyn objects. This is better than the CLI, which
+       fetches theh config JSON file from the GitHub repo (?)."""
+
+    def __init__(self, reprosyn_class, label=None, **kwargs):
+        self.reprosyn_class = reprosyn_class
+        self.generator_kwargs = kwargs
+        self.trained = False
+        self._label = label or str(reprosyn_class)
+
+    def fit(self, dataset):
+        """Fitting does nothing, as we don't yet know the output size."""
+        assert isinstance(dataset, TabularDataset), 'dataset must be of class TabularDataset'
+        self.dataset = dataset
+        self.trained = True
+
+    def generate(self, num_samples):
+        """Instantiate a reprosyn model, run it, and return output."""
+        assert self.trained, "No dataset provided to generator."
+        model = self.reprosyn_class(
+            dataset=self.dataset.data,
+            metadata=self.dataset.description.schema,
+            size=num_samples,
+            **self.generator_kwargs,
+        )
+        model.run()
+        return prive.datasets.TabularDataset(model.output, self.dataset.description)
+
+    @property
+    def label(self):
+        """Cherry on top."""
         return self._label
