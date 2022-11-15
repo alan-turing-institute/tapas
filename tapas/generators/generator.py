@@ -6,7 +6,7 @@ import json
 from io import StringIO
 import subprocess
 from subprocess import PIPE
-from prive.datasets import TabularDataset
+from ..datasets import TabularDataset
 
 
 class Generator(ABC):
@@ -205,7 +205,7 @@ class ReprosynGenerator(Generator):
             **self.generator_kwargs,
         )
         model.run()
-        return prive.datasets.TabularDataset(model.output, self.dataset.description)
+        return tapas.datasets.TabularDataset(model.output, self.dataset.description)
 
     @property
     def label(self):

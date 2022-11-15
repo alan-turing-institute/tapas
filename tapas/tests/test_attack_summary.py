@@ -2,7 +2,7 @@ import os
 import unittest
 import numpy as np
 
-from prive.report import MIAttackSummary, BinaryAIAttackSummary
+from tapas.report import MIAttackSummary, BinaryAIAttackSummary
 
 
 class MIAttackSummaryTest(unittest.TestCase):

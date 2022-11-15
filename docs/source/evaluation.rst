@@ -2,12 +2,12 @@
 Evaluation
 ==========
 
-The module ``prive.report`` provides tools to analyse the outcome of attacks, and in particular compare different attacks and threat models.
+The module ``tapas.report`` provides tools to analyse the outcome of attacks, and in particular compare different attacks and threat models.
 The outcome of an attack is obtained from ``ThreatModel.test(attack)``, which returns an ``AttackSummary`` object.
 This object contains information about how the attack performed: typically, the outcome for a number of simulations.
 
 ``Report`` objects aggregate ``AttackSummary`` objects from different attacks to produce a human-readable output.
-These objects provide a ``.publish(filepath)`` method, which publishes a "report" of these attacks, saved as one or more files in the folder indicated by ``filepath``. ``PrivE`` implements different reports.
+These objects provide a ``.publish(filepath)`` method, which publishes a "report" of these attacks, saved as one or more files in the folder indicated by ``filepath``. ``TAPAS`` implements different reports.
 
 
 
@@ -64,14 +64,14 @@ We thus define the effective epsilon :math:`\varepsilon^\text{eff}` of an attack
 .. math::
 	\varepsilon^\text{eff}_\mathcal{M}(\mathcal{A}) = \frac{TP_\mathcal{A}}{FP_\mathcal{A}}
 
-Importantly, this is a very noisy metric: estimating the false positive rate from a finite sample can lead to underestimation, and crucially estimating :math:`FP_\mathcal{A} = 0`, in which case the metric degenerates. For this reason, one should instead use a statistically significant lower bound for TP and upper bound for FP, leading to a trustworthy estimate. This methodology was introduced by Jagielski et al.[2]_, and uses Clopper-Pearson bounds for the confidence interval of a binomial distribution.
+Importantly, this is a very noisy metric: estimating the false positive rate from a finite sample can lead to underestimation, and crucially estimating :math:`FP_\mathcal{A} = 0`, in which case the metric degenerates. For this reason, one should instead use a statistically significant lower bound for TP and upper bound for FP, leading to a trustworthy estimate. This methodology was introduced by Jagielski et al. [2]_, and uses Clopper-Pearson bounds for the confidence interval of a binomial distribution.
 
-Since ``PrivE`` aims at evaluating the robustness of a synthetic data generation mechanism :math:`\mathcal{M}`, a more interesting metric is the effective epsilon of *the mechanism*:
+Since ``TAPAS`` aims at evaluating the robustness of a synthetic data generation mechanism :math:`\mathcal{M}`, a more interesting metric is the effective epsilon of *the mechanism*:
 
 .. math::
 	\varepsilon^\text{eff}(\mathcal{M}) = \sup_{\mathcal{A}} \varepsilon^\text{eff}_\mathcal{M}(\mathcal{A})
 
-Iterating over all possible attacks is of course impossible. Instead, ``PrivE`` implements and applies a finite number of attacks :math:`\left(\mathcal{A}_{1, \tau_1}, \dots, \mathcal{A}_{n, \tau_n}\right)` with variable thresholds :math:`\left(\tau_1, \dots, \tau_n\right)`. The effective epsilon is then estimated as:
+Iterating over all possible attacks is of course impossible. Instead, ``TAPAS`` implements and applies a finite number of attacks :math:`\left(\mathcal{A}_{1, \tau_1}, \dots, \mathcal{A}_{n, \tau_n}\right)` with variable thresholds :math:`\left(\tau_1, \dots, \tau_n\right)`. The effective epsilon is then estimated as:
 
 .. math::
 	\widehat{\varepsilon^\text{eff}}(\mathcal{M}) = \max_{i, \tau} \varepsilon^\text{eff}_\mathcal{M}(\mathcal{A}_{i,\tau})

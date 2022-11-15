@@ -3,38 +3,38 @@ This example is similar to multiple_attacks.py, except that it applies
 attribute inference attacks (AIA) instead. AIAs are generally used in cases
 where membership is not a meaningful threat.
 
-The PrivE interface for AIAs is similar to MIAs, except one must also specify
+The TAPAS interface for AIAs is similar to MIAs, except one must also specify
 a sensitive attribute to guess, and a set of possible values. Many attacks
-in PrivE apply seemlessly to either AI and MI, so little change is required.
+in TAPAS apply seemlessly to either AI and MI, so little change is required.
 
 """
 
-import prive.datasets
-import prive.generators
-import prive.threat_models
-import prive.attacks
-import prive.report
+import tapas.datasets
+import tapas.generators
+import tapas.threat_models
+import tapas.attacks
+import tapas.report
 
 from sklearn.linear_model import LogisticRegression
 
 # Load the data.
-data = prive.datasets.TabularDataset.read(
+data = tapas.datasets.TabularDataset.read(
     "data/2011 Census Microdata Teaching File", label="Census"
 )
 
 # Create a dummy generator.
-generator = prive.generators.Raw()
+generator = tapas.generators.Raw()
 
 # Select the auxiliary data + black-box attack model.
-data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
+data_knowledge = tapas.threat_models.AuxiliaryDataKnowledge(
     data, auxiliary_split=0.5, num_training_records=1000,
 )
 
-sdg_knowledge = prive.threat_models.BlackBoxKnowledge(
+sdg_knowledge = tapas.threat_models.BlackBoxKnowledge(
     generator, num_synthetic_records=1000,
 )
 
-threat_model = prive.threat_models.TargetedAIA(
+threat_model = tapas.threat_models.TargetedAIA(
     attacker_knowledge_data=data_knowledge,
     # Specific to AIA: the sensitive attribute and its possible values.
     sensitive_attribute="Sex",
@@ -45,14 +45,14 @@ threat_model = prive.threat_models.TargetedAIA(
 
 # We here create a range of attacks to test.
 attacks = [
-    prive.attacks.GroundhogAttack(),
-    prive.attacks.ClosestDistanceAIA(criterion="accuracy"),
-    prive.attacks.ClosestDistanceAIA(
-        distance=prive.attacks.LpDistance(2), criterion="accuracy"
+    tapas.attacks.GroundhogAttack(),
+    tapas.attacks.ClosestDistanceAIA(criterion="accuracy"),
+    tapas.attacks.ClosestDistanceAIA(
+        distance=tapas.attacks.LpDistance(2), criterion="accuracy"
     ),
-    prive.attacks.LocalNeighbourhoodAttack(radius=1),
-    prive.attacks.LocalNeighbourhoodAttack(radius=2),
-    prive.attacks.SyntheticPredictorAttack(LogisticRegression(), criterion="accuracy"),
+    tapas.attacks.LocalNeighbourhoodAttack(radius=1),
+    tapas.attacks.LocalNeighbourhoodAttack(radius=2),
+    tapas.attacks.SyntheticPredictorAttack(LogisticRegression(), criterion="accuracy"),
 ]
 
 # Train, evaluate, and summarise all attacks.
@@ -65,5 +65,5 @@ for attack in attacks:
 
 # Finally, group together the summaries as a report.
 print("Publishing a report.")
-report = prive.report.MIAttackReport(summaries)  # TODO: fix.
+report = tapas.report.MIAttackReport(summaries)  # TODO: fix.
 report.publish("multiple_aia")

@@ -34,5 +34,5 @@ jobs:
 
     - name: Test with pytest
       run: |
-        cd prive
+        cd tapas
         python -m poetry run python -m pytest -v tests

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import datetime
 
-from prive.report import MIAttackSummary, MIAttackReport, EffectiveEpsilonReport
+from tapas.report import MIAttackSummary, MIAttackReport, EffectiveEpsilonReport
 
 
 class MIAReport(unittest.TestCase):
@@ -35,7 +35,7 @@ class MIAReport(unittest.TestCase):
     def test_publish(self):
         filepath_timestamp = os.path.join(
             os.path.dirname(__file__),
-            f'outputs/prive_report_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}',
+            f'outputs/tapas_report_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}',
         )
 
         self.report.publish(filepath_timestamp)

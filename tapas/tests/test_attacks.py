@@ -6,18 +6,18 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from prive.datasets import TabularDataset, TabularRecord
-from prive.datasets.data_description import DataDescription
-from prive.threat_models import (
+from tapas.datasets import TabularDataset, TabularRecord
+from tapas.datasets.data_description import DataDescription
+from tapas.threat_models import (
     TargetedMIA,
     TargetedAIA,
     AuxiliaryDataKnowledge,
     BlackBoxKnowledge,
 )
-from prive.generators import Raw
+from tapas.generators import Raw
 
 # The classes being tested.
-from prive.attacks import (
+from tapas.attacks import (
     ClosestDistanceMIA,
     GroundhogAttack,
     NaiveSetFeature,

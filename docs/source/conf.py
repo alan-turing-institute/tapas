@@ -13,15 +13,15 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
-sys.path.insert(0, os.path.abspath('../../prive'))
+sys.path.insert(0, os.path.abspath('../../tapas'))
 
 
 # -- Project information -----------------------------------------------------
 
 # The authors are (temporarily) in alphabetical order.
-project = 'prive'
-copyright = '2022, Andrew Elliott, James Geddes, Florimond Houssiau, James Jordon, Callum Mole, Camila Rangel Smith'
-author = 'Andrew Elliott, James Geddes, Florimond Houssiau, James Jordon, Callum Mole, Camila Rangel Smith (in alphabetical order)'
+project = 'tapas'
+copyright = '2022, Florimond Houssiau, James Jordon, Andrew Elliott, James Geddes, Callum Mole, Camila Rangel Smith'
+author = 'Florimond Houssiau, James Jordon, Andrew Elliott, James Geddes, Callum Mole, Camila Rangel Smith'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'
@@ -39,7 +39,7 @@ extensions = ['sphinx.ext.napoleon',
 
 autosummary_generate = True
 autosummary_imported_members = False
-autodoc_mock_imports = ['prive.run_groundhog']
+autodoc_mock_imports = ['tapas.tests']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

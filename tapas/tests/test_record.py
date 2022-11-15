@@ -1,7 +1,7 @@
 import unittest
 
-from prive.datasets import TabularRecord
-from prive.datasets import TabularDataset
+from tapas.datasets import TabularRecord
+from tapas.datasets import TabularDataset
 
 
 class TestTabularRecord(unittest.TestCase):

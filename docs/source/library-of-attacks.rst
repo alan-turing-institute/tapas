@@ -3,10 +3,10 @@ Library of Attacks
 ==================
 
 Adversarial approaches for privacy require auditors to run a large range of diverse attacks, in order to test for as many potential vulnerabilities as possible.
-For this reason, ``PrivE`` implements a large range of attacks.
+For this reason, ``TAPAS`` implements a large range of attacks.
 While some of these attacks are technically involved, many are straightforward and are intended mostly as safety checks.
-We here present the different attacks implemented in ``PrivE``, grouped by theme. For each attack, we specify the additional parameters it requires, and the attack models (see `Modelling Threats <modelling-threats.rst>`) it applies to.
-``PrivE`` attacks inherit from the ``prive.attacks.Attack`` abstract class (see `Implementing Attacks <implementing-attacks.rst>` for details).
+We here present the different attacks implemented in ``TAPAS``, grouped by theme. For each attack, we specify the additional parameters it requires, and the attack models (see `Modelling Threats <modelling-threats.rst>`) it applies to.
+``TAPAS`` attacks inherit from the ``tapas.attacks.Attack`` abstract class (see `Implementing Attacks <implementing-attacks.rst>` for details).
 Note that the constructor of *all* the attacks described below allows for an optional ``label`` parameters, which we exclude from the descriptions for the sake of concision.
 
 *Notations*: we denote by :math:`D^{(r)}` the real, private dataset, and :math:`D^{(s)}` the synthetic dataset obtained with the generation method :math:`\mathcal{G}`. For targeted attacks, the attacker aims to learn information about a record :math:`x`, either membership (:math:`x \in D^{(r)}`) or the value of a sensitive attribute :math:`s` (:math:`v~\text{s.t.}~x|v \in D^{(r)}`).
@@ -73,7 +73,7 @@ Closest-distance Attacks
 Closest-distance Attacks are *targeted attacks* that rely on the local neighbourhood of the target record in the synthetic data to infer information.
 A simple example is a direct lookup attack, where the attacker predicts that the target record is in the real data if and only if it is also found in the *synthetic* data :math:`x \in D^{(s)}`.
 They exploit the fact that real records have a higher likelihood to be found in the synthetic data, especially if the generation method is poorly designed (e.g., it is overfitted).
-These attacks require a meaningful notion of distance between records in a dataset, represented by a ``prive.attacks.DistanceMetric`` object. While ``PrivE`` only implements two simple distances (``HammingDistance`` and ``LpDistance``), this object is little more than a wrapper over ``__call__`` and custom distance metrics are straightforward to implement.
+These attacks require a meaningful notion of distance between records in a dataset, represented by a ``tapas.attacks.DistanceMetric`` object. While ``TAPAS`` only implements two simple distances (``HammingDistance`` and ``LpDistance``), this object is little more than a wrapper over ``__call__`` and custom distance metrics are straightforward to implement.
 
 
 ClosestDistanceMIA
@@ -125,9 +125,9 @@ Shadow modelling is a common technique to build privacy attacks against privacy-
 The idea is to generate a large number of training "real" datasets :math:`(D_1^{(r)}, \dots, D_N^{(r)})` according to the attacker's knowledge (usually as subsets from an auxiliary dataset), then generate synthetic datasets from each of these: :math:`(D_1^{(s)}, \dots, D_N^{(s)})`.
 For a function :math:`\phi` that the attacker is trying to learn (e.g., :math:`phi(D) = I\{x \in D\})`), they train a machine learning model :math:`\mathcal{F}_\theta` to infer the value of :math:`\phi` over real datasets from the synthetic dataset: :math:`\mathcal{F}_\theta(D^{(s)}) = \phi(D^{(r)})`.
 
-The key design decision of a shadow modelling attack (``prive.attacks.ShadowModellingAttack``) is in the choice of the classifier :math:`\mathcal{F}_\theta`.
+The key design decision of a shadow modelling attack (``tapas.attacks.ShadowModellingAttack``) is in the choice of the classifier :math:`\mathcal{F}_\theta`.
 A challenge of applying shadow modelling to synthetic datasets is that the input of the classifier is *the whole synthetic dataset*, and is thus very high-dimensional.
-The first attack using shadow modelling for synthetic data is by Stadler et al.[1]_, an attack which we refer to as the Groundhog attack (``prive.attacks.GroundhogAttack``).
+The first attack using shadow modelling for synthetic data is by Stadler et al.[1]_, an attack which we refer to as the Groundhog attack (``tapas.attacks.GroundhogAttack``).
 
 
 ShadowModellingAttack
@@ -136,21 +136,21 @@ ShadowModellingAttack
 This class implements the logic of shadow modelling (in ``.train`` and ``.attack``) for membership and attribute inference attacks.
 It takes one parameter, ``classifier``, a ``SetClassifier`` object that represents a classifier over *sets*.
 
-A ``SetClassifier`` has an interface similar to ``scikit-learn`` classifiers, with ``.fit``, ``.predict`` and ``.predict_proba`` methods, except the inputs are lists of ``prive.datasets.Dataset`` objects.
+A ``SetClassifier`` has an interface similar to ``scikit-learn`` classifiers, with ``.fit``, ``.predict`` and ``.predict_proba`` methods, except the inputs are lists of ``tapas.datasets.Dataset`` objects.
 
 
 FeatureBasedSetClassifier
 +++++++++++++++++++++++++
 
-The main ``SetClassifier`` implemented by ``PrivE`` is ``FeatureBasedSetClassifier``, a classifier that groups together two independent components:
+The main ``SetClassifier`` implemented by ``TAPAS`` is ``FeatureBasedSetClassifier``, a classifier that groups together two independent components:
 
 1. ``features``: A ``SetFeature`` object that extracts a vector of features (a ``numpy.array``) from a ``Dataset``. This object is a fixed function :math:`psi` and is not trainable.
 2. ``classifier``: A classifier from ``scikit-learn``, :math:`C_\theta`. This classifier is then trained (choosing :math:`\theta`) to infer the sensitive function :math:`\phi(D)` from the features extracted from a dataset.
 
 The corresponding classifier is obtained by combining these two elements as :math:`\mathcal{F}_\theta = C_\theta \circ \psi`.
 
-``SetFeature`` objects primarily consist of a ``.extract`` method mapping datasets to a ``numpy.array`` of size (len(datasets), k) for some size k. Implementing a custom ``SetFeature`` only requires to create an object inhering from ``prive.attacks.SetFeature`` and defining the ``.extract`` method.
-``PrivE`` implements several simple ``SetFeature``.
+``SetFeature`` objects primarily consist of a ``.extract`` method mapping datasets to a ``numpy.array`` of size (len(datasets), k) for some size k. Implementing a custom ``SetFeature`` only requires to create an object inhering from ``tapas.attacks.SetFeature`` and defining the ``.extract`` method.
+``TAPAS`` implements several simple ``SetFeature``.
 
 .. list-table::
 	:widths: 20 20 60
@@ -173,7 +173,7 @@ The corresponding classifier is obtained by combining these two elements as :mat
 GroundhogAttack
 ~~~~~~~~~~~~~~~
 
-This class implements the attack from Stadler et al.[1]_. In ``PrivE``, this is a ``FeatureBasedSetClassifier`` with, by default:
+This class implements the attack from Stadler et al.[1]_. In ``TAPAS``, this is a ``FeatureBasedSetClassifier`` with, by default:
 
 1. ``feature = NaiveSetFeature() + HistSetFeature() + CorrSetFeature()``
 2. ``classifier = sklearn.ensemble.RandomForestClassifier()``.
@@ -204,13 +204,13 @@ Parameters:
 - ``criterion`` (see `above <Trainable-threshold attacks>`_).
 
 ``DensityEstimator`` objects implement a ``.fit`` method, training parameters :math:`\theta` from a dataset, and a ``.score`` method, returning a density :math:`y\in\mathbb{R}` for records :math:`y`.
-The main ``DensityEstimator`` provided by ``PrivE`` is the internal class ``sklearnDensityEstimator``, which wraps a ``scikit-learn`` density estimator, and is used by the constructor of ``ProbabilityEstimationAttack``.
+The main ``DensityEstimator`` provided by ``TAPAS`` is the internal class ``sklearnDensityEstimator``, which wraps a ``scikit-learn`` density estimator, and is used by the constructor of ``ProbabilityEstimationAttack``.
 
 
 SyntheticPredictorAttack
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Synthetic predictor attacks are attribute inference attacks that train a machine learning model to predict the value of :math:`x_s` from known attributes :math:`x_{-s}`, :math:`C_\theta`, on records in the synthetic data. This is a common privacy attack, where correlations between attributes are exploited to predict the sensitive attribute (see, e.g., Correct Attribution Probability CAP [2]_). However, whether such attacks present a privacy risk is controversial, as an attacker can make a guess with accuracy better than random *even if* the target user is not in the dataset. ``PrivE`` circumvents this issue by randomising the sensitive attribute independently from other attributes.
+Synthetic predictor attacks are attribute inference attacks that train a machine learning model to predict the value of :math:`x_s` from known attributes :math:`x_{-s}`, :math:`C_\theta`, on records in the synthetic data. This is a common privacy attack, where correlations between attributes are exploited to predict the sensitive attribute (see, e.g., Correct Attribution Probability CAP [2]_). However, whether such attacks present a privacy risk is controversial, as an attacker can make a guess with accuracy better than random *even if* the target user is not in the dataset. ``TAPAS`` circumvents this issue by randomising the sensitive attribute independently from other attributes.
 
 Disclaimer
 

@@ -2,20 +2,20 @@
 In this file, we apply the Grounhog attack to the Census 1% Teaching file of
 the England and Wales census and the Raw generator.
 
-The goal of PrivE is to evaluate the possibility of an attack, rather than
+The goal of TAPAS is to evaluate the possibility of an attack, rather than
 train and deploy attacks against real datasets. This informs the design
 decisions made, especially as relates to the auxiliary knowledge.
 
-This example is meant as a general introduction to PrivE, and explains some
+This example is meant as a general introduction to TAPAS, and explains some
 important design choices to make when using the toolbox.
 
 """
 
-import prive.datasets
-import prive.generators
-import prive.threat_models
-import prive.attacks
-import prive.report
+import tapas.datasets
+import tapas.generators
+import tapas.threat_models
+import tapas.attacks
+import tapas.report
 
 # Some fancy displays when training/testing.
 import tqdm
@@ -25,16 +25,16 @@ from sklearn.ensemble import RandomForestClassifier
 print("Loading dataset...")
 # We attack the 1% Census Microdata file, available at:
 #  https://www.ons.gov.uk/census/2011census/2011censusdata/censusmicrodata/microdatateachingfile
-# We have created a .json description file, so that prive.Dataset.read can load both.
-data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File", label="Census")
+# We have created a .json description file, so that tapas.Dataset.read can load both.
+data = tapas.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File", label="Census")
 
 # We attack the (trivial) Raw generator, which outputs its training dataset.
-generator = prive.generators.Raw()
+generator = tapas.generators.Raw()
 
 # We now define the threat model: what is assumed that the attacker knows.
 # We first define what the attacker knows about the dataset. Here, we assume
 # they have access to an auxiliary dataset from the same distribution.
-data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
+data_knowledge = tapas.threat_models.AuxiliaryDataKnowledge(
     # The attacker has access to 50% of the data as auxiliary information.
     # This information will be used to generate training datasets.
     data,
@@ -48,7 +48,7 @@ data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(
 # This would typically be black-box knowledge, where they are able to run the
 # (exact) SDG model on any dataset that they choose, but can only observe
 # (input, output) pairs and not internal parameters.
-sdg_knowledge = prive.threat_models.BlackBoxKnowledge(
+sdg_knowledge = tapas.threat_models.BlackBoxKnowledge(
     generator,
     # The attacker also specifies the size of the output dataset. In practice,
     # use the size of the published synthetic dataset.
@@ -57,7 +57,7 @@ sdg_knowledge = prive.threat_models.BlackBoxKnowledge(
 
 # Now that we have defined the attacker's knowledge, we define their goal.
 # We will here focus on a membership inference attack on a random record.
-threat_model = prive.threat_models.TargetedMIA(
+threat_model = tapas.threat_models.TargetedMIA(
     attacker_knowledge_data=data_knowledge,
     # We here select the first record, arbitrarily.
     target_record=data.get_records([0]),
@@ -74,7 +74,7 @@ threat_model = prive.threat_models.TargetedMIA(
 
 # Next step: initialise an attacker. Here, we just apply the GroundHog attack
 # with standard parameters (from Stadler et al., 2022).
-attacker = prive.attacks.GroundhogAttack()
+attacker = tapas.attacks.GroundhogAttack()
 
 print("Training the attack...")
 # Having defined all the objects that we need, we can train the attack.

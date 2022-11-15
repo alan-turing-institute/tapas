@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "prive"
-version = "1.1.13"
+name = "tapas"
+version = "1.0.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Florimond Houussiau <fhoussiau@turing.ac.uk>", "James Jordon", "Callum Mole <cmole@turing.ac.uk>", "Camila Rangel-Smith <crangelsmith@turing.ac.uk>", "James Geddes <jgeddes@turing.ac.uk>"]
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.11"

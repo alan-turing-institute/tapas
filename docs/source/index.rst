@@ -1,12 +1,12 @@
-.. prive documentation master file, created by
+.. tapas documentation master file, created by
    sphinx-quickstart on Thu Apr 14 11:48:41 2022.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to prive's documentation!
+Welcome to TAPAS's documentation!
 =================================
 
-**PrivE** is a Python library for evaluating the privacy of synthetic data from
+**TAPAS** is a Python library for evaluating the privacy of synthetic data from
 an adversarial perspective.
 
 .. note::
@@ -25,7 +25,7 @@ accessible to:
 - Privacy researchers who want to test and develop new attacks against
   synthetic data generators.
 
-``PrivE`` implements a panoply of diverse attacks in order to extract private
+``TAPAS`` implements a panoply of diverse attacks in order to extract private
 information about real datasets from synthetic datasets. Importantly, should
 no attack be found to succeed, it does not mean that the generator is safe, as
 more sophisticated/specifically tailored attacks might exist. This package thus
@@ -39,9 +39,10 @@ To meet the two use cases above we provide two different interfaces into the pac
 The first is a pure Python interface which can be combined directly with
 standard python pipelines, see the ``/examples`` folder.
 
-The second is a purely command line interface using the ``prive`` command which
+The second is a purely command line interface using the ``tapas`` command which
 is directly installed when you set up the package. This interface allows you to
 interact with our package without having to develop in a python ecosystem.
+*Warning: this is currently unsupported -- use Python instead*
 
 
 API
@@ -52,7 +53,7 @@ API
    :template: custom-module-template.rst
    :recursive:
 
-   prive
+   tapas
 
 Contents
 --------

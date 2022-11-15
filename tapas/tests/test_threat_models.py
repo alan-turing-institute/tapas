@@ -7,16 +7,16 @@ import itertools
 import numpy as np
 import pandas as pd
 
-from prive.datasets import TabularDataset, TabularRecord
-from prive.datasets.data_description import DataDescription
-from prive.threat_models import (
+from tapas.datasets import TabularDataset, TabularRecord
+from tapas.datasets.data_description import DataDescription
+from tapas.threat_models import (
     ThreatModel,
     TargetedMIA,
     TargetedAIA,
     AuxiliaryDataKnowledge,
     BlackBoxKnowledge,
 )
-from prive.generators import Raw
+from tapas.generators import Raw
 
 dummy_data_description = DataDescription(
     [
