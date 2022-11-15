@@ -205,7 +205,7 @@ class ReprosynGenerator(Generator):
             **self.generator_kwargs,
         )
         model.run()
-        return prive.datasets.TabularDataset(model.output, self.dataset.description)
+        return tapas.datasets.TabularDataset(model.output, self.dataset.description)
 
     @property
     def label(self):

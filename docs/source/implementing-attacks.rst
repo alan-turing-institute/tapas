@@ -2,8 +2,8 @@
 Implementing Attacks
 ====================
 
-Privacy attacks are at the core of ``PrivE``.
-In order to detect privacy leakage, ``PrivE`` deploys a panoply of pre-implemented attacks, ranging in complexity and exploited vulnerability.
+Privacy attacks are at the core of ``TAPAS``.
+In order to detect privacy leakage, ``TAPAS`` deploys a panoply of pre-implemented attacks, ranging in complexity and exploited vulnerability.
 There are several reasons why one might want to implement attacks:
 
 1. Attacks currently implemented in the toolbox fail against the model being evaluated.
@@ -13,7 +13,7 @@ There are several reasons why one might want to implement attacks:
 Attacks are usually implemented with a (range of) threat model(s) and dataset(s) in mind.
 For instance, some attacks assume a tabular dataset and will not apply to a time-series dataset, or specifically designed for membership inference attacks.
 
-We here first explain the philosophy behind ``PrivE``'s design of threat models and attacks, then how to implement a new attack.
+We here first explain the philosophy behind ``TAPAS``'s design of threat models and attacks, then how to implement a new attack.
 
 
 Philosophy
@@ -23,7 +23,7 @@ An attack can be modelled as a randomised function of a synthetic dataset :math:
 The output of an attack aims at approximating a *sensitive* function :math:`f` of the *real* dataset, :math:`a \approx f\left(D^{(r)}\right)`.
 The target function :math:`f`, and the quality of the approximation :math:`\approx` depend on the specific threat model.
 
-In ``PrivE``, an ``Attack`` is thus defined by two elements:
+In ``TAPAS``, an ``Attack`` is thus defined by two elements:
 
 1. *Evaluation*: what the attack does, the "function call" of :math:`\mathcal{A}_\theta(\circ)`. This is defined by the ``.attack`` and ``.attack_score`` functions, taking a list of synthetic datasets as argument, and outputting a decision per dataset. The ``.attack`` method outputs a "decision" on :math:`f\left(D^{(r)}\right)`, while ``.attack_score`` computes the confidence of the decision.
 2. *Training*: how to choose the parameters :math:`\theta` of the attack. This behaviour is defined by the ``.train`` method, which takes as input a threat model. This threat model captures all the information available to an attacker.
@@ -57,7 +57,7 @@ Additionally, the following methods are useful to implement:
 1. The constructor, ``.__init__``, which should contain all parameters that describe the attack. Note that it is not recommended to pass data/``DataDescription`` to this constructor.
 2. ``.label()``, a *property* that defines a user-readable string to use as name for this attack (e.g., in figures).
 
-``PrivE`` provides several tools to implement attacks, which we detail here.
+``TAPAS`` provides several tools to implement attacks, which we detail here.
 
 
 
@@ -80,14 +80,14 @@ See the documentation page on `Modelling Threats <modelling-threats.html>`_ for 
 Training against a ThreatModels
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Attacks are trained against a specific threat model. The threat model holds information related to the specific task at hand, which can be used for training. We here describe what parameters ``PrivE`` threat models contain.
+Attacks are trained against a specific threat model. The threat model holds information related to the specific task at hand, which can be used for training. We here describe what parameters ``TAPAS`` threat models contain.
 
 LabelInferenceThreatModel
 +++++++++++++++++++++++++
 
 Many common attacks can be modelled as *label-inference* attacks, where the decision set is finite (a *label*), :math:`\mathcal{S} = \{1, \dots, k\}`. Notably, this includes membership inference attacks (MIA), where the label is binary :math:`\mathcal{S} = \{0,1\}`, and attribute inference attacks (AIA), where the label can take any value allowed for the sensitive attribute :math:`s`: :math:`\mathcal{S} = \mathcal{V}_s`.
 
-In ``PrivE``, such threat models inherit from the class ``LabelInferenceThreatModel``, which implements ``.test`` and ``.generate_training_samples`` for attacks whose goal is to predict the label. The latter method is implemented to return a pair ``(synthetic_datasets, corresponding_labels)``.
+In ``TAPAS``, such threat models inherit from the class ``LabelInferenceThreatModel``, which implements ``.test`` and ``.generate_training_samples`` for attacks whose goal is to predict the label. The latter method is implemented to return a pair ``(synthetic_datasets, corresponding_labels)``.
 The common attack classes, ``TargetedMIA`` and ``TargetedAIA``, inherit from this class, and implement the logic of MIA/AIA with purpose-specific ``AttackerKnowledgeWithLabel`` objects.
 If the attack you are implementing is agnostic to the *semantics* of the label and can treat the attack task as a classification problem, you may have a label-inference attack.
 
@@ -99,7 +99,7 @@ In addition to ``.generate_training_samples``, these threat models have the foll
 TargetedMIA
 +++++++++++
 
-Targeted Membership Inference Attacks aim at inferring whether a specific *target* record :math:`x` is in the real data. Such threat models are implemented in ``PrivE`` as ``LabelInferenceThreatModel`` where the label is membership of the target records, :math:`l = I\left\{x \in D^{(r)}\right\}`.
+Targeted Membership Inference Attacks aim at inferring whether a specific *target* record :math:`x` is in the real data. Such threat models are implemented in ``TAPAS`` as ``LabelInferenceThreatModel`` where the label is membership of the target records, :math:`l = I\left\{x \in D^{(r)}\right\}`.
 In addition to the attributes inherited from the parent, these threat models also have  the following attributes:
 
 - ``target_record``: a ``Dataset`` object with one entry, the record of the target user.
@@ -123,7 +123,7 @@ Trainable-Threshold Attacks
 
 Many binary label-inference attacks can be defined solely by a non-trainable score :math:`s: \mathcal{D} \mapsto \mathbb{R}`. The decision made by ``.attack`` is based on a threshold :math:`\tau`,  :math:`\mathcal{A}_\theta(D^{(s)}) = 1 \Leftrightarrow s(D^{(s)}) \geq \tau`.
 Training the attack thus only involves *selecting a threshold* that leads to good results, according to some criterion.
-``PrivE`` provides a ``TrainableThresholdAttack`` class for these attacks, that only requires the attack designer to implement ``.attack_score``.
+``TAPAS`` provides a ``TrainableThresholdAttack`` class for these attacks, that only requires the attack designer to implement ``.attack_score``.
 The constructor of these attacks has an additional parameter, a tuple ``criterion``, which defines how the threshold is selected.
 There are several options, detailed in the documentation page on `Library of Attacks <library-of-attacks.html>`_.
 
@@ -132,6 +132,6 @@ ShadowModellingAttack
 ~~~~~~~~~~~~~~~~~~~~~
 
 Shadow-modelling attacks are label-inference attacks where the attacker trains a classifier :math:`C_\theta` over synthetic datasets to predict the label of the real dataset. 
-``PrivE`` implements shadow-modelling attacks with the ``ShadowModellingAttack`` class. This class takes as argument a ``PrivE.attacks.SetClassifier`` object.
+``TAPAS`` implements shadow-modelling attacks with the ``ShadowModellingAttack`` class. This class takes as argument a ``tapas.attacks.SetClassifier`` object.
 If you wish to implement a shadow-modelling attack, the easiest way if to implement a custom ``SetClassifier`` object.
 For more details on shadow-modelling attacks, see the documentation page on `Library of Attacks <library-of-attacks.html>`_.

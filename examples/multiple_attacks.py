@@ -83,7 +83,7 @@ for attack in attacks:
 # Finally, group together the summaries as a report.
 print("Publishing a report.")
 report = tapas.report.MIAttackReport(summaries)
-report.create_report("multiple_mia")
+report.publish("multiple_mia")
 
 # Also publish the ROC curve.
 report = tapas.report.ROCReport(summaries)

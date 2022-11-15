@@ -32,6 +32,6 @@ It is also possible to install from pip:
 
    pip install git+https://github.com/alan-turing-institute/privacy-sdg-toolbox
 
-Doing so installs a command-line tool, `prive`, somewhere in your path. (Eg, on
+Doing so installs a command-line tool, ``TAPAS``, somewhere in your path. (Eg, on
 a MacOS system with pip installed via homebrew, the tool ends up in a homebrew
 bin director.) 

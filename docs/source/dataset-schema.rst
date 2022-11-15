@@ -2,18 +2,18 @@
 Data format
 ===========
 
-Prive presently deals with tabular data. It consumes and produces the
+``TAPAS`` presently deals with tabular data. It consumes and produces the
 following tabular datasets:
 
 -  The user-supplied raw data;
 -  Any input to the user-supplied privacy-enhancing method;
 -  Any output from the user-supplied privacy-enhancing method.
 
-In order that prive can interpret the data given to it and to ensure
+In order that ``TAPAS`` can interpret the data given to it and to ensure
 that it produces data that is a valid input to the user-supplied
 privacy-enhancing method, we need a method of describing tabular data.
 
-The *format* for tabular data used by prive is a csv file, where each
+The *format* for tabular data used by ``TAPAS`` is a csv file, where each
 line is a comma-separated tuple of values, and the values in the
 corresponding position in different rows have the same ‘type’. The main
 challenge is describing the \`type’ of each field in the data as well as
@@ -23,7 +23,7 @@ The format we have chosen for storing this metadata is a separate json
 file, the “table schema” (not to be confused with the JSON schema which
 describes the format of any table schema).
 
-This document describes the types of data understood by prive along with
+This document describes the types of data understood by ``TAPAS`` along with
 their representations.
 
 JSON format

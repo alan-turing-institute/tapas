@@ -10,11 +10,11 @@ For this example, we apply the `Groundhog attack <https://www.usenix.org/system/
 Teaching file of the England and Wales census and the simplest Raw
 generator.
 
-The goal of PrivE is to evaluate the possibility of an attack, rather
+The goal of TAPAS is to evaluate the possibility of an attack, rather
 than train and deploy attacks against real datasets. This informs the
 design decisions made, especially as relates to the auxiliary knowledge.
 
-This example is meant as a general introduction to PrivE, and explains
+This example is meant as a general introduction to TAPAS, and explains
 some important design choices to make when using the toolbox.
 
 For those who would just like to run the attack we also provide a
@@ -25,11 +25,11 @@ First we import the required dependences to run our attack.
 
 .. code:: python
 
-   import prive.datasets
-   import prive.generators
-   import prive.threat_models
-   import prive.attacks
-   import prive.report
+   import tapas.datasets
+   import tapas.generators
+   import tapas.threat_models
+   import tapas.attacks
+   import tapas.report
 
    # Some fancy displays when training/testing.
    import tqdm
@@ -71,7 +71,7 @@ We can load the data using the following command:
 .. code:: python
 
 
-   data = prive.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File")
+   data = tapas.datasets.TabularDataset.read("data/2011 Census Microdata Teaching File")
 
 We attack the (trivial) Raw generator, which outputs its training
 dataset.
@@ -79,7 +79,7 @@ dataset.
 .. code:: python
 
 
-   generator = prive.generators.Raw()
+   generator = tapas.generators.Raw()
 
 We now define the threat model: what is assumed that the attacker knows.
 We first define what the attacker knows about the dataset. Here, we
@@ -89,7 +89,7 @@ distribution.
 .. code:: python
 
 
-   data_knowledge = prive.threat_models.AuxiliaryDataKnowledge(data,
+   data_knowledge = tapas.threat_models.AuxiliaryDataKnowledge(data,
                        sample_real_frac=0.5, num_training_records=5000,)
 
 In this example, the attacker has access to 50% of the data as auxiliary
@@ -106,7 +106,7 @@ can only observe (input, output) pairs and not internal parameters.
 .. code:: python
 
 
-   sdg_knowledge = prive.threat_models.BlackBoxKnowledge(generator, num_synthetic_records=5000, )
+   sdg_knowledge = tapas.threat_models.BlackBoxKnowledge(generator, num_synthetic_records=5000, )
 
 The attacker also specifies the size of the output dataset. In practice,
 use the size of the published synthetic dataset.
@@ -119,7 +119,7 @@ We here select the first record, arbitrarily:
 .. code:: python
 
 
-   threat_model = prive.threat_models.TargetedMIA(attacker_knowledge_data=data_knowledge,
+   threat_model = tapas.threat_models.TargetedMIA(attacker_knowledge_data=data_knowledge,
                        target_record=data.get_records([0]),
                        attacker_knowledge_generator=sdg_knowledge,
                        generate_pairs=True,
@@ -141,10 +141,10 @@ The GroundhogAttack attacker is mostly a wrapper over a set classifier.
    from sklearn.ensemble import RandomForestClassifier
 
    rf = RandomForestClassifier(n_estimators=100)
-   features = prive.attacks.NaiveSetFeature() + prive.attacks.HistSetFeature() + prive.attacks.CorrSetFeature()
-   fsClassfr = prive.attacks.FeatureBasedSetClassifier(features, rf) 
+   features = tapas.attacks.NaiveSetFeature() + tapas.attacks.HistSetFeature() + tapas.attacks.CorrSetFeature()
+   fsClassfr = tapas.attacks.FeatureBasedSetClassifier(features, rf) 
 
-   attacker = prive.attacks.GroundhogAttack(fsClassfr)
+   attacker = tapas.attacks.GroundhogAttack(fsClassfr)
 
 We here use, as in Stadler et al., a feature-based set classifier, which
 computes a vector of (fixed) features of the set to classify. We use the
@@ -182,7 +182,7 @@ these attack_labels, truth_labels, And some metadata for nicer displays.
 .. code:: python
 
 
-   attack_summary = prive.report.MIAttackSummary(generator_info="raw", attack_info=attacker.__name__, dataset_info="Census", target_id="0" )
+   attack_summary = tapas.report.MIAttackSummary(generator_info="raw", attack_info=attacker.__name__, dataset_info="Census", target_id="0" )
    metrics = attack_summary.get_metrics() 
    print(metrics)
 

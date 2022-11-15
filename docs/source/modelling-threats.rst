@@ -2,16 +2,16 @@
 Modelling Threats
 =================
 
-Privacy evaluation with ``PrivE`` relies on adversarial testing.
-To test whether a synthetic data generation (SDG) technique provides privacy protection, ``PrivE`` applies a range of attacks against it in order to try and infer sensitive information from synthetic datasets.
+Privacy evaluation with ``TAPAS`` relies on adversarial testing.
+To test whether a synthetic data generation (SDG) technique provides privacy protection, ``TAPAS`` applies a range of attacks against it in order to try and infer sensitive information from synthetic datasets.
 This requires a *threat model*: a representation of the assumptions made on what an attacker could know, and what they could be trying to infer.
 
-In ``PrivE``, threat models are represented with objects of the (abstract) class ``ThreatModel``. In its simplest form, this class just implements a ``.test`` method which takes a ``prive.Attack`` object as argument. This method tests whether the attack succeeds, and returns some metric of success -- both of which depend on the context.
+In ``TAPAS``, threat models are represented with objects of the (abstract) class ``ThreatModel``. In its simplest form, this class just implements a ``.test`` method which takes a ``tapas.Attack`` object as argument. This method tests whether the attack succeeds, and returns some metric of success -- both of which depend on the context.
 Typically, this method involves generating synthetic datasets from the real data and evaluating whether the attack can infer sensitive information from them.
 
 Most commonly, threat models also hold some information that the attacker has access to. This information can be used to generate synthetic datasets on which to train the attack. These are represented as ``TrainableThreatModel``, an abstract class which defines an additional ``generate_training_samples`` method to produce synthetic datasets according to the attacker's auxiliary information.
 
-In ``PrivE``, threat models are composed of three independent components:
+In ``TAPAS``, threat models are composed of three independent components:
 
 1. *Knowledge on the private dataset*.
 2. *Knowledge on the generation method*.
@@ -34,7 +34,7 @@ Knowledge on the training dataset
 The goal of publishing synthetic data is to prevent the disclosure of sensitive information from a private dataset `D`.
 The attacker has *some* information on the private dataset. This information can be represented by a prior :math:`p_D` over datasets.
 
-In `PrivE`, the abstract class ``prive.threat_models.AttackerKnowledgeOnData`` represents this knowledge. It defines a ``generate_datasets`` method which samples (private) datasets from the prior :math:`p_D`. Importantly, these are **training** datasets that reflect knowledge of the private datasets and are **not** synthetic datasets.
+In `TAPAS`, the abstract class ``tapas.threat_models.AttackerKnowledgeOnData`` represents this knowledge. It defines a ``generate_datasets`` method which samples (private) datasets from the prior :math:`p_D`. Importantly, these are **training** datasets that reflect knowledge of the private datasets and are **not** synthetic datasets.
 
 In practice, we disaggregate the data knowledge in two parts:
 
@@ -61,8 +61,8 @@ Knowledge on the generation method
 ----------------------------------
 
 The attacker is typically assumed to have some knowledge of the synthetic data generation method.
-This is represented by a ``prive.threat_models.AttackerKnowledgeOnGenerator``, that is mostly a wrapper over the generator.
-`PrivE` implements a range of possible knowledge.
+This is represented by a ``tapas.threat_models.AttackerKnowledgeOnGenerator``, that is mostly a wrapper over the generator.
+``TAPAS`` implements a range of possible knowledge.
 
 .. list-table::
     :widths: 20 80
@@ -88,7 +88,7 @@ Traditionally, privacy attacks attempt to *re-identify* a target record in the d
 In synthetic data, this is impossible: records in the synthetic data are *not* linked 1-1 with real records.
 Attack models must thus detect different forms of leakages in the data.
 
-``PrivE`` implements two standard threat models, which have been applied to most types of data releases (e.g. aggregate statistics, machine learning models, synthetic data).
+``TAPAS`` implements two standard threat models, which have been applied to most types of data releases (e.g. aggregate statistics, machine learning models, synthetic data).
 
 .. list-table::
     :widths: 15 20 65
