@@ -12,7 +12,7 @@ import os
 import pandas as pd
 from scipy.stats import binomtest
 
-from prive.report import MIAttackSummary
+from .attack_summary import MIAttackSummary
 from .utils import metric_comparison_plots, plot_roc_curve
 
 

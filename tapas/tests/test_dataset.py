@@ -7,8 +7,8 @@ from warnings import filterwarnings
 
 filterwarnings("ignore")
 
-from prive.datasets import TabularDataset, TabularRecord
-from prive.datasets.data_description import DataDescription
+from tapas.datasets import TabularDataset, TabularRecord
+from tapas.datasets.data_description import DataDescription
 
 
 class TestDescription(TestCase):

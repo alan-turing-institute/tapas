@@ -1,6 +1,6 @@
-# Contributing to Prive
+# Contributing to TAPAS
 
-Welcome to Prive the synthetic data privacy toolbox from The Alan Turing Institute.
+Welcome to TAPAS the synthetic data privacy toolbox from The Alan Turing Institute.
 
 We encourage everyone to use our package to run privacy tests on their own
 datasets using standard generating methods, and to test their new synthetic

@@ -6,7 +6,7 @@ import json
 from io import StringIO
 import subprocess
 from subprocess import PIPE
-from prive.datasets import TabularDataset
+from ..datasets import TabularDataset
 
 
 class Generator(ABC):

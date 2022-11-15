@@ -132,7 +132,7 @@ class SyntheticPredictorAttack(TrainableThresholdAttack):
     This is a common baseline, linked to CAP (Correct Attribution Probability),
     although whether it constitutes a privacy violation is controversial, since
     correlations in the data could reveal the sensitive attribute even if the
-    user does not contribute their data. PrivE circumvents this issue by
+    user does not contribute their data. TAPAS circumvents this issue by
     randomising the sensitive attribute independently from all others. As such,
     this attack mostly aims at detecting overfitted models.
 

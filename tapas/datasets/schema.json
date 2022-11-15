@@ -1,6 +1,6 @@
 {
     "$schema":     "https://json-schema.org/draft/2020-12/schema",
-    "$id":         "https://github.com/alan-turing-institute/privacy-sdg-toolbox/tree/main/prive/datasets/schema.json",
+    "$id":         "https://github.com/alan-turing-institute/privacy-sdg-toolbox/tree/main/tapas/datasets/schema.json",
     "title":       "Tabular datasets",
     "description": "A schema for describing the content of simple tabular data.",
     "type": "array",

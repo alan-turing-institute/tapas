@@ -1,5 +1,5 @@
 """
-Primary command-line access script into the prive library
+Primary command-line access script into the tapas library
 """
 
 import argparse
@@ -12,10 +12,10 @@ import numpy as np
 import sys
 
 sys.path.append("..")
-from prive.attacks import load_attack
-from prive.datasets import TabularDataset, TabularRecord
-from prive.generators import GeneratorFromExecutable, Raw
-from prive.threat_models import (
+from tapas.attacks import load_attack
+from tapas.datasets import TabularDataset, TabularRecord
+from tapas.generators import GeneratorFromExecutable, Raw
+from tapas.threat_models import (
     TargetedMIA,
     AuxiliaryDataKnowledge,
     BlackBoxKnowledge,
@@ -44,7 +44,7 @@ def main():
         "--runconfig",
         "-C",
         type=str,
-        default="prive/configs/config.json",
+        default="tapas/configs/config.json",
         help="Path to config json file",
     )
     parser.add_argument(

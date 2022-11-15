@@ -6,7 +6,7 @@ import io
 import numpy as np
 import pandas as pd
 
-from prive.datasets.data_description import DataDescription
+from .data_description import DataDescription
 from .utils import encode_data, index_split, get_dtype
 
 
@@ -213,7 +213,7 @@ class TabularDataset(Dataset):
         Parameters
         ----------
         data: pandas.DataFrame
-        description: prive.datasets.data_description.DataDescription
+        description: tapas.datasets.data_description.DataDescription
         label: str (optional)
         """
         self.data = data

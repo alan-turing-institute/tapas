@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
-import prive.datasets as datasets
-import prive.generators as generators
+import tapas.datasets as datasets
+import tapas.generators as generators
 
 
 class TestGenerator(TestCase):

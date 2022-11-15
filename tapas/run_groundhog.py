@@ -3,13 +3,13 @@ import os
 
 import numpy as np
 
-from prive.attacks.set_classifiers import LRClassifier, RFClassifier, \
+from tapas.attacks.set_classifiers import LRClassifier, RFClassifier, \
     SetReprClassifier, NaiveRep
-from prive.threat_models.mia import TargetedAuxiliaryDataMIA
-from prive.attacks import Groundhog, ClosestDistanceMIA
-from prive.datasets import TabularDataset, TabularRecord
+from tapas.threat_models.mia import TargetedAuxiliaryDataMIA
+from tapas.attacks import Groundhog, ClosestDistanceMIA
+from tapas.datasets import TabularDataset, TabularRecord
 
-from prive.generators import ReturnRaw
+from tapas.generators import ReturnRaw
 
 
 # Set some parameters
@@ -23,7 +23,7 @@ curr_time = datetime.now().strftime('%d%m_%H%M%S')
 save_dir = os.path.join('runs', curr_time)
 
 # Load data
-dataset = TabularDataset.read('prive/tests/data/test_texas')
+dataset = TabularDataset.read('tapas/tests/data/test_texas')
 
 # Initialise synthetic data generator
 sdg_model = ReturnRaw() # instance of generators.Generator
