@@ -15,18 +15,18 @@ class Generator(ABC):
         self.trained = False
 
     @abstractmethod
+    def fit(self, dataset, **kwargs):
+        """Fit generator to real data."""
+        pass
+
+    @abstractmethod
     def generate(self, num_samples, random_state=None):
         """Given an input dataset, output a synthetic dataset with given number of samples."""
         pass
 
-    @abstractmethod
-    def fit(self, dataset, *args, **kwargs):
-        """Fit generator to real data."""
-        pass
-
     # The call method should map a dataset to a synthetic dataset.
-    def __call__(self, dataset, num_samples):
-        self.fit(dataset)
+    def __call__(self, dataset, num_samples, **kwargs):
+        self.fit(dataset, **kwargs)
         return self.generate(num_samples)
 
     @property

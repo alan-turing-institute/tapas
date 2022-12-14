@@ -340,6 +340,10 @@ class UncertainBoxKnowledge(AttackerKnowledgeOnGenerator):
             kwargs = self.final_parameters
         return self.generator(training_dataset, self.num_synthetic_records, **kwargs)
 
+    @property
+    def label(self):
+        return f"{self.generator.label}[uncertain]"
+
 
 # With the tools developed in this module, we can define a generic threat model
 # where the attacker aims to infer the "label" of the private dataset. The

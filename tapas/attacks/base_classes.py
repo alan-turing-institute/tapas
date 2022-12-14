@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from ..datasets import Dataset
     from ..threat_models import ThreatModel
 
-from ..threat_models import LabelInferenceThreatModel, TargetedAIA
+from ..threat_models import LabelInferenceThreatModel, TargetedAIA, NoBoxKnowledge
 
 from abc import ABC, abstractmethod
 
@@ -77,7 +77,6 @@ from sklearn.metrics import roc_curve
 
 
 # TODO: extend to multi-class labels. Currently assumes binary labels.
-# TODO: currently broken for AIAs. TOFIX. Check that the output is a Label!
 
 
 class TrainableThresholdAttack(Attack):
@@ -108,9 +107,9 @@ class TrainableThresholdAttack(Attack):
          - ("fp", float): similarly, for the false positive rate ("fp").
          - ("threshold", float): manually specify the threshold.
 
-        For "tp" and "fp", you may also include a third entry (int), which is the
-        label to consider as positive value. If this is not provided, then True
-        or 1 (depending on label type) is assumed to be the positive label.
+        For "tp" and "fp" and "threshold", you may also include a third entry (int),
+        which is the label to consider as positive value. If this is not provided,
+        then True or 1 (depending on label type) is assumed to be the positive label.
 
         """
         if not isinstance(criterion, tuple):
@@ -125,6 +124,7 @@ class TrainableThresholdAttack(Attack):
         # If three arguments, replace positive_label (currently using None, the
         # default value of roc_curve) with specified value.
         self.positive_label = None
+        self.negative_label = None
         if len(criterion) >= 3:
             self.positive_label = criterion[2]
         # Initialise the threshold.
@@ -136,7 +136,7 @@ class TrainableThresholdAttack(Attack):
         self,
         threat_model: LabelInferenceThreatModel,
         num_samples: int = 100,
-        **attack_score_kwargs
+        **attack_score_kwargs,
     ):
         """
         Train this attack: train the score, then choose a threshold meeting
@@ -167,6 +167,26 @@ class TrainableThresholdAttack(Attack):
             # positive label (consistently with AIASummary).
             if self.positive_label is None:
                 self.positive_label = threat_model.attribute_values[1]
+
+        # If this is a no-box attack, training samples cannot be used. This is
+        # only acceptable for the "threshold" criterion. If no positive label
+        # is provided, True is used. The negative label is automatically set as
+        # not self.positive_label (which may not make sense).
+        if isinstance(threat_model.atk_know_gen, NoBoxKnowledge):
+            if self._threshold is None:
+                raise Exception(
+                    "This threat model is no-box, yet no threshold was provided to this attack."
+                )
+            self.positive_label = self.positive_label or True
+            if self.negative_label is None:
+                self.negative_label = not self.positive_label
+                if self.positive_label not in [True, 1, "1"]:
+                    print(
+                        f"The negative label was automatically assigned to {self.negative_label} (not self.positive_label).",
+                        "This may not make sense for your analysis. Please set this.negative_label to match if needed.",
+                    )
+            return # All "training" (setting internal variables) finished.
+
         # If the threshold is not specified, train to get the desired tpr or fpr.
         synthetic_datasets, labels = self.threat_model.generate_training_samples(
             num_samples
@@ -191,11 +211,9 @@ class TrainableThresholdAttack(Attack):
             # Set the negative label as thee other one.
             self.negative_label = v1 if self.positive_label == v2 else v2
         # Once the labels are set, no more learning is required if the threshold is set.
-        # TODO: this is somewhat inefficient, maybe we should require the thresholds to
-        # be given as arguments? At the same time, since datasets are cached, generating
-        # samples for any attack beyond the first is extremely fast.
         if self._threshold is not None:
             return  # No training required.
+
         # Finally, compute the ROC curve and select the threshold from it.
         fpr_all, tpr_all, thresholds = roc_curve(
             labels, self.attack_score(synthetic_datasets), pos_label=self.positive_label
