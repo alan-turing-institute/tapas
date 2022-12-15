@@ -212,10 +212,12 @@ class TabularDataset(Dataset):
         """
         Parameters
         ----------
-        data: pandas.DataFrame
+        data: pandas.DataFrame (or a valid argument for pd.DataFrame).
         description: tapas.datasets.data_description.DataDescription
         label: str (optional)
         """
+        if not isinstance(data, pd.DataFrame):
+            data = pd.DataFrame(data, columns = [c['name'] for c in description])
         self.data = data
         
         assert isinstance(description,DataDescription), 'description needs to be of class DataDescription'
