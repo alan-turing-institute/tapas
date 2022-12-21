@@ -9,6 +9,7 @@ filterwarnings("ignore")
 
 from tapas.datasets import TabularDataset, TabularRecord
 from tapas.datasets.data_description import DataDescription
+from tapas.datasets.canary import create_canary
 
 
 class TestDescription(TestCase):
@@ -191,6 +192,10 @@ class TestTabularDataset(TestCase):
         rows = self.dataset.get_records(indices)
         for row in rows:
             self.assertIn(row, self.dataset)
+
+    def test_canary(self):
+        new_dataset, canary = create_canary(self.dataset)
+        self.assertEqual(new_dataset.description, canary.description)
 
 
 if __name__ == "__main__":
