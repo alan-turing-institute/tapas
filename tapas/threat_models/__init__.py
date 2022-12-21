@@ -6,6 +6,8 @@ from .attacker_knowledge import (
     ExactDataKnowledge,
     AttackerKnowledgeOnGenerator,
     BlackBoxKnowledge,
+    NoBoxKnowledge,
+    UncertainBoxKnowledge,
     LabelInferenceThreatModel,
 )
 from .mia import TargetedMIA

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from ..datasets import Dataset
     from ..generators import Generator
     from collections.abc import Iterable
+    from typing import Callable
 
 from abc import ABC, abstractmethod
 from .base_classes import TrainableThreatModel
@@ -222,16 +223,22 @@ class AttackerKnowledgeOnGenerator:
     requires a Generator objct and a choice of length for generated synthetic
     datasets.
 
+    This class supports two modes: training mode, where it behaves like the
+    generator that the attacker knows about, and testing mode, where the real
+    generator is applied. In black-box setting, these are identical, but this
+    allows to model situations where the attacker might have limited information
+    about the generator.
+
     """
 
     @abstractmethod
-    def generate(self, training_dataset: Dataset):
+    def generate(self, training_dataset: Dataset, training_mode: bool = True):
         """Generate a synthetic dataset from a given training dataset."""
         pass
 
     # Equivalently, you can just call this object:
-    def __call__(self, training_dataset: Dataset):
-        return self.generate(training_dataset)
+    def __call__(self, training_dataset: Dataset, training_mode: bool = True):
+        return self.generate(training_dataset, training_mode)
 
     @property
     def label(self):
@@ -248,13 +255,15 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
     generator has an exact black-box. The attacker can call the generator
     with the same parameters as were used to produce the real dataset.
 
+    This is the recommended assumption on attacker knowledge.
+
     """
 
     def __init__(self, generator: Generator, num_synthetic_records: int):
         self.generator = generator
         self.num_synthetic_records = num_synthetic_records
 
-    def generate(self, training_dataset: Dataset):
+    def generate(self, training_dataset: Dataset, training_mode: bool = True):
         return self.generator(training_dataset, self.num_synthetic_records)
 
     @property
@@ -262,14 +271,89 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
         return self.generator.label
 
 
+class NoBoxKnowledge(AttackerKnowledgeOnGenerator):
+    """
+    The attacker does not have access to the generator. The attacker cannot
+    call the generator, and the .generate method thus fails in training mode.
+    A generator is still needed to generate evaluation samples.
+
+    """
+
+    def __init__(self, generator: Generator, num_synthetic_records: int):
+        self.generator = generator
+        self.num_synthetic_records = num_synthetic_records
+
+    def generate(self, training_dataset: Dataset, training_mode: bool = True):
+        if training_mode:
+            raise Exception("Cannot generate datasets in no-box setup.")
+        return self.generator(training_dataset, self.num_synthetic_records)
+
+    @property
+    def label(self):
+        return f"{self.generator.label}[no-box]"
+
+
+class UncertainBoxKnowledge(AttackerKnowledgeOnGenerator):
+    """
+    The attacker has uncertain knowledge of the generator: they have access to
+    the code, but not to some "parameters" of the code. Instead, the attacker
+    has a prior (distribution) of acceptable parameters.
+
+    """
+
+    def __init__(
+        self,
+        generator: Generator,
+        num_synthetic_records: int,
+        prior: Callable[[], dict],
+        final_parameters: dict = None,
+    ):
+        """
+        Initialise an attacker with uncertain knowledge of some parameters in
+        the generator.
+
+        Parameters
+        ----------
+        generator: Generator
+            The generator object. This generator must accept additional keyword
+            arguments in its __call__ method.
+        num_synthetic_records: int
+            The number of synthetic records to generate.
+        prior: function () -> dict
+            A randomised functions which draws from the attacker's prior over
+            the parameters of the method.
+        final_parameters: dict (default None)
+            The actual parameters used to generate the final dataset. If this
+            is not specified, a new random draw from the prior is used every
+            time (meaning the prior is accurate).
+
+        """
+        self.generator = generator
+        self.num_synthetic_records = num_synthetic_records
+        self.prior = prior
+        self.final_parameters = final_parameters
+
+    def generate(self, training_dataset: Dataset, training_mode: bool):
+        if training_mode or self.final_parameters is None:
+            kwargs = self.prior()
+        else:
+            kwargs = self.final_parameters
+        return self.generator(training_dataset, self.num_synthetic_records, **kwargs)
+
+    @property
+    def label(self):
+        return f"{self.generator.label}[uncertain]"
+
+
 # With the tools developed in this module, we can define a generic threat model
 # where the attacker aims to infer the "label" of the private dataset. The
 # label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
 
 # This is not a lambda for pickling purposes.
-def _silent_iterator( x):
+def _silent_iterator(x):
     """Identity function, equivalent to lambda x: x."""
     return x
+
 
 class LabelInferenceThreatModel(TrainableThreatModel):
     """
@@ -383,7 +467,8 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             )
             # Then, generate synthetic data from each original dataset.
             gen_datasets = [
-                self.atk_know_gen(ds) for ds in self.iterator_tracker(training_datasets)
+                self.atk_know_gen.generate(ds, training_mode=training)
+                for ds in self.iterator_tracker(training_datasets)
             ]
             # Add the entries generated to the memory.
             if use_memory:

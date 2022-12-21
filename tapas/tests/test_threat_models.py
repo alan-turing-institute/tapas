@@ -6,6 +6,7 @@ from unittest import TestCase
 import itertools
 import numpy as np
 import pandas as pd
+import pytest
 
 from tapas.datasets import TabularDataset, TabularRecord
 from tapas.datasets.data_description import DataDescription
@@ -15,8 +16,10 @@ from tapas.threat_models import (
     TargetedAIA,
     AuxiliaryDataKnowledge,
     BlackBoxKnowledge,
+    NoBoxKnowledge,
+    UncertainBoxKnowledge,
 )
-from tapas.generators import Raw
+from tapas.generators import Raw, Generator
 
 dummy_data_description = DataDescription(
     [
@@ -209,7 +212,9 @@ class TestAIA(TestCase):
             # Check that the target record is found in the dataset.
             self.assertEqual(len(threat_model_targeted.target_record), 1)
             for x, y, col in zip(
-                threat_model_targeted.target_record.data.values[0], r.data.values[0], ["a", "b", "c"],
+                threat_model_targeted.target_record.data.values[0],
+                r.data.values[0],
+                ["a", "b", "c"],
             ):
                 # Check equality for non-sensitive attributes.
                 if col != "c":
@@ -226,6 +231,7 @@ class TestAIA(TestCase):
                 record = r.copy()
                 record.set_value("c", value)
                 self.assertEqual(record in ds, True)
+
 
 class TestAttackerKnowledge(TestCase):
     """Test the attacker knowledge."""
@@ -256,6 +262,32 @@ class TestAttackerKnowledge(TestCase):
             # Check that sizes are as expected.
             self.assertEqual(len(threat_model.aux_data), aux_size + aux_split_size)
             self.assertEqual(len(threat_model.test_data), test_size + test_split_size)
+
+    def test_no_box(self):
+        gen = NoBoxKnowledge(Raw(), 2)
+        with pytest.raises(Exception) as err:
+            gen(dataset, training_mode=True)
+        gen(dataset, training_mode=False)
+
+
+    def test_uncertain_box(self):
+        # First, define a silly 1-dimensional generator.
+        class Replicator(Generator):
+            def __call__(self, dataset, num_samples, mean=0):
+                return np.full((num_samples,), mean)
+            def fit(self, *args): pass
+            def generate(self, *args): pass
+
+        # Then, define a threat model using this, and test it.
+        gen = UncertainBoxKnowledge(
+            Replicator(), 1, lambda: {"mean": np.random.normal()}, {"mean": 117}
+        )
+        records_train = [gen(None, training_mode = True) for _ in range(1000)]
+        records_test = [gen(None, training_mode = False) for _ in range(1000)]
+        self.assertTrue(np.mean(records_train) < 4)  # Unlikely to fail.
+        self.assertTrue(np.std(records_train) < 2)
+        for x in records_test:
+            self.assertEqual(x[0], 117)
 
 
 class TestSaveLoad(TestCase):
