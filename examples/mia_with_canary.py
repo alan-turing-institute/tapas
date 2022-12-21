@@ -1,4 +1,4 @@
-from tapas.datasets.canary import produce_canary
+from tapas.datasets.canary import create_canary
 
 import tapas.datasets
 import tapas.generators
@@ -14,7 +14,7 @@ real_data = tapas.datasets.TabularDataset.read(
 # Create a *canary* record: this is a record with unique values for each
 # attribute. Creating this canary modifies the data description, and a new
 # dataset object (with the same content) is thus generated.
-data, canary = produce_canary(real_data)
+data, canary = create_canary(real_data)
 
 canary.set_id(-1)
 

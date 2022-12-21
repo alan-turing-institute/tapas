@@ -2,7 +2,7 @@
 from .dataset import TabularDataset, TabularRecord, DataDescription
 
 
-def produce_canary(dataset: TabularDataset):
+def create_canary(dataset: TabularDataset):
     """
     Create a "canary", a record which should stand out in the dataset and
     therefore is more likely to be identified in MIAs.
@@ -11,7 +11,9 @@ def produce_canary(dataset: TabularDataset):
     this record, and setting continuous attributes as the current maximum plus
     some margin.
 
-    This also creates a modified dataset with an updated description.
+    This also creates a modified dataset with an updated description. Importantly,
+    the canary is *not* part of the modified dataset, so it does not need to be
+    removed before passing the dataset to auxiliary knowledge.
 
     Parameters
     ----------
