@@ -91,10 +91,13 @@ def metric_comparison_plots(
         )
         filename = f"{comparison_label}sComparison_Dataset{pair_name[0]}_Attack{pair_name[1]}.png"
 
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
+        filename = os.path.join(output_path, filename)
 
-        plt.savefig(os.path.join(output_path, filename))
+        dirname = os.path.dirname(filename)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        plt.savefig(filename)
 
         plt.close(fig)
 
