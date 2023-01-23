@@ -14,7 +14,7 @@ from .set_classifiers import (
     NaiveSetFeature,
     HistSetFeature,
     CorrSetFeature,
-    RandomTargetedQueryFeature,
+    RandomTargetedQueryFeature
 )
 from .groundhog import GroundhogAttack
 from .synthinference import (
@@ -24,3 +24,4 @@ from .synthinference import (
     SyntheticPredictorAttack,
 )
 from .utils import load_attack
+from .network import NetworkMIA
