@@ -20,6 +20,8 @@ setuptools = "^65.5.0"
 reprosyn = {git = "https://github.com/alan-turing-institute/reprosyn", rev = "2b1f29ab582ca96d9adc8992bd8650f79248e5d1"}
 jupyterlab = "^3.5.0"
 nbclient = "0.5.13"
+grakel = "0.1.9"
+networkx = ">=2.8"
 
 [tool.poetry.dev-dependencies]
 spyder-kernels = "^2.1.0"
