@@ -38,6 +38,7 @@ class GNP(Generator):
             graph_edges = [data.iloc[i].number_of_edges() for i in range(len(data))]
 
             param_dict = {}
+
             for i in range(len(data)):
                 # compute parameters n, p for each input graph
                 n = graph_nodes[i]
@@ -54,18 +55,16 @@ class GNP(Generator):
                                      for i in range(len(param_dict[n]))]
                     param_dict[n][-1] = count + 1
 
-            # choose *num_samples* parameter pairs from the pool and
+            # choose *num_samples* parameter pairs from param_dict
             keys = choices(list(param_dict), k=num_samples)
             graphs = []
             for i in keys:
-                nodes = graph_nodes[i]
-                n = int(param_dict[nodes][0])
-                p = param_dict[nodes][1]
+                n = int(param_dict[i][0])
+                p = param_dict[i][1]
                 graph = nx.fast_gnp_random_graph(n, p)
                 # initialise node labels used for graph kernel
                 labels = dict(zip(graph, [0]*len(graph)))
                 nx.set_node_attributes(graph, labels, "label")
-
                 graphs.append(graph)
 
             return TUDataset(pd.Series(graphs), self.dataset.description)
