@@ -1,5 +1,5 @@
 """
-In this file, we apply the Groundhog attack to synthetic networks
+In this file, we apply the MIA attack to synthetic networks
 
 """
 
@@ -7,7 +7,6 @@ import tapas.datasets
 import tapas.generators
 import tapas.threat_models
 import tapas.attacks
-from tapas.datasets import TUDataset
 
 # Some fancy displays when training/testing.
 import tqdm
@@ -17,22 +16,14 @@ print("Loading dataset...")
 # tu_dataset = tapas.datasets.TUDataset.download_and_read("DD")
 # tu_dataset = tapas.datasets.TUDataset.read("DD", "DD")
 # tu_dataset = tapas.datasets.TUDataset.download_and_read("ENZYMES")
-# tu_dataset2 = tapas.datasets.TUDataset.read("DD", "DD-small")
-#tu_dataset = tapas.datasets.TUDataset.download_and_read("MUTAG")
-tu_dataset = tapas.datasets.TUDataset.read("MUTAG", "MUTAG")
-
-print("# of subgraph", len(tu_dataset.data))
-print("# of sampled graph", len(tu_dataset.sample(frac=0.3).data))
-#print("# of subgraph after drop", len(tu_dataset.drop_records(n=100, in_place=True).data))
-# print("# of graph after add_records", len(tu_dataset.add_records(tu_dataset2)))
+tu_dataset = tapas.datasets.TUDataset.download_and_read("MUTAG")
+#tu_dataset = tapas.datasets.TUDataset.read("MUTAG", "MUTAG")
 
 # We attack the Rng generator
 generator = tapas.generators.network_generator.GNP()
-print("GNP network generator......")
-print("# of Rng samples:", len(generator(tu_dataset, 40)))
 
 data_knowledge = tapas.threat_models.AuxiliaryDataKnowledge(
-    # The attacker has access to 50% of the data as auxiliary information.
+    # The attacker has access to 60% of the data as auxiliary information.
     # This information will be used to generate training datasets.
     tu_dataset,
     auxiliary_split=0.6,
@@ -40,10 +31,6 @@ data_knowledge = tapas.threat_models.AuxiliaryDataKnowledge(
     # reflects the attacker's knowledge about the real data.
     num_training_records=76,
 )
-print("AuxiliaryDataKnowledge...")
-print("# of aux_data", len(data_knowledge.aux_data))
-print("# of test_data", len(data_knowledge.test_data))
-print("# of generated datasets", len(data_knowledge.generate_datasets(50)))
 
 sdg_knowledge = tapas.threat_models.BlackBoxKnowledge(
     generator,
@@ -70,6 +57,7 @@ threat_model = tapas.threat_models.TargetedMIA(
 )
 
 attacker = tapas.attacks.NetworkMIA()
+#attacker = tapas.attacks.NetworkFeatureMIA()
 
 print("Training the attack...")
 # Having defined all the objects that we need, we can train the attack.

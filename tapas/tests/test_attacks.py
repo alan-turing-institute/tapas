@@ -3,10 +3,12 @@
 import unittest
 from unittest import TestCase
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 
-from tapas.datasets import TabularDataset, TabularRecord
+from tapas import attacks
+from tapas.datasets import TabularDataset, TabularRecord, TUDataset
 from tapas.datasets.data_description import DataDescription
 from tapas.threat_models import (
     TargetedMIA,
@@ -15,6 +17,7 @@ from tapas.threat_models import (
     BlackBoxKnowledge,
 )
 from tapas.generators import Raw
+import matplotlib.pyplot as plt
 
 # The classes being tested.
 from tapas.attacks import (
@@ -50,6 +53,44 @@ class TestClosestDistance(TestCase):
 
     def setUp(self):
         self.dataset = TabularDataset(dummy_data, dummy_data_description)
+        self.tu_dataset_in = TUDataset.read("in", "data/network")
+
+    def test_relabel_graphs(self):
+        # Check whether the graphs are relabeled in consecutive integers
+        attacker = attacks.NetworkMIA()
+        relabeled_graphs = attacker._relabel_graphs(self.tu_dataset_in.data)
+
+        index = 1
+        for graph in relabeled_graphs:
+            attr = nx.get_node_attributes(graph, "label")
+            self.assertEqual(list(attr.keys())[0], index)
+            self.assertEqual(list(attr.values())[0], index)
+            index += len(graph)
+
+        attacker._compose_datasets([self.tu_dataset_in])
+
+    def test_composed_datasets(self):
+        # Check whether the sub-graphs in tu_dataset are correctly composed
+        attacker = attacks.NetworkMIA()
+        self.assertEqual(len(self.tu_dataset_in), 5)
+        total_size = 0
+
+        for graph in self.tu_dataset_in.data:
+            total_size += len(graph)
+            # # plot subgraphs
+            # nx.draw(graph, node_size=10)
+            # plt.savefig(f"filename{len(graph)}.png")
+            # plt.clf()
+
+        ds = attacker._compose_datasets([self.tu_dataset_in])
+        composed_size = len(ds[0])
+        self.assertEqual(len(ds), 1)
+        # check the size of composed graph is equal to the total size of sub-graphs
+        self.assertEqual(total_size, composed_size)
+
+        # # plot composed graph
+        # nx.draw(ds[0], node_size=10)
+        # plt.savefig("composed.png")
 
     def _make_mia(self, a, b):
         """Helper function to generate a MIA threat model."""

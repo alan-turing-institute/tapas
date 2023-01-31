@@ -16,13 +16,16 @@ class GNP(Generator):
         self.dataset = dataset
         self.trained = True
 
-    def generate(self, num_samples = None):
+    def generate(self, num_samples = None, random_state = None):
         """
         Generate a list of Gnp random graphs using the parameters calculated from input datasets
 
         Parameters
         ---------
         num_samples: # of Gnp samples to be generated
+
+        random_state : optional
+            Passed to networkx.fast_gnp_random_graph()
 
         Returns
         -------
@@ -61,7 +64,7 @@ class GNP(Generator):
             for i in keys:
                 n = int(param_dict[i][0])
                 p = param_dict[i][1]
-                graph = nx.fast_gnp_random_graph(n, p)
+                graph = nx.fast_gnp_random_graph(n, p, random_state)
                 # initialise node labels used for graph kernel
                 labels = dict(zip(graph, [0]*len(graph)))
                 nx.set_node_attributes(graph, labels, "label")

@@ -9,8 +9,14 @@ from typing import TYPE_CHECKING
 import networkx as nx
 
 if TYPE_CHECKING:
-    from ..datasets import Dataset
+    from ..datasets import Dataset, TUDataset
 
+from .shadow_modelling import ShadowModellingAttack
+from .set_classifiers import (
+    FeatureBasedSetClassifier,
+    NetworkFeature,
+)
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.base import ClassifierMixin
 from sklearn.svm import SVC
 from grakel.kernels import ShortestPath
@@ -21,43 +27,53 @@ from .base_classes import Attack
 from ..threat_models import LabelInferenceThreatModel
 
 
-def _relabel_graphs(graphs):
-    """
-    Relabel the nodes of the graphs in consecutive integers
-    e.g, G1 = [0, 1, 2], G2 = [0, 1] ->
-    G1 = [0, 1, 2], G2 = [3, 4]
-    """
-    idx = 0
-    relabeled_graphs = []
-    for graph in graphs:
-        mapping = dict(zip(graph, range(idx, idx + len(graph))))
-        g = nx.relabel_nodes(graph, mapping)
-        nx.set_node_attributes(g, mapping, 'label')
-        relabeled_graphs.append(g)
-        idx += len(graph)
-
-    return relabeled_graphs
-
-
-def _compose_datasets(datasets):
-    """
-    Compose all the graphs for each TUDataset
-    """
-    composed_datasets = []
-    for ds in datasets:
-        relabeled_graphs = _relabel_graphs(ds.data)
-        composed_graph = nx.compose_all(relabeled_graphs)
-        composed_datasets.append(composed_graph)
-
-    return composed_datasets
-
-
 class NetworkMIA(Attack):
+
+    def _relabel_graphs(self, graphs):
+        """
+        Relabel graph nodes in consecutive integers
+        e.g, G1 = [0, 1, 2], G2 = [0, 1] ->
+        G1 = [0, 1, 2], G2 = [3, 4]
+        """
+        idx = 0
+        relabeled_graphs = []
+        for graph in graphs:
+            end = idx+len(graph)+1
+            mapping = dict(zip(range(idx, end), range(idx, end)))
+            # sorting graph nodes
+            sorted_graph = nx.Graph()
+            sorted_graph.add_nodes_from(sorted(graph.nodes(data=True)))
+            sorted_graph.add_edges_from(graph.edges(data=True))
+
+            g = nx.relabel_nodes(sorted_graph, mapping)
+            nx.set_node_attributes(g, mapping, 'label')
+
+            relabeled_graphs.append(g)
+            idx += len(graph)
+
+        return relabeled_graphs
+
+    def _compose_datasets(self, datasets: list[TUDataset]):
+        """
+        Compose all the graphs in each TUDataset for classification task
+
+        Parameters
+        ----------
+        datasets : list[TUDataset]
+            List of TUDataset
+        """
+        composed_datasets = []
+        for ds in datasets:
+            relabeled_graphs = self._relabel_graphs(ds.data)
+            composed_graph = nx.compose_all(relabeled_graphs)
+            composed_datasets.append(composed_graph)
+
+        return composed_datasets
 
     def __init__(self, classifier: ClassifierMixin = SVC(kernel="precomputed", probability=True),
                  kernel: Kernel = ShortestPath(normalize=True), label: str = None):
         """
-        NetworkMIA aims to infer whether a given network (graph) is in the training
+        NetworkMIA aims to infer whether a given record (graph) is in the training
         dataset. The attacker uses auxiliary information, and train a classifier
         to make the prediction.
         Parameters
@@ -73,7 +89,6 @@ class NetworkMIA(Attack):
         self._label = label or "NetworkMIA"
 
     def train(self, threat_model: LabelInferenceThreatModel = None, num_samples: int = 100):
-
         """
         Train the attack classifier on a labelled set of datasets. The datasets
         will either be generated from threat_model or need to be provided.
@@ -99,7 +114,7 @@ class NetworkMIA(Attack):
         synthetic_datasets, labels = threat_model.generate_training_samples(num_samples)
         # Compose all the graphs in each synthetic dataset and
         # transform the composed datasets to Grakel objects
-        ds = _compose_datasets(synthetic_datasets)
+        ds = self._compose_datasets(synthetic_datasets)
         transformed_graphs = graph_from_networkx(ds, node_labels_tag='label')
 
         # Fit the classifier to the data
@@ -128,7 +143,7 @@ class NetworkMIA(Attack):
 
         # Compose all the graphs in each synthetic dataset and
         # transform the composed datasets to Grakel objects
-        ds = _compose_datasets(datasets)
+        ds = self._compose_datasets(datasets)
         transformed_graphs = graph_from_networkx(ds, node_labels_tag='label')
         k_test = self.kernel.transform(transformed_graphs)
 
@@ -150,7 +165,7 @@ class NetworkMIA(Attack):
             List of probabilities corresponding to attacker's guess about the truth.
 
         """
-        ds = _compose_datasets(datasets)
+        ds = self._compose_datasets(datasets)
         transformed_graphs = graph_from_networkx(ds, node_labels_tag='label')
         k_test = self.kernel.transform(transformed_graphs)
 
@@ -158,9 +173,34 @@ class NetworkMIA(Attack):
 
         # If there are only two possible values, output the score for the positive label.
         if scores.shape[1] == 2:
-            return scores[:,1]
+            return scores[:, 1]
         return scores
 
     @property
     def label(self):
         return self._label
+
+
+class NetworkFeatureMIA(ShadowModellingAttack):
+    def __init__(
+        self, use_network=True, model=None, label=None
+    ):
+        features = None
+        if use_network:
+            features = NetworkFeature()
+        assert features is not None, "At least one feature must be specified."  #
+
+        ShadowModellingAttack.__init__(
+            self,
+            # The attack uses a feature-based set classifier, which first
+            # extracts fixed (non-trainable) features from the set, then
+            # fits a machine learning classifier from these features.
+            FeatureBasedSetClassifier(
+                # Use the default features: network feature.
+                features,
+                # If a classifier is specified, use it. Otherwise, use a random
+                # forest with 100 trees and default parameters.
+                model or RandomForestClassifier(n_estimators=100),
+            ),
+            label=label or "Groundhog"
+        )

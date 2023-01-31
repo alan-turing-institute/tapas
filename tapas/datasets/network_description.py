@@ -2,9 +2,10 @@
 A network description class
 """
 
+
 class TUDatasetDescription:
 
-    def __init__(self, label = None):
+    def __init__(self, label=None):
         """
         Parameters
         ----------
@@ -18,9 +19,10 @@ class TUDatasetDescription:
         Check that the content of the description (schema) is identical. Label is ignored.
 
         """
-        #TODO
+        if not isinstance(other_network_description, TUDatasetDescription):
+            return False
         return True
-    
+
     @property
     def label(self):
         """
@@ -28,4 +30,3 @@ class TUDatasetDescription:
 
         """
         return self._label
-    

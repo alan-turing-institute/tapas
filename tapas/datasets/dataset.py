@@ -2,9 +2,6 @@
 from abc import ABC, abstractmethod
 import json
 import io
-import os
-import requests
-import zipfile
 
 import numpy as np
 import pandas as pd
@@ -93,30 +90,6 @@ def validate_header(fp, cnames):
         # is not a header row. 
         return None
 
-
-def download_url(url, fp):
-
-    if os.path.isdir(fp):
-        path = os.path.join(fp, url.split("/")[-1])
-    else:
-        path = fp
-
-    print("Downloading %s from %s..." % (path, url))
-
-    r = requests.get(url, stream=True)
-    if r.status_code != 200:
-        raise RuntimeError("Failed downloading url %s" % url)
-    with open(path, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:  # filter out keep-alive new chunks
-                f.write(chunk)
-
-    return path
-
-
-def extract_zip(path, folder):
-    with zipfile.ZipFile(path, 'r') as f:
-        f.extractall(folder)
 
 ## Classes
 ## -------

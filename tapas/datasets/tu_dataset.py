@@ -1,12 +1,43 @@
 import networkx as nx
-import os
 import numpy as np
 import pandas as pd
 import pickle
+import os
+import requests
+import zipfile
 
-from .dataset import Dataset, download_url, extract_zip
+from .dataset import Dataset
 from .network_description import TUDatasetDescription
 from .utils import index_split
+
+def _download_url(url, fp):
+    """
+    download dataset to path
+    """
+    if os.path.isdir(fp):
+        path = os.path.join(fp, url.split("/")[-1])
+    else:
+        path = fp
+
+    print("Downloading %s from %s..." % (path, url))
+
+    r = requests.get(url, stream=True)
+    if r.status_code != 200:
+        raise RuntimeError("Failed downloading url %s" % url)
+    with open(path, "wb") as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+
+    return path
+
+
+def _extract_zip(path, folder):
+    """
+    extract zip file
+    """
+    with zipfile.ZipFile(path, 'r') as f:
+        f.extractall(folder)
 
 
 def _process(name, filepath):
@@ -55,11 +86,6 @@ def _process(name, filepath):
 
     # print(nx.get_node_attributes(graph, "label"))
     # print(nx.get_node_attributes(graph, "attribute"))
-
-    # remove isolated nodes and self-loop edges
-    # print('Removing isolated nodes and self-loop edges' + str(name))
-    # graph.remove_nodes_from(list(nx.isolates(graph)))
-    # graph.remove_edges_from(nx.selfloop_edges(graph))
 
     data_graph_indicator = np.loadtxt(
         os.path.join(filepath, '{}_graph_indicator.txt'.format(name)),
@@ -154,13 +180,17 @@ class TUDataset(Dataset):
 
         """
         if root is None: root = "./"
-        filepath = download_url(f'{cls._url}/{name}.zip', root)
-        extract_zip(filepath, root)
+        filepath = _download_url(f'{cls._url}/{name}.zip', root)
+        _extract_zip(filepath, root)
 
         filepath = os.path.join(root, name)
         return _process(name, filepath)
 
     def write(self, output_path):
+        """
+        Write dataset as object to file.
+
+        """
         with open(output_path, "wb") as f:
             pickle.dump(self.data, f)
 
@@ -173,6 +203,7 @@ class TUDataset(Dataset):
     def sample(self, n_samples=1, frac=None, random_state=None):
         """
         Sample a set of records from a TUDataset object.
+        Note that a record in TUDataset means a graph.
 
         Parameters
         ----------
@@ -181,6 +212,9 @@ class TUDataset(Dataset):
 
         frac : float
             Fraction of records to sample.
+
+        random_state : optional
+            Passed to `pandas.DataFrame.sample()`
 
         Returns
         -------
@@ -207,7 +241,7 @@ class TUDataset(Dataset):
 
         Returns
         -------
-        TabularDataset
+        TUDataset
             A TUDataset object with the record(s).
 
         """
@@ -332,7 +366,7 @@ class TUDataset(Dataset):
 
         Returns
         -------
-        list(TabularDataset)
+        list(TUDataset)
             A lists containing subsets of the data with and without the target record(s).
 
         """
@@ -343,7 +377,7 @@ class TUDataset(Dataset):
         # Create splits.
         splits = index_split(self.data.shape[0], sample_size, n)
 
-        # Returns a list of TabularDataset subsampled from this dataset.
+        # Returns a list of TUDataset subsampled from this dataset.
         subsamples = [self.get_records(train_index) for train_index in splits]
 
         # If required, remove the indices from the dataset.
@@ -368,13 +402,13 @@ class TUDataset(Dataset):
 
     def copy(self):
         """
-        Create a TabularDataset that is a deep copy of this one. In particular,
+        Create a TUDataset that is a deep copy of this one. In particular,
         the underlying data is copied and can thus be modified freely.
 
         Returns
         -------
-        TabularDataset
-            A copy of this TabularDataset.
+        TUDataset
+            A copy of this TUDataset.
 
         """
         return TUDataset(self.data.copy(), self.description)
@@ -409,7 +443,7 @@ class TUDataset(Dataset):
                 description=self.description
             )
         )
-        return map(convert_record, self.data.iteritems())
+        return map(convert_record, self.data.items())
 
     def __len__(self):
         """
@@ -441,14 +475,14 @@ class TUDataset(Dataset):
         """
         if not isinstance(item, TUDataset):
             raise ValueError(
-                f"Only TabularDatasets can be checked for containment, not {type(item)}"
+                f"Only TUDatasets can be checked for containment, not {type(item)}"
             )
         if len(item) != 1:
             raise ValueError(
                 f"Only length-1 TUDataset can be checked for containment, got length {len(item)})"
             )
 
-        return (self.data == item.data.iloc[0]).all(axis=1).any()
+        return (self.data == item.data.iloc[0]).any()
 
     @property
     def label(self):
@@ -494,13 +528,13 @@ class TURecord(TUDataset):
     def get_id(self, tu_dataset):
         """
 
-        Check if the record is found on a given TabularDataset and return the object id (index) on that
+        Check if the record is found on a given TUDataset and return the object id (index) on that
         dataset.
 
         Parameters
         ----------
-        tu_dataset: TabularDataset
-            A TabularDataset object.
+        tu_dataset: TUDataset
+            A TUDataset object.
 
         Returns
         -------
@@ -520,12 +554,12 @@ class TURecord(TUDataset):
 
     def set_id(self, identifier):
         """
-        Overwrite the id attribute on the TabularRecord object.
+        Overwrite the id attribute on the TURecord object.
 
         Parameters
         ----------
         identifier: int or str
-            An id value to be assigned to the TabularRecord id attribute
+            An id value to be assigned to the TURecord id attribute
 
         Returns
         -------
@@ -538,32 +572,17 @@ class TURecord(TUDataset):
         return
 
     def set_value(self, column, value):
-        """
-        Overwrite the value of attribute `column` of the TabularRecord object.
-
-        Parameters
-        ----------
-        column: str
-            The identifier of the attribute to be replaced.
-        value: (value set of column)
-            The value to set the `column` of the record.
-
-        Returns
-        -------
-        None
-
-        """
-        self.data[column] = value
+        pass
 
     def copy(self):
         """
-        Create a TabularRecord that is a deep copy of this one. In particular,
+        Create a TURecord that is a deep copy of this one. In particular,
         the underlying data is copied and can thus be modified freely.
 
         Returns
         -------
-        TabularRecord
-            A copy of this TabularRecord.
+        TURecord
+            A copy of this TURecord.
 
         """
         return TURecord(self.data.copy(), self.description, self.id)

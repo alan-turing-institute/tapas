@@ -14,7 +14,14 @@ import tapas.generators as generators
 class TestGenerator(TestCase):
     def setUp(self):
         ## An example dataset of 998 rows
-        self.dataset = datasets.TabularDataset.read("tests/data/test_texas")
+        self.dataset = datasets.TabularDataset.read("data/test_texas")
+        self.tu_dataset = datasets.TUDataset.download_and_read("Cuneiform", "data/network")
+
+    def test_generate_gnp(self):
+        gnp = generators.GNP()
+        gnp.fit(self.tu_dataset)
+        ds = gnp.generate(5, random_state=0)
+        self.assertEqual(len(ds), 5)
 
     def test_generate_raw(self):
         raw = generators.Raw()
@@ -22,20 +29,19 @@ class TestGenerator(TestCase):
         ds = raw.generate(5, random_state=0)
 
         ## A previously-saved dataset generated as above
-        baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
+        baseline_dataset = datasets.TabularDataset.read("data/test_texas_sample0")
 
         pdt.assert_frame_equal(ds.data.reset_index(drop=True), baseline_dataset.data)
 
     def test_generator_from_exe(self):
-        exe = generators.GeneratorFromExecutable("tests/bin/raw")
+        exe = generators.GeneratorFromExecutable("bin/raw")
 
         ## The following is identical to test_generate_raw
         exe.fit(self.dataset)
         ds = exe.generate(5)  ## TODO: Figure out how to make reproducible call
-        print(ds.data)
 
         ## A previously-saved dataset generated as above
-        baseline_dataset = datasets.TabularDataset.read("tests/data/test_texas_sample0")
+        baseline_dataset = datasets.TabularDataset.read("data/test_texas_sample0")
 
         # Check all generated rows are in the original data
         for row in ds:
