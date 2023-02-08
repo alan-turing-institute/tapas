@@ -19,7 +19,7 @@ from .set_classifiers import (
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.base import ClassifierMixin
 from sklearn.svm import SVC
-from grakel.kernels import ShortestPath
+from grakel import WeisfeilerLehman, VertexHistogram
 from grakel.kernels import Kernel
 from grakel.utils import graph_from_networkx
 
@@ -71,7 +71,8 @@ class NetworkMIA(Attack):
         return composed_datasets
 
     def __init__(self, classifier: ClassifierMixin = SVC(kernel="precomputed", probability=True),
-                 kernel: Kernel = ShortestPath(normalize=True), label: str = None):
+                 kernel: Kernel = WeisfeilerLehman(n_iter=4, base_graph_kernel=VertexHistogram, normalize=True),
+                 label: str = None):
         """
         NetworkMIA aims to infer whether a given record (graph) is in the training
         dataset. The attacker uses auxiliary information, and train a classifier
