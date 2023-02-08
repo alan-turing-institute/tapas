@@ -53,7 +53,7 @@ class TestClosestDistance(TestCase):
 
     def setUp(self):
         self.dataset = TabularDataset(dummy_data, dummy_data_description)
-        self.tu_dataset_in = TUDataset.read("in", "data/network")
+        self.tu_dataset_in = TUDataset.read("in", "tests/data/network")
 
     def test_relabel_graphs(self):
         # Check whether the graphs are relabeled in consecutive integers
@@ -78,9 +78,9 @@ class TestClosestDistance(TestCase):
         for graph in self.tu_dataset_in.data:
             total_size += len(graph)
             # # plot subgraphs
-            # nx.draw(graph, node_size=10)
-            # plt.savefig(f"filename{len(graph)}.png")
-            # plt.clf()
+            nx.draw(graph, node_size=10)
+            plt.savefig(f"filename{len(graph)}.png")
+            plt.clf()
 
         ds = attacker._compose_datasets([self.tu_dataset_in])
         composed_size = len(ds[0])
@@ -89,8 +89,8 @@ class TestClosestDistance(TestCase):
         self.assertEqual(total_size, composed_size)
 
         # # plot composed graph
-        # nx.draw(ds[0], node_size=10)
-        # plt.savefig("composed.png")
+        nx.draw(ds[0], node_size=10)
+        plt.savefig("composed.png")
 
     def _make_mia(self, a, b):
         """Helper function to generate a MIA threat model."""

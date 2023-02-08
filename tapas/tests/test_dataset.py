@@ -27,8 +27,8 @@ class TestDescription(TestCase):
 
 class TestTUDataset(TestCase):
     def setUp(self):
-        self.tu_dataset = TUDataset.download_and_read("Cuneiform", "data/network")
-        self.tu_dataset_in = TUDataset.read("in", "data/network")
+        self.tu_dataset = TUDataset.download_and_read("Cuneiform", "tests/data/network")
+        self.tu_dataset_in = TUDataset.read("in", "tests/data/network")
 
     def test_read(self):
         self.assertEqual(len(self.tu_dataset_in.data), 5)
@@ -211,15 +211,15 @@ class TestTUDataset(TestCase):
 
 class TestTabularDataset(TestCase):
     def setUp(self):
-        self.dataset = TabularDataset.read("data/test_texas")
-        self.row_in = TabularDataset.read("data/row_in_texas")
-        self.row_out = TabularDataset.read("data/row_out_texas")
+        self.dataset = TabularDataset.read("tests/data/test_texas")
+        self.row_in = TabularDataset.read("tests/data/row_in_texas")
+        self.row_out = TabularDataset.read("tests/data/row_out_texas")
 
     def test_read(self):
 
         self.assertEqual(len(self.dataset), 998)
 
-        with open("data/test_texas.json") as f:
+        with open("tests/data/test_texas.json") as f:
             description = json.load(f)
 
         self.assertEqual(self.dataset.description.schema, description)
