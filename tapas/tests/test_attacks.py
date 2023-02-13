@@ -7,7 +7,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from tapas import attacks
 from tapas.datasets import TabularDataset, TabularRecord, TUDataset
 from tapas.datasets.data_description import DataDescription
 from tapas.threat_models import (
@@ -29,6 +28,7 @@ from tapas.attacks import (
     FeatureBasedSetClassifier,
     HammingDistance,
     LpDistance,
+    ComposedGraphClassifier,
 )
 
 from sklearn.linear_model import LogisticRegression
@@ -57,7 +57,7 @@ class TestClosestDistance(TestCase):
 
     def test_relabel_graphs(self):
         # Check whether the graphs are relabeled in consecutive integers
-        attacker = attacks.NetworkMIA()
+        attacker = ComposedGraphClassifier()
         relabeled_graphs = attacker._relabel_graphs(self.tu_dataset_in.data)
 
         index = 1
@@ -71,7 +71,7 @@ class TestClosestDistance(TestCase):
 
     def test_composed_datasets(self):
         # Check whether the sub-graphs in tu_dataset are correctly composed
-        attacker = attacks.NetworkMIA()
+        attacker = ComposedGraphClassifier()
         self.assertEqual(len(self.tu_dataset_in), 5)
         total_size = 0
 
