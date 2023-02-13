@@ -1,4 +1,5 @@
-"""Classes to represent the data object"""
+"""Classes to represent the data object."""
+
 from abc import ABC, abstractmethod
 import json
 import io
@@ -10,7 +11,7 @@ from .data_description import DataDescription
 from .utils import encode_data, index_split, get_dtype
 
 
-# Helper function for parsing file-like objects
+# Helper function for parsing file-like objects.
 def _parse_csv(fp, schema, label=None):
     """
     Parse fp into a TabularDataset using schema
@@ -212,10 +213,13 @@ class TabularDataset(Dataset):
         """
         Parameters
         ----------
-        data: pandas.DataFrame
+        data: pandas.DataFrame (or a valid argument for pandas.DataFrame).
         description: tapas.datasets.data_description.DataDescription
         label: str (optional)
+
         """
+        if not isinstance(data, pd.DataFrame):
+            data = pd.DataFrame(data, columns = [c['name'] for c in description])
         self.data = data
         
         assert isinstance(description,DataDescription), 'description needs to be of class DataDescription'

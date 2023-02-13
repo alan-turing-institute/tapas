@@ -2,7 +2,7 @@
 name = "tapas"
 version = "1.0.0"
 description = ""
-authors = ["Florimond Houussiau <fhoussiau@turing.ac.uk>", "James Jordon", "Callum Mole <cmole@turing.ac.uk>", "Camila Rangel-Smith <crangelsmith@turing.ac.uk>", "James Geddes <jgeddes@turing.ac.uk>"]
+authors = ["Florimond Houussiau <fhoussiau@turing.ac.uk>", "James Jordon", "Callum Mole <cmole@turing.ac.uk>", "Camila Rangel-Smith <crangelsmith@turing.ac.uk>", "James Geddes <jgeddes@turing.ac.uk>", "Bowen Li <bowen.li2@newcastle.ac.uk>"]
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.11"

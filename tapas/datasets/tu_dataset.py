@@ -1,3 +1,5 @@
+"""Loads graph datasets from the TU repository."""
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -7,8 +9,8 @@ import requests
 import zipfile
 
 from .dataset import Dataset
-from .network_description import TUDatasetDescription
 from .utils import index_split
+
 
 def _download_url(url, fp):
     """
@@ -32,73 +34,69 @@ def _download_url(url, fp):
     return path
 
 
-def _extract_zip(path, folder):
-    """
-    extract zip file
-    """
-    with zipfile.ZipFile(path, 'r') as f:
-        f.extractall(folder)
-
-
 def _process(name, filepath):
     """
     Parse files into a TUDataset
+
     """
-    print('Loading TU graph dataset: ' + str(name))
+    print("Loading TU graph dataset: " + str(name))
     graph = nx.Graph()
 
     # add edges
     data_adj = np.loadtxt(
-        os.path.join(filepath, '{}_A.txt'.format(name)), delimiter=',').astype(int)
+        os.path.join(filepath, "{}_A.txt".format(name)), delimiter=","
+    ).astype(int)
     data_tuple = list(map(tuple, data_adj))
     graph.add_edges_from(data_tuple)
 
     # add edge labels
-    f = os.path.join(filepath, '{}_edge_labels.txt'.format(name))
+    f = os.path.join(filepath, "{}_edge_labels.txt".format(name))
     if os.path.exists(f):
-        data_edge_labels = np.loadtxt(f, delimiter=',').astype(int).tolist()
+        data_edge_labels = np.loadtxt(f, delimiter=",").astype(int).tolist()
         nx.set_edge_attributes(graph, dict(zip(data_tuple, data_edge_labels)), "label")
 
     # add edge attributes
-    f = os.path.join(filepath, '{}_edge_attributes.txt'.format(name))
+    f = os.path.join(filepath, "{}_edge_attributes.txt".format(name))
     if os.path.exists(f):
-        data_edge_attributes = np.loadtxt(f, delimiter=',').tolist()
-        nx.set_edge_attributes(graph, dict(zip(data_tuple, data_edge_attributes)), "attribute")
-
-    # print(nx.get_edge_attributes(graph, "label"))
-    # print(nx.get_edge_attributes(graph, "attribute"))
-    # print(graph)
+        data_edge_attributes = np.loadtxt(f, delimiter=",").tolist()
+        nx.set_edge_attributes(
+            graph, dict(zip(data_tuple, data_edge_attributes)), "attribute"
+        )
 
     # add nodes, their labels and attributes
-    data_node_label = np.loadtxt(
-        os.path.join(filepath, '{}_node_labels.txt'.format(name)),
-        delimiter=',').astype(int).tolist()
+    data_node_label = (
+        np.loadtxt(
+            os.path.join(filepath, "{}_node_labels.txt".format(name)), delimiter=","
+        )
+        .astype(int)
+        .tolist()
+    )
 
-    f = os.path.join(filepath, '{}_node_attributes.txt'.format(name))
+    f = os.path.join(filepath, "{}_node_attributes.txt".format(name))
     has_node_attr = False
     if os.path.exists(f):
-        data_node_attribute = np.loadtxt(f, delimiter=',').tolist()
-        has_node_attr = True;
+        data_node_attribute = np.loadtxt(f, delimiter=",").tolist()
+        has_node_attr = True
 
     for i in range(len(data_node_label)):
-        graph.add_node(i + 1, label=data_node_label[i],
-                       attribute=data_node_attribute[i] if has_node_attr else None)
-
-    # print(nx.get_node_attributes(graph, "label"))
-    # print(nx.get_node_attributes(graph, "attribute"))
+        graph.add_node(
+            i + 1,
+            label=data_node_label[i],
+            attribute=data_node_attribute[i] if has_node_attr else None,
+        )
 
     data_graph_indicator = np.loadtxt(
-        os.path.join(filepath, '{}_graph_indicator.txt'.format(name)),
-        delimiter=',').astype(int)
+        os.path.join(filepath, "{}_graph_indicator.txt".format(name)), delimiter=","
+    ).astype(int)
 
     data_graph_label = np.loadtxt(
-        os.path.join(filepath, '{}_graph_labels.txt'.format(name)),
-        delimiter=',').astype(int)
+        os.path.join(filepath, "{}_graph_labels.txt".format(name)), delimiter=","
+    ).astype(int)
 
     has_graph_attr = False
-    f = os.path.join(filepath, '{}_graph_attributes.txt'.format(name))
+    f = os.path.join(filepath, "{}_graph_attributes.txt".format(name))
     if os.path.exists(f):
-        data_graph_attribute = np.loadtxt(f, delimiter=',')
+        data_graph_attribute = np.loadtxt(f, delimiter=",")
         has_graph_attr = True
 
     # split into sub-graphs using graph indicator
@@ -108,8 +106,10 @@ def _process(name, filepath):
         node_list = [x + 1 for x in node_idx[0]]
 
         sub_graph = graph.subgraph(node_list)
-        sub_graph.graph['label'] = data_graph_label[idx]
-        sub_graph.graph['attribute'] = data_graph_attribute[idx] if has_graph_attr else None
+        sub_graph.graph["label"] = data_graph_label[idx]
+        sub_graph.graph["attribute"] = (
+            data_graph_attribute[idx] if has_graph_attr else None
+        )
         graphs.append(sub_graph)
 
     # pandas.Series of networkx objects
@@ -119,6 +119,36 @@ def _process(name, filepath):
     return TUDataset(graphs, description)
 
 
+class TUDatasetDescription:
+    """Dummy description object."""
+
+    def __init__(self, label=None):
+        """
+        Parameters
+        ----------
+        label: str (optional)
+            The name to use to describe this dataset in reports.
+        """
+        self._label = label or "Unnamed dataset"
+
+    def __eq__(self, other_network_description):
+        """
+        Check that the content of the description (schema) is identical. Label is ignored.
+
+        """
+        if not isinstance(other_network_description, TUDatasetDescription):
+            return False
+        return True
+
+    @property
+    def label(self):
+        """
+        A label that describes the underlying dataset (and children).
+
+        """
+        return self._label
+
+
 class TUDataset(Dataset):
     """
     Class to represent TU network data as a Dataset. Internally, the data
@@ -126,18 +156,21 @@ class TUDataset(Dataset):
 
     """
 
-    _url = r'https://www.chrsmrrs.com/graphkerneldatasets/'
+    _url = r"https://www.chrsmrrs.com/graphkerneldatasets/"
 
     def __init__(self, data, description):
         """
         Parameters
         ----------
         data: pandas.Series
-        description: tapas.datasets.network_description.TUDatasetDescription
+        description: tapas.datasets.TUDatasetDescription
+
         """
         self.data = data
 
-        assert isinstance(description, TUDatasetDescription), 'description needs to be of class DataDescription'
+        assert isinstance(
+            description, TUDatasetDescription
+        ), "description needs to be of class DataDescription"
         self.description = description
 
     @classmethod
@@ -179,9 +212,11 @@ class TUDataset(Dataset):
             A TUDataset.
 
         """
-        if root is None: root = "./"
-        filepath = _download_url(f'{cls._url}/{name}.zip', root)
-        _extract_zip(filepath, root)
+        if root is None:
+            root = "./"
+        filepath = _download_url(f"{cls._url}/{name}.zip", root)
+        with zipfile.ZipFile(filepath, "r") as f:
+            f.extractall(root)
 
         filepath = os.path.join(root, name)
         return _process(name, filepath)
@@ -227,7 +262,7 @@ class TUDataset(Dataset):
 
         return TUDataset(
             data=self.data.sample(n_samples, random_state=random_state),
-            description=self.description
+            description=self.description,
         )
 
     def get_records(self, record_ids):
@@ -246,9 +281,7 @@ class TUDataset(Dataset):
 
         """
         if len(record_ids) == 1:
-            return TURecord(
-                self.data.iloc[record_ids], self.description, record_ids[0]
-            )
+            return TURecord(self.data.iloc[record_ids], self.description, record_ids[0])
         return TUDataset(self.data.iloc[record_ids], self.description)
 
     def drop_records(self, record_ids=[], n=1, in_place=False):
@@ -273,7 +306,8 @@ class TUDataset(Dataset):
         """
         if len(record_ids) == 0:
             record_ids = np.random.choice(
-                self.data.index, size=n, replace=False).tolist()
+                self.data.index, size=n, replace=False
+            ).tolist()
         else:
             record_ids = [self.data.index[i] for i in record_ids]
 
@@ -413,7 +447,7 @@ class TUDataset(Dataset):
         """
         return TUDataset(self.data.copy(), self.description)
 
-    def view(self, columns = None, exclude_columns = None):
+    def view(self, columns=None, exclude_columns=None):
         pass
 
     def __add__(self, other):
@@ -438,10 +472,7 @@ class TUDataset(Dataset):
         # instead of the cleaner (idx, rec).
 
         convert_record = lambda idx_and_rec: TURecord.from_dataset(
-            TUDataset(
-                data=pd.Series([idx_and_rec[1]]),
-                description=self.description
-            )
+            TUDataset(data=pd.Series([idx_and_rec[1]]), description=self.description)
         )
         return map(convert_record, self.data.items())
 

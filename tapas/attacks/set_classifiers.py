@@ -3,13 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..datasets import Dataset, DataDescription, TabularDataset, TabularRecord, TUDataset
+    from ..datasets import Dataset, DataDescription, TabularDataset, TabularRecord
     from ..threat_models import LabelInferenceThreatModel
     from sklearn.base import ClassifierMixin
 
 import numpy as np
-import networkx as nx
-from statistics import mean
 
 from abc import ABC, abstractmethod
 
@@ -23,7 +21,7 @@ class SetClassifier(ABC):
     @abstractmethod
     def fit(self, datasets: list[Dataset], labels: list[int]):
         """
-        Fit classifier to datasets-data.
+        Fit classifier to datasets and labels.
 
         """
 
@@ -155,33 +153,6 @@ class FeatureBasedSetClassifier(SetClassifier):
     def label(self):
         return self._label
 
-
-class NetworkFeature(SetFeature):
-
-    def _average_degree(self, tu_dataset):
-        ave_deg = []
-        for g in tu_dataset.data:
-            res = 0
-            for _, deg in g.degree():
-                res += deg
-            res = res / len(g.degree())
-            ave_deg.append(res)
-        return mean(ave_deg)
-
-    def extract(self, datasets: list[TUDataset]) -> np.array:
-        return np.stack(
-            np.concatenate(
-                [
-                    [mean([nx.average_clustering(g) for g in tu_dataset.data])],
-                    [self._average_degree(tu_dataset)]
-                ]
-            )
-            for tu_dataset in datasets
-        )
-
-    @property
-    def label(self):
-        return "F_Network"
 
 ## We here propose a few possible SetFeature that can be used for attacks.
 
