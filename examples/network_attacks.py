@@ -19,8 +19,10 @@ print("Loading dataset...")
 # Download and load a dataset from TU.
 tu_dataset = tapas.datasets.TUDataset.download_and_read("DD")
 
-# Alternatively:
+## Alternatively, if you already have the files:
 # tu_dataset = tapas.datasets.TUDataset.read("DD", "DD")
+
+## Here are some other possibilities.
 # tu_dataset = tapas.datasets.TUDataset.download_and_read("ENZYMES")
 # tu_dataset = tapas.datasets.TUDataset.download_and_read("MUTAG")
 
@@ -60,9 +62,11 @@ threat_model = tapas.threat_models.TargetedMIA(
 # This extracts (very) basic features from each graph, then aggregates them
 # (mean) for each dataset of graph to obtain simple features.
 
+# from sklearn.ensemble import RandomForestClassifier
 # attacker = tapas.attacks.ShadowModellingAttack(
 #     tapas.attacks.FeatureBasedSetClassifier(
-#         tapas.attacks.BasicNetworkFeature()
+#         features = tapas.attacks.BasicNetworkFeature(),
+#         classifier = RandomForestClassifier(),
 #     ),
 #     label = "NetworkGroundhog"
 # )
@@ -71,11 +75,8 @@ threat_model = tapas.threat_models.TargetedMIA(
 # groups all individual graphs in the dataset in one disconnected graph, then
 # extract graph kernel features from this larger graph.
 
-from sklearn.ensemble import RandomForestClassifier
-# from sklearn.linear_model import LogisticRegression
-
 attacker = tapas.attacks.ShadowModellingAttack(
-    tapas.attacks.ComposedGraphClassifier(classifier = RandomForestClassifier()),
+    tapas.attacks.ComposedGraphClassifier(),
     label = 'ComposedAttack'
 )
 
