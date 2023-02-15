@@ -78,9 +78,9 @@ class TestClosestDistance(TestCase):
         for graph in self.tu_dataset_in.data:
             total_size += len(graph)
             # # plot subgraphs
-            nx.draw(graph, node_size=10)
-            plt.savefig(f"tests/outputs/filename{len(graph)}.png")
-            plt.clf()
+            # nx.draw(graph, node_size=10)
+            # plt.savefig(f"tests/outputs/filename{len(graph)}.png")
+            # plt.clf()
 
         ds = attacker._compose_datasets([self.tu_dataset_in])
         composed_size = len(ds[0])
@@ -89,8 +89,8 @@ class TestClosestDistance(TestCase):
         self.assertEqual(total_size, composed_size)
 
         # # plot composed graph
-        nx.draw(ds[0], node_size=10)
-        plt.savefig("tests/outputs/composed.png")
+        # nx.draw(ds[0], node_size=10)
+        # plt.savefig("tests/outputs/composed.png")
 
     def _make_mia(self, a, b):
         """Helper function to generate a MIA threat model."""
