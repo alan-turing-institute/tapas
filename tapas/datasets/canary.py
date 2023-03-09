@@ -1,5 +1,5 @@
 """A set of utilities to do target selection and canaries."""
-from .dataset import TabularDataset, TabularRecord, DataDescription
+from .tabular import TabularDataset, TabularRecord, TabularDataDescription
 
 
 def create_canary(dataset: TabularDataset):
@@ -67,7 +67,7 @@ def create_canary(dataset: TabularDataset):
         # Add the (potentially modified) new column.
         new_schema.append(new_column)
     # Second, create a dataset with the new description, and the canary from these values.
-    new_description = DataDescription(new_schema, dataset.description.label)
+    new_description = TabularDataDescription(new_schema, dataset.description.label)
     new_dataset = TabularDataset(dataset.data, new_description)
     canary = TabularRecord([canary_values], new_description, "canary")
     return new_dataset, canary

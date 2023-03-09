@@ -7,8 +7,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from tapas.datasets import TabularDataset, TabularRecord, TUDataset
-from tapas.datasets.data_description import DataDescription
+from tapas.datasets import TabularDataset, TabularRecord, TUDataset, TabularDataDescription
 from tapas.threat_models import (
     TargetedMIA,
     TargetedAIA,
@@ -35,7 +34,7 @@ from sklearn.linear_model import LogisticRegression
 
 ## Test for closest-distance.
 
-dummy_data_description = DataDescription(
+dummy_data_description = TabularDataDescription(
     [
         {"name": "a", "type": "countable", "representation": "integer"},
         {"name": "b", "type": "countable", "representation": "integer"},
@@ -160,7 +159,7 @@ class TestClosestDistance(TestCase):
                 ),
                 columns=["a", "b"],
             ),
-            DataDescription(
+            TabularDataDescription(
                 [
                     {"name": "a", "type": "finite", "representation": num_cat},
                     {"name": "b", "type": "countable", "representation": "integer"},
@@ -207,7 +206,7 @@ class TestSetFeatures(TestCase):
         num_records = 20
         num_datasets = 10
         num_finite = 2
-        data_description = DataDescription(
+        data_description = TabularDataDescription(
             [
                 {"name": "a", "type": "real", "representation": "number"},
                 {"name": "b", "type": "real", "representation": "number"},
@@ -252,7 +251,7 @@ class TestSetFeatures(TestCase):
 
     def test_histogram(self):
         """Test that the histogram features work properly."""
-        data_description = DataDescription(
+        data_description = TabularDataDescription(
             [
                 {"name": "a", "type": "real", "representation": "number"},
                 {"name": "b", "type": "finite", "representation": ["x", "y", "z"]},
@@ -283,7 +282,7 @@ class TestSetFeatures(TestCase):
 
     def test_combination(self):
         """Test whether combining feature maps works."""
-        data_description = DataDescription(
+        data_description = TabularDataDescription(
             [
                 {"name": "a", "type": "real", "representation": "number"},
                 {"name": "b", "type": "finite", "representation": ["x", "y", "z"]},
@@ -344,7 +343,7 @@ class TestGroundHog:
                 ),
                 columns=["a", "b"],
             ),
-            DataDescription(
+            TabularDataDescription(
                 [
                     {"name": "a", "type": "real", "representation": "number"},
                     {"name": "b", "type": "finite", "representation": values},

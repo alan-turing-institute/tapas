@@ -8,7 +8,7 @@ generator from scratch.
 import numpy as np
 import pandas as pd
 
-from tapas.datasets import TabularDataset, DataDescription
+from tapas.datasets import TabularDataset, TabularDataDescription
 from tapas.generators import Generator
 from tapas.threat_models import (
     NoBoxKnowledge,
@@ -55,7 +55,7 @@ class NoisyHistogram(Generator):
 
 # We create a simplistic one-dimensional dataset.
 num_categories = 100
-description = DataDescription(
+description = TabularDataDescription(
     [{"name": "a", "type": "finite", "representation": num_categories}],
     label="1-D"
 )

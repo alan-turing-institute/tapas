@@ -8,8 +8,7 @@ import networkx as nx
 
 filterwarnings("ignore")
 
-from tapas.datasets import TabularDataset, TabularRecord, TUDataset, TURecord
-from tapas.datasets.data_description import DataDescription
+from tapas.datasets import TabularDataset, TabularRecord, TabularDataDescription, TUDataset, TURecord
 from tapas.datasets.canary import create_canary
 
 
@@ -20,8 +19,8 @@ class TestDescription(TestCase):
             {"name": "B", "type": "countable", "representation": "integer"},
             {"name": "   ", "type": "finite", "representation": 10},
         ]
-        description_1 = DataDescription(dummy_descr)
-        description_2 = DataDescription(copy.deepcopy(dummy_descr))
+        description_1 = TabularDataDescription(dummy_descr)
+        description_2 = TabularDataDescription(copy.deepcopy(dummy_descr))
         self.assertEqual(description_1, description_2)
 
 

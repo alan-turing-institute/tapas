@@ -18,9 +18,9 @@ data, canary = create_canary(real_data)
 
 canary.set_id(-1)
 
-# For comparison, we are also going to select a random record (0) as target.
-target = data.get_records([0])
-data.drop_records(record_ids=[0], in_place=True)
+# For comparison, we are also going to select two random records (0, 1) as target.
+target = data.get_records([0,1])
+data.drop_records(record_ids=[0,1], in_place=True)
 
 # Since the target is a dataset, we can add the canary record to it to form
 # a dataset of two targets.

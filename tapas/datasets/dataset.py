@@ -1,99 +1,11 @@
 """Classes to represent the data object."""
 
 from abc import ABC, abstractmethod
-import json
-import io
 
 import numpy as np
 import pandas as pd
 
-from .data_description import DataDescription
-from .utils import encode_data, index_split, get_dtype
-
-
-# Helper function for parsing file-like objects.
-def _parse_csv(fp, schema, label=None):
-    """
-    Parse fp into a TabularDataset using schema
-
-    Parameters
-    ----------
-    fp: A file-type object
-    schema: A json schema
-    label: a name to represent this dataset (optional)
-
-    Returns
-    -------
-    TabularDataset
-
-    """
-    ## read_csv does not accept datetime in the dtype argument, so we read dates as strings and
-    ## then convert them.
-    dtypes = {
-        i: get_dtype(col["type"], col["representation"]) for i, col in enumerate(schema)
-    }
-
-    cnames = [col["name"] for col in schema]
-    
-    data = pd.read_csv(fp, header=validate_header(fp, cnames), dtype=dtypes, index_col=None, names=cnames)    
-    
-    ## Convert any date or datetime fields to datetime.
-    for c in [
-        col["name"]
-        for col in schema
-        if col["representation"] == "date" or col["representation"] == "datetime"
-    ]:
-        data[c] = pd.to_datetime(data[c])
-
-    description = DataDescription(schema, label=label)
-    return TabularDataset(data, description)
-
-
-def validate_header(fp, cnames):
-    """
-    Helper function to toggle 'header' argument in pd.read_csv()
-    
-    Reads first row of data. 
-    
-    Raises exception is header exists and it does not match schema.
-    
-    
-
-    Parameters
-    ----------
-    fp: A file-type object
-    cnames: Column names from schema.
-
-    Returns
-    -------
-    an option for 'header' argument in pd.read_csv(). 
-    
-    0 if header exists and it matches cnames.
-    None is header does not exist. 
-
-    """
-    if isinstance(fp, io.StringIO):
-        fp = io.StringIO(fp.getvalue())
-    
-    row0 = pd.read_csv(fp, header=None, index_col=None, nrows=1) 
-    if all(row0.iloc[0].apply(lambda x: isinstance(x, str))):
-        # is a potential header row
-        if (row0.iloc[0] == cnames).all(): 
-            # is the same.
-            return 0
-        else:
-            # is a header row but invalid.
-            invalid=[{'data': r, 'schema': c} for r, c in zip(row0.iloc[0], cnames) if r != c]
-            raise AssertionError(
-                f"Data has header row that does not match schema. Invalid matches:\n {invalid}"
-            )
-    else:
-        # is not a header row. 
-        return None
-
-
-## Classes
-## -------
+from .utils import index_split
 
 
 class Dataset(ABC):
@@ -199,99 +111,45 @@ class Dataset(ABC):
     @property
     def label(self):
         return "Unnamed dataset"
-    
 
 
-class TabularDataset(Dataset):
+class RecordSetDataset(Dataset):
     """
-    Class to represent tabular data as a Dataset. Internally, the tabular data
-    is stored as a Pandas Dataframe and the schema is an array of types.
+    Abstract class to represent datasets that can be represented as an unordered
+    collection of "records", where each user is associated with exactly one
+    record (and vice versa).
+
+    This class provides utility to manipulate such datasets, but does not make
+    assumptions on what records are. Children classes will define these (see,
+    e.g., .tabular.TabularDataset).
+
+    This class assumes that the data can be represented internally as either a
+    Pandas DataFrame or a Pandas Series. Note that the latter can contain
+    arbitrary objects, so this should not be a problem in practice.
 
     """
 
-    def __init__(self, data, description):
+    def __init__(self, data, description, RecordClass):
         """
+        Create a record-set dataset.
+
         Parameters
         ----------
-        data: pandas.DataFrame (or a valid argument for pandas.DataFrame).
-        description: tapas.datasets.data_description.DataDescription
-        label: str (optional)
+        data: pd.Series *or* pd.DataFrame.
+        description: DataDescription object.
+        RecordClass: subclass of self.__class__ to use for individual records.
 
         """
-        if not isinstance(data, pd.DataFrame):
-            data = pd.DataFrame(data, columns = [c['name'] for c in description])
         self.data = data
-        
-        assert isinstance(description,DataDescription), 'description needs to be of class DataDescription'
         self.description = description
+        self.RecordClass = RecordClass
 
-    @classmethod
-    def read_from_string(cls, data, description):
-        """
-        Parameters
-        ----------
-        data: str
-          The csv version of the data
-        description: DataDescription
-
-        Returns
-        -------
-        TabularDataset
-        """
-        return _parse_csv(io.StringIO(data), description.schema, description.label)
-
-    @classmethod
-    def read(cls, filepath, label = None):
-        """
-        Read csv and json files for dataframe and schema respectively.
-
-        Parameters
-        ----------
-        filepath: str
-            Full path to the csv and json, excluding the ``.csv`` or ``.json`` extension.
-            Both files should have the same root name.
-        label: str or None
-            An optional string to represent this dataset.
-
-        Returns
-        -------
-        TabularDataset
-            A TabularDataset.
-
-        """
-        with open(f"{filepath}.json") as f:
-            schema = json.load(f)
-
-        return _parse_csv(f"{filepath}.csv", schema, label or filepath)
-
-    def write_to_string(self):
-        """
-        Return a string holding the dataset (as a csv).
-
-        """
-        # Passing None to to_csv returns the csv as a string
-        return self.data.to_csv(None, index=False)
-
-    def write(self, filepath):
-        """
-        Write data and description to file
-
-        Parameters
-        ----------
-        filepath : str
-            Path where the csv and json file are saved.
-
-        """
-
-        with open(f"{filepath}.json", "w") as fp:
-            json.dump(self.description.schema, fp, indent=4)
-
-        # TODO: Make sure this writes it exactly as needed
-        self.data.to_csv(filepath + ".csv", index=False)
+    # All the .read and .write methods are not implemented by the abstract
+    # class. Implement these for children classes.
 
     def sample(self, n_samples=1, frac=None, random_state=None):
         """
-        Sample a set of records from a TabularDataset object.
+        Sample a set of records from a Dataset object.
 
         Parameters
         ----------
@@ -306,21 +164,21 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset
-            A TabularDataset object with a sample of the records of the original object.
+        Dataset
+            A Dataset object with a sample of the records of the original object.
 
         """
         if frac:
             n_samples = int(frac * len(self))
 
-        return TabularDataset(
+        return self.__class__(
             data=self.data.sample(n_samples, random_state=random_state),
             description=self.description,
         )
 
     def get_records(self, record_ids):
         """
-        Get a record from the TabularDataset object
+        Get a record from the Dataset object
 
         Parameters
         ----------
@@ -329,21 +187,19 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset
-            A TabularDataset object with the record(s).
+        Dataset
+            A Dataset object with the record(s).
 
         """
-
-        # TODO: what if the index is supposed to be a column? an identifier?
         if len(record_ids) == 1:
-            return TabularRecord(
+            return self.RecordClass(
                 self.data.iloc[record_ids], self.description, record_ids[0]
             )
-        return TabularDataset(self.data.iloc[record_ids], self.description)
+        return self.__class__(self.data.iloc[record_ids], self.description)
 
     def drop_records(self, record_ids=[], n=1, in_place=False):
         """
-        Drop records from the TabularDataset object, if record_ids is empty it will drop a random record.
+        Drop records from the Dataset object, if record_ids is empty it will drop a random record.
 
         Parameters
         ----------
@@ -357,8 +213,8 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset or None
-            A new TabularDataset object without the record(s) or None if in_place=True.
+        Dataset or None
+            A new Dataset object without the record(s) or None if in_place=True.
 
         """
         if len(record_ids) == 0:
@@ -378,7 +234,7 @@ class TabularDataset(Dataset):
             self.data = new_data
             return
 
-        return TabularDataset(new_data, self.description)
+        return self.__class__(new_data, self.description)
 
     def add_records(self, records, in_place=False):
         """
@@ -386,28 +242,28 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        records : TabularDataset
-            A TabularDataset object with the record(s) to add.
+        records : Dataset
+            A Dataset object with the record(s) to add.
         in_place : bool
             Bool indicating whether or not to change the dataset in-place or return
             a copy. If True, the dataset is changed in-place. The default is False.
 
         Returns
         -------
-        TabularDataset or None
-            A new TabularDataset object with the record(s) or None if inplace=True.
+        Dataset or None
+            A new Dataset object with the record(s) or None if inplace=True.
 
         """
 
         if in_place:
             assert (
                 self.description == records.description
-            ), "Both datasets must have the same data description"
+            ), "Both datasets must have the same data description."
 
             self.data = pd.concat([self.data, records.data])
             return
 
-        # if not in_place this does the same as the __add__
+        # If not in_place this does the same as __add__.
         return self.__add__(records)
 
     def replace(self, records_in, records_out=[], in_place=False):
@@ -416,8 +272,8 @@ class TabularDataset(Dataset):
 
         Parameters
         ----------
-        records_in : TabularDataset
-            A TabularDataset object with the record(s) to add.
+        records_in : Dataset
+            A Dataset object with the record(s) to add.
         records_out : list(int)
             List of indexes of records to drop.
         in_place : bool
@@ -426,8 +282,8 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        TabularDataset or None
-            A modified TabularDataset object with the replaced record(s) or None if in_place=True..
+        Dataset or None
+            A modified Dataset object with the replaced record(s) or None if in_place=True..
 
         """
         if len(records_out) > 0:
@@ -461,7 +317,7 @@ class TabularDataset(Dataset):
 
         Returns
         -------
-        list(TabularDataset)
+        list(Dataset)
             A lists containing subsets of the data with and without the target record(s).
 
         """
@@ -472,7 +328,7 @@ class TabularDataset(Dataset):
         # Create splits.
         splits = index_split(self.data.shape[0], sample_size, n)
 
-        # Returns a list of TabularDataset subsampled from this dataset.
+        # Returns a list of Dataset subsampled from this dataset.
         subsamples = [self.get_records(train_index) for train_index in splits]
 
         # If required, remove the indices from the dataset.
@@ -484,12 +340,12 @@ class TabularDataset(Dataset):
 
     def empty(self):
         """
-        Create an empty TabularDataset with the same description as the current one.
-        Short-hand for TabularDataset.get_records([]).
+        Create an empty Dataset with the same description as the current one.
+        Short-hand for Dataset.get_records([]).
 
         Returns
         -------
-        TabularDataset
+        Dataset
             Empty tabular dataset.
 
         """
@@ -497,81 +353,30 @@ class TabularDataset(Dataset):
 
     def copy(self):
         """
-        Create a TabularDataset that is a deep copy of this one. In particular,
+        Create a Dataset that is a deep copy of this one. In particular,
         the underlying data is copied and can thus be modified freely.
 
         Returns
         -------
-        TabularDataset
-            A copy of this TabularDataset.
+        Dataset
+            A copy of this Dataset.
 
         """
-        return TabularDataset(self.data.copy(), self.description)
-
-    def view(self, columns = None, exclude_columns = None):
-        """
-        Create a TabularDataset object that contains a subset of the columns of
-        this TabularDataset. The resulting object only has a copy of the data,
-        and can thus be modified without affecting the original data.
-
-        Parameters
-        ----------
-        Exactly one of `columns` and `exclude_columns` must be defined.
-
-        columns: list, or None
-            The columns to include in the view.
-        exclude_columns: list, or None
-            The columns to exclude from the view, with all other columns included.
-
-        Returns
-        -------
-        TabularDataset
-            A subset of this data, restricted to some columns.
-
-        """
-        assert (
-            columns is not None or exclude_columns is not None
-        ), "Empty view: specify either columns or exclude_columns."
-        assert (
-            columns is None or exclude_columns is None
-        ), "Overspecified view: only one of columns and exclude_columns can be given."
-
-        if exclude_columns is not None:
-            columns = [c for c in self.description.columns if c not in exclude_columns]
-
-        return TabularDataset(self.data[columns], self.description.view(columns))
-
-    @property
-    def as_numeric(self):
-        """
-        Encodes this dataset as a np.array, where numeric values are kept as is
-        and categorical values are 1-hot encoded. This is only computed once
-        (for efficiency reasons), so beware of modifying TabularDataset after
-        using this property.
-
-        The columns are kept in the order of the description, with categorical
-        variables encoded over several contiguous columns.
-
-        Returns
-        -------
-        np.array
-
-        """
-        return encode_data(self)
+        return self.__class__(self.data.copy(), self.description)
 
     def __add__(self, other):
         """
-        Adding two TabularDataset objects with the same data description together
+        Adding two Dataset objects with the same data description together
 
         Parameters
         ----------
-        other : (TabularDataset)
-            A TabularDataset object.
+        other : (Dataset)
+            A Dataset object.
 
         Returns
         -------
-        TabularDataset
-            A TabularDataset object with the addition of two initial objects.
+        Dataset
+            A Dataset object with the addition of two initial objects.
 
         """
 
@@ -579,7 +384,7 @@ class TabularDataset(Dataset):
             self.description == other.description
         ), "Both datasets must have the same data description"
 
-        return TabularDataset(pd.concat([self.data, other.data]), self.description)
+        return self.__class__(pd.concat([self.data, other.data]), self.description)
 
     def __iter__(self):
         """
@@ -588,20 +393,25 @@ class TabularDataset(Dataset):
         Returns
         -------
         iterator
-            An iterator object that iterates over individual records, as TabularRecords.
+            An iterator object that iterates over individual records, as Records.
 
         """
+        # Depending on the internal representation, a record is converted differently.
+        if isinstance(self.data, pd.DataFrame):
+            _convert_data = lambda record: record.to_frame().T
+            data_iterator = self.data.iterrows()
+        else:
+            _convert_data = lambda record: pd.Series([record])
+            data_iterator = self.data.items()
         # iterrows() returns tuples (index, record), and map applies a 1-argument
         # function to the iterable it is given, hence why we have idx_and_rec
         # instead of the cleaner (idx, rec).
-        convert_record = lambda idx_and_rec: TabularRecord.from_dataset(
-            TabularDataset(
-                # iterrows() outputs pd.Series rather than .DataFrame, so we convert here:
-                data=idx_and_rec[1].to_frame().T,
-                description=self.description,
-            )
+        convert_record = lambda idx_and_rec: self.RecordClass(
+            data=_convert_data(idx_and_rec[1]),
+            description=self.description,
+            identifier=idx_and_rec[0],
         )
-        return map(convert_record, self.data.iterrows())
+        return map(convert_record, data_iterator)
 
     def __len__(self):
         """
@@ -618,7 +428,7 @@ class TabularDataset(Dataset):
     def __contains__(self, item):
         """
         Determines the truth value of `item in self`. The only items considered
-        to be in a TabularDataset are the rows, treated as 1-row TabularDatasets.
+        to be in a Dataset are the rows, treated as 1-row Datasets.
 
         Parameters
         ----------
@@ -631,70 +441,67 @@ class TabularDataset(Dataset):
             Whether or not item is considered to be contained in self.
 
         """
-        if not isinstance(item, TabularDataset):
+        if not isinstance(item, self.__class__):
             raise ValueError(
-                f"Only TabularDatasets can be checked for containment, not {type(item)}"
+                f"Only {str(self.__class__)} can be checked for containment, not {type(item)}."
             )
         if len(item) != 1:
             raise ValueError(
-                f"Only length-1 TabularDatasets can be checked for containment, got length {len(item)})"
+                f"Only length-1 Datasets can be checked for containment, got length {len(item)})."
             )
-
-        return (self.data == item.data.iloc[0]).all(axis=1).any()
+        # Check if a record matches the item (flattening the result for pd.DataFrame).
+        are_records_equal = self.data == item.data.iloc[0]
+        if len(are_records_equal.shape) > 1:
+            are_records_equal = are_records_equal.all(axis=1)
+        return are_records_equal.any()
 
     @property
     def label(self):
         return self.description.label
-    
 
 
-class TabularRecord(TabularDataset):
-    """
-    Class for tabular record object. The tabular data is a Pandas Dataframe with 1 row
-    and the data description is a dictionary.
-
-    """
+class Record(Dataset):
+    """Generic class holding the data of a user record."""
 
     def __init__(self, data, description, identifier):
-        super().__init__(data, description)
-        # id of the object based on their index on the original dataset
-        self.id = identifier
-
-    @classmethod
-    def from_dataset(cls, tabular_row):
         """
-        Create a TabularRecord object from a TabularDataset object containing 1 record.
+        Create a Record (children of Dataset).
 
         Parameters
         ----------
-        tabular_row: TabularDataset
-            A TabularDataset object containing one record.
+        data: Dataset.
+            Carried over from Dataset.
+        description: Description
+            Carried over from Dataset.
+        identified: int or str
+            A unique identifier for this record in the original dataset.
+
+        """
+        super().__init__(data, description)
+        self.id = identifier
+
+    def copy(self):
+        """
+        Create a Record that is a deep copy of this one. In particular,
+        the underlying data is copied and can thus be modified freely.
 
         Returns
         -------
-        TabularRecord
-            A TabularRecord object
+        Record: A copy of this Record.
 
         """
-        if tabular_row.data.shape[0] != 1:
-            raise AssertionError(
-                f"Parent TabularDataset object must contain only 1 record, not {tabular_row.data.shape[0]}"
-            )
+        return self.__class__(self.data.copy(), self.description, self.id)
 
-        return cls(
-            tabular_row.data, tabular_row.description, tabular_row.data.index.values[0]
-        )
-
-    def get_id(self, tabular_dataset):
+    def get_id(self, dataset):
         """
 
-        Check if the record is found on a given TabularDataset and return the object id (index) on that
+        Check if the record is found on a given Dataset and return the object id (index) on that
         dataset.
 
         Parameters
         ----------
-        tabular_dataset: TabularDataset
-            A TabularDataset object.
+        dataset: Dataset
+            Dataset that contains this record.
 
         Returns
         -------
@@ -703,7 +510,7 @@ class TabularRecord(TabularDataset):
 
         """
 
-        merged = pd.merge(tabular_dataset.data, self.data, how="outer", indicator=True)
+        merged = pd.merge(dataset.data, self.data, how="outer", indicator=True)
 
         if merged[merged["_merge"] == "both"].shape[0] != 1:
             raise AssertionError(
@@ -714,12 +521,12 @@ class TabularRecord(TabularDataset):
 
     def set_id(self, identifier):
         """
-        Overwrite the id attribute on the TabularRecord object.
+        Overwrite the id attribute on the Record.
 
         Parameters
         ----------
         identifier: int or str
-            An id value to be assigned to the TabularRecord id attribute
+            An id value to be assigned to the Record id attribute
 
         Returns
         -------
@@ -731,36 +538,16 @@ class TabularRecord(TabularDataset):
 
         return
 
-    def set_value(self, column, value):
-        """
-        Overwrite the value of attribute `column` of the TabularRecord object.
-
-        Parameters
-        ----------
-        column: str
-            The identifier of the attribute to be replaced.
-        value: (value set of column)
-            The value to set the `column` of the record.
-
-        Returns
-        -------
-        None
-
-        """
-        self.data[column] = value
-
-    def copy(self):
-        """
-        Create a TabularRecord that is a deep copy of this one. In particular,
-        the underlying data is copied and can thus be modified freely.
-
-        Returns
-        -------
-        TabularRecord
-            A copy of this TabularRecord.
-
-        """
-        return TabularRecord(self.data.copy(), self.description, self.id)
+    def __add__(self, other):
+        if isinstance(other, Record):
+            # This is not allowed: records added together create a dataset, and
+            # thus the result is not of type self.__class__. We explicitly ask
+            # you to cast this record to a dataset of relevant type.
+            raise Exception(
+                "Adding two records is not allowed. Convert either to Dataset first."
+            )
+        # The other is a Dataset, and so supports addition with a recod.
+        return other.__add__(self)
 
     @property
     def label(self):
@@ -771,3 +558,41 @@ class TabularRecord(TabularDataset):
 
         """
         return str(self.id)
+
+
+class DataDescription:
+    """
+    Describes the content of a record (and a dataset).
+
+    By default, this just holds the label for the dataset (and subsets of the
+    datasets), and is shared by all datasets from the same source. Additional
+    functionalities can be added in children classes.
+
+    """
+
+    def __init__(self, label=None):
+        """
+        Parameters
+        ----------
+        label: str (optional)
+            The name to use to describe this dataset in reports.
+        """
+        self._label = label or "Unnamed dataset"
+
+    def __eq__(self, other_description):
+        """
+        Check that the descriptions are equal. Since there is no data, this is
+        based only on label.
+
+        """
+        if not isinstance(other_description, DataDescription):
+            return False
+        return self.label == other_description.label
+
+    @property
+    def label(self):
+        """
+        A label that describes the underlying dataset (and children).
+
+        """
+        return self._label

@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tapas.datasets import TabularDataset, TabularRecord
-from tapas.datasets.data_description import DataDescription
+from tapas.datasets import TabularDataset, TabularRecord, TabularDataDescription
 from tapas.threat_models import (
     ThreatModel,
     TargetedMIA,
@@ -21,7 +20,7 @@ from tapas.threat_models import (
 )
 from tapas.generators import Raw, Generator
 
-dummy_data_description = DataDescription(
+dummy_data_description = TabularDataDescription(
     [
         {"name": "a", "type": "countable", "description": "integer"},
         {"name": "b", "type": "countable", "description": "integer"},
