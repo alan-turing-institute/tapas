@@ -453,6 +453,10 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         if use_memory:
             mem_datasets, mem_labels = self._memory[training]
             num_samples -= len(mem_datasets)
+            if num_samples <= 0:
+                # Restrict to only the first entries.
+                mem_datasets = mem_datasets[:num_samples]
+                mem_labels = mem_labels[:num_samples]
         else:
             mem_datasets = []
             mem_labels = []

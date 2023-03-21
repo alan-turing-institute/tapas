@@ -467,6 +467,10 @@ class TabularDataset(Dataset):
             self
         ), f"Cannot create subsets larger than original dataset, sample_size max: {len(self)} got {sample_size}"
 
+        # Sample size 0 is allowed -- return empty datasets then.
+        if sample_size == 0:
+            return [self.empty() for _ in range(n)]
+
         # Create splits.
         splits = index_split(self.data.shape[0], sample_size, n)
 

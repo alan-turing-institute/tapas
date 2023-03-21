@@ -17,7 +17,7 @@ Sphinx = {version = "^4.5.0", optional = true}
 sphinx-rtd-theme = {version = "^1.0.0", optional = true}
 tqdm = "^4.64.0"
 setuptools = "^65.5.0"
-reprosyn = {git = "https://github.com/alan-turing-institute/reprosyn", rev = "2b1f29ab582ca96d9adc8992bd8650f79248e5d1"}
+reprosyn = {git = "https://github.com/alan-turing-institute/reprosyn", rev = "ec2a3ecf0e076a810322d2a0c6771e9420e9209a"}
 jupyterlab = "^3.5.0"
 nbclient = "0.5.13"
 

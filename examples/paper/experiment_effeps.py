@@ -1,4 +1,4 @@
-"""Script that runs a membership inference attack on three different generators."""
+"""Script that attempts to estimate the effective epsilon of a generator."""
 
 import tapas
 import tapas.datasets
