@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from typing import Callable
 
 from abc import ABC, abstractmethod
+import asyncio
 from .base_classes import TrainableThreatModel
 
 
@@ -232,7 +233,7 @@ class AttackerKnowledgeOnGenerator:
     """
 
     @abstractmethod
-    def generate(self, training_dataset: Dataset, training_mode: bool = True):
+    async def generate(self, training_dataset: Dataset, training_mode: bool = True):
         """Generate a synthetic dataset from a given training dataset."""
         pass
 
@@ -263,7 +264,7 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
         self.generator = generator
         self.num_synthetic_records = num_synthetic_records
 
-    def generate(self, training_dataset: Dataset, training_mode: bool = True):
+    async def generate(self, training_dataset: Dataset, training_mode: bool = True):
         return self.generator(training_dataset, self.num_synthetic_records)
 
     @property
@@ -283,7 +284,7 @@ class NoBoxKnowledge(AttackerKnowledgeOnGenerator):
         self.generator = generator
         self.num_synthetic_records = num_synthetic_records
 
-    def generate(self, training_dataset: Dataset, training_mode: bool = True):
+    async def generate(self, training_dataset: Dataset, training_mode: bool = True):
         if training_mode:
             raise Exception("Cannot generate datasets in no-box setup.")
         return self.generator(training_dataset, self.num_synthetic_records)
@@ -333,7 +334,7 @@ class UncertainBoxKnowledge(AttackerKnowledgeOnGenerator):
         self.prior = prior
         self.final_parameters = final_parameters
 
-    def generate(self, training_dataset: Dataset, training_mode: bool):
+    async def generate(self, training_dataset: Dataset, training_mode: bool):
         if training_mode or self.final_parameters is None:
             kwargs = self.prior()
         else:
@@ -466,10 +467,14 @@ class LabelInferenceThreatModel(TrainableThreatModel):
                 num_samples, training=training
             )
             # Then, generate synthetic data from each original dataset.
-            gen_datasets = [
-                self.atk_know_gen.generate(ds, training_mode=training)
-                for ds in self.iterator_tracker(training_datasets)
-            ]
+            gen_datasets = asyncio.get_event_loop().run_until_complete(
+                asyncio.gather(
+                    *[
+                        self.atk_know_gen.generate(ds, training_mode=training)
+                        for ds in self.iterator_tracker(training_datasets)
+                    ]
+                )
+            )
             # Add the entries generated to the memory.
             if use_memory:
                 self._memory[training] = (

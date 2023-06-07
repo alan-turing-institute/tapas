@@ -1,5 +1,6 @@
 """A test for threat models."""
 
+import asyncio
 import os
 from unittest import TestCase
 
@@ -265,10 +266,10 @@ class TestAttackerKnowledge(TestCase):
 
     def test_no_box(self):
         gen = NoBoxKnowledge(Raw(), 2)
+        event_loop = asyncio.get_event_loop()
         with pytest.raises(Exception) as err:
-            gen(dataset, training_mode=True)
-        gen(dataset, training_mode=False)
-
+            event_loop.run_until_complete(gen(dataset, training_mode=True))
+        event_loop.run_until_complete(gen(dataset, training_mode=False))
 
     def test_uncertain_box(self):
         # First, define a silly 1-dimensional generator.
@@ -282,8 +283,13 @@ class TestAttackerKnowledge(TestCase):
         gen = UncertainBoxKnowledge(
             Replicator(), 1, lambda: {"mean": np.random.normal()}, {"mean": 117}
         )
-        records_train = [gen(None, training_mode = True) for _ in range(1000)]
-        records_test = [gen(None, training_mode = False) for _ in range(1000)]
+        event_loop = asyncio.get_event_loop()
+        records_train = event_loop.run_until_complete(
+            asyncio.gather(*[gen(None, training_mode=True) for _ in range(1000)])
+        )
+        records_test = event_loop.run_until_complete(
+            asyncio.gather(*[gen(None, training_mode=False) for _ in range(1000)])
+        )
         self.assertTrue(np.mean(records_train) < 4)  # Unlikely to fail.
         self.assertTrue(np.std(records_train) < 2)
         for x in records_test:
