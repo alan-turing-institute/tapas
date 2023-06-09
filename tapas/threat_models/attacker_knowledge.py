@@ -267,7 +267,6 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
     def generate(self, training_dataset: Dataset, training_mode: bool = True):
         return self.generator(training_dataset, self.num_synthetic_records)
 
-
     @property
     def label(self):
         return self.generator.label

@@ -25,6 +25,8 @@ class Generator(ABC):
         pass
 
     # The call method should map a dataset to a synthetic dataset.
+    # Subclasses can implement __call__ as a function or a coroutine. If coroutine is
+    # used then concurrency should be enabled in the threat model.
     def __call__(self, dataset, num_samples, **kwargs):
         self.fit(dataset, **kwargs)
         return self.generate(num_samples)

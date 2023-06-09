@@ -308,8 +308,8 @@ class TestAttackerKnowledge(TestCase):
         gen = UncertainBoxKnowledge(
             Replicator(), 1, lambda: {"mean": np.random.normal()}, {"mean": 117}
         )
-        records_train = [gen(None, training_mode=True) for _ in range(1000)]
-        records_test = [gen(None, training_mode=False) for _ in range(1000)]
+        records_train = [gen(None, training_mode = True) for _ in range(1000)]
+        records_test = [gen(None, training_mode = False) for _ in range(1000)]
         self.assertTrue(np.mean(records_train) < 4)  # Unlikely to fail.
         self.assertTrue(np.std(records_train) < 2)
         for x in records_test:
