@@ -22,6 +22,16 @@ from tapas.threat_models import (
 )
 from tapas.generators import Raw, Generator
 
+class RawConcurrent(Raw):
+    """A generator that's like Raw, but uses a coroutine to return results async."""
+
+    async def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    @property
+    def label(self):
+        return "RawConcurrent"
+
 dummy_data_description = DataDescription(
     [
         {"name": "a", "type": "countable", "description": "integer"},
@@ -44,19 +54,23 @@ knowledge_on_data = AuxiliaryDataKnowledge(
     dataset, auxiliary_split=0.5, num_training_records=2
 )
 knowledge_on_sdg = BlackBoxKnowledge(Raw(), num_synthetic_records=None)
+knowledge_on_sdg_concurrent = BlackBoxKnowledge(RawConcurrent(), num_synthetic_records=None)
 
 
 class TestMIA(TestCase):
     """Test the membership-inference attack."""
 
-    def _test_labelling_helper(self, generate_pairs, replace_target):
+    def _test_labelling_helper(self, generate_pairs, replace_target, use_concurrency):
         """Test whether the datasets are correctly labelled."""
+        atk_know = knowledge_on_sdg_concurrent if use_concurrency else knowledge_on_sdg
+        num_concurrent =  5 if use_concurrency else 1
         mia = TargetedMIA(
             knowledge_on_data,
             target_record,
-            knowledge_on_sdg,
+            atk_know,
             generate_pairs=generate_pairs,
             replace_target=replace_target,
+            num_concurrent=num_concurrent,
         )
         self.assertEqual(mia.multiple_label_mode, False)
         # Check that we generate the correct number of samples.
@@ -72,16 +86,28 @@ class TestMIA(TestCase):
             self.assertEqual(target_record in ds, target_in)
 
     def test_labelling_default(self):
-        self._test_labelling_helper(False, False)
+        self._test_labelling_helper(False, False, False)
 
     def test_labelling_pairs(self):
-        self._test_labelling_helper(True, False)
+        self._test_labelling_helper(True, False, False)
 
     def test_labelling_replace(self):
-        self._test_labelling_helper(False, True)
+        self._test_labelling_helper(False, True, False)
 
     def test_labelling_replace_pairs(self):
-        self._test_labelling_helper(True, True)
+        self._test_labelling_helper(True, True, False)
+
+    def test_labelling_default_concurrent(self):
+        self._test_labelling_helper(False, False, True)
+
+    def test_labelling_pairs_concurrent(self):
+        self._test_labelling_helper(True, False, True)
+
+    def test_labelling_replace_concurrent(self):
+        self._test_labelling_helper(False, True, True)
+
+    def test_labelling_replace_pairs_concurrent(self):
+        self._test_labelling_helper(True, True, True)
 
 
 class TestMIAMultipleTargets(TestCase):
@@ -266,10 +292,9 @@ class TestAttackerKnowledge(TestCase):
 
     def test_no_box(self):
         gen = NoBoxKnowledge(Raw(), 2)
-        event_loop = asyncio.get_event_loop()
         with pytest.raises(Exception) as err:
-            event_loop.run_until_complete(gen(dataset, training_mode=True))
-        event_loop.run_until_complete(gen(dataset, training_mode=False))
+            gen(dataset, training_mode=True)
+        gen(dataset, training_mode=False)
 
     def test_uncertain_box(self):
         # First, define a silly 1-dimensional generator.
@@ -283,13 +308,8 @@ class TestAttackerKnowledge(TestCase):
         gen = UncertainBoxKnowledge(
             Replicator(), 1, lambda: {"mean": np.random.normal()}, {"mean": 117}
         )
-        event_loop = asyncio.get_event_loop()
-        records_train = event_loop.run_until_complete(
-            asyncio.gather(*[gen(None, training_mode=True) for _ in range(1000)])
-        )
-        records_test = event_loop.run_until_complete(
-            asyncio.gather(*[gen(None, training_mode=False) for _ in range(1000)])
-        )
+        records_train = [gen(None, training_mode=True) for _ in range(1000)]
+        records_test = [gen(None, training_mode=False) for _ in range(1000)]
         self.assertTrue(np.mean(records_train) < 4)  # Unlikely to fail.
         self.assertTrue(np.std(records_train) < 2)
         for x in records_test:

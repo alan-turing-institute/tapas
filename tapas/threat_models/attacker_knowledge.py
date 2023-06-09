@@ -13,7 +13,7 @@ number of synthetic records, but can be extended to more.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..attacks import Attack
@@ -233,7 +233,7 @@ class AttackerKnowledgeOnGenerator:
     """
 
     @abstractmethod
-    async def generate(self, training_dataset: Dataset, training_mode: bool = True):
+    def generate(self, training_dataset: Dataset, training_mode: bool = True):
         """Generate a synthetic dataset from a given training dataset."""
         pass
 
@@ -264,8 +264,9 @@ class BlackBoxKnowledge(AttackerKnowledgeOnGenerator):
         self.generator = generator
         self.num_synthetic_records = num_synthetic_records
 
-    async def generate(self, training_dataset: Dataset, training_mode: bool = True):
+    def generate(self, training_dataset: Dataset, training_mode: bool = True):
         return self.generator(training_dataset, self.num_synthetic_records)
+
 
     @property
     def label(self):
@@ -284,7 +285,7 @@ class NoBoxKnowledge(AttackerKnowledgeOnGenerator):
         self.generator = generator
         self.num_synthetic_records = num_synthetic_records
 
-    async def generate(self, training_dataset: Dataset, training_mode: bool = True):
+    def generate(self, training_dataset: Dataset, training_mode: bool = True):
         if training_mode:
             raise Exception("Cannot generate datasets in no-box setup.")
         return self.generator(training_dataset, self.num_synthetic_records)
@@ -334,7 +335,7 @@ class UncertainBoxKnowledge(AttackerKnowledgeOnGenerator):
         self.prior = prior
         self.final_parameters = final_parameters
 
-    async def generate(self, training_dataset: Dataset, training_mode: bool):
+    def generate(self, training_dataset: Dataset, training_mode: bool):
         if training_mode or self.final_parameters is None:
             kwargs = self.prior()
         else:
@@ -350,10 +351,19 @@ class UncertainBoxKnowledge(AttackerKnowledgeOnGenerator):
 # where the attacker aims to infer the "label" of the private dataset. The
 # label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
 
-# This is not a lambda for pickling purposes.
-def _silent_iterator(x):
-    """Identity function, equivalent to lambda x: x."""
-    return x
+class SilentIterator():
+    """
+    SilentIterator implements the interface expected of iteration trackers, but does
+    nothing.
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def update(self, *args, **kwargs):
+        pass
+
+    def close(self, *args, **kwargs):
+        pass
 
 
 class LabelInferenceThreatModel(TrainableThreatModel):
@@ -380,8 +390,9 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         attacker_knowledge_data: AttackerKnowledgeWithLabel,
         attacker_knowledge_generator: AttackerKnowledgeOnGenerator,
         memorise_datasets=True,
-        iterator_tracker: Callable[[list], Iterable] = None,
+        iterator_tracker: Optional[type] = None,
         num_labels: int = 1,
+        num_concurrent: int = 1,
     ):
         """
         Generate a Label-Inference Threat Model.
@@ -395,12 +406,14 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             The knowledge on the generator available to the attacker.
         memorise_datasets: boolean, default True
             Whether to memoise the synthetic datasets generated,
-        iterator_tracker: Callable list L -> Iterable over L.
-            A callable used to track iterations. The method __next__ is called
-            whenever a dataset needs to be generated. This can be used to track
-            progress, e.g. with tqdm. Default is (silent).
-            Note that this iterator is only called for synthetic data generation,
-            which is often the bottleneck, and not training data generation.
+        iterator_tracker: type.
+            A class used to track iterations. The constructor should take the keyword
+            argument `total` that is the length of the iterable to track. Instances
+            should have methods `update(n: int)` and `close()` to mark iterations done
+            and perform clean up. iterator_tracker can be used to track progress, e.g.
+            with tqdm. Default is a silent tracker that does nothing. Note that this
+            tracker is only used for synthetic data generation, which is often the
+            bottleneck, and not training data generation.
         num_labels: int, default 1
             Number of labels output by attacker_knowledge_data. If >1, the
             labels are disaggregated and treated as multiple indepedent labels.
@@ -408,23 +421,77 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             as a threat model against any one label at a time. This mode exists
             for efficiency reasons, allowing the same synthetic datasets to be
             reused for several threat models.
-
+        num_concurrent: int, default 1
+            Number of samples to generate concurrently when creating training and
+            testing data. The implementation uses asyncio. Note that the computations
+            are not run in parallel but rather concurrently in an event loop. Having
+            num_concurrent > 1 is only useful if generating synthetic data is I/O heavy
+            and uses coroutines and `await`s.
         """
         self.atk_know_data = attacker_knowledge_data
         self.atk_know_gen = attacker_knowledge_generator
         # Also, handle the memoisation to prevent recomputing datasets.
         self.memorise_datasets = memorise_datasets
-        self.iterator_tracker = iterator_tracker or _silent_iterator
+        self.iterator_tracker = iterator_tracker or SilentIterator
         # maps training = True/False -> list of datasets, list of labels.
         self._memory = {True: ([], []), False: ([], [])}
         # Multiple-label mode.
         self.num_labels = num_labels
+        self.num_concurrent = num_concurrent
         self.multiple_label_mode = num_labels > 1
         if self.multiple_label_mode:
             # Multiple-label mode: all interactions with this object occur as
             # if there was only one label: the `self.current_label`th entry
             # in the label vector returned by samples.
             self.current_label = 0
+
+    async def _async_generate_data(self, training_datasets: list[Dataset], training:
+                                   bool) -> list[Dataset]:
+        """Generate synthetic data running multiple samples concurrently.
+
+        Parameters
+        ----------
+        training_datasets: list[Dataset]
+            The original datasets based on which to generate synthetic data.
+        training: bool
+            Whether this is training of testing data.
+        """
+        tracker = self.iterator_tracker(total=len(training_datasets))
+        semaphore = asyncio.Semaphore(self.num_concurrent)
+
+        async def generate(ds):
+            async with semaphore:
+                result = self.atk_know_gen.generate(ds, training_mode=training)
+                # We might have gotten a result or a future for a result, handle both.
+                try:
+                    result = await result
+                except TypeError:
+                    pass
+                tracker.update(1)
+                return result
+
+        tasks = [generate(ds) for ds in training_datasets]
+        gen_datasets = await asyncio.gather(*tasks)
+        tracker.close()
+        return gen_datasets
+
+    def _sync_generate_data(self, training_datasets: list[Dataset], training: bool) -> list[Dataset]:
+        """Generate synthetic data synchronously.
+
+        Parameters
+        ----------
+        training_datasets: list[Dataset]
+            The original datasets based on which to generate synthetic data.
+        training: bool
+            Whether this is training of testing data.
+        """
+        tracker = self.iterator_tracker(total=len(training_datasets))
+        gen_datasets = []
+        for ds in training_datasets:
+            gen_datasets.append(self.atk_know_gen.generate(ds, training_mode=training))
+            tracker.update(1)
+        tracker.close()
+        return gen_datasets
 
     def _generate_samples(
         self, num_samples: int, training: bool = True, ignore_memory: bool = False,
@@ -467,14 +534,12 @@ class LabelInferenceThreatModel(TrainableThreatModel):
                 num_samples, training=training
             )
             # Then, generate synthetic data from each original dataset.
-            gen_datasets = asyncio.get_event_loop().run_until_complete(
-                asyncio.gather(
-                    *[
-                        self.atk_know_gen.generate(ds, training_mode=training)
-                        for ds in self.iterator_tracker(training_datasets)
-                    ]
+            if self.num_concurrent > 1:
+                gen_datasets = asyncio.get_event_loop().run_until_complete(
+                    self._async_generate_data(training_datasets, training)
                 )
-            )
+            else:
+                gen_datasets = self._sync_generate_data(training_datasets, training)
             # Add the entries generated to the memory.
             if use_memory:
                 self._memory[training] = (

@@ -160,7 +160,8 @@ class TargetedMIA(LabelInferenceThreatModel):
         generate_pairs: bool = True,
         replace_target: bool = False,
         memorise_datasets: bool = True,
-        iterator_tracker: Callable[[list], Iterable] = None,
+        iterator_tracker: Option[type] = None,
+        num_concurrent: int = 1,
     ):
         LabelInferenceThreatModel.__init__(
             self,
@@ -171,6 +172,7 @@ class TargetedMIA(LabelInferenceThreatModel):
             memorise_datasets,
             iterator_tracker=iterator_tracker,
             num_labels=len(target_record),
+            num_concurrent=num_concurrent,
         )
         # Save the target recordS, and the current record (0).
         if self.multiple_label_mode:
