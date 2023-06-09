@@ -350,11 +350,13 @@ class UncertainBoxKnowledge(AttackerKnowledgeOnGenerator):
 # where the attacker aims to infer the "label" of the private dataset. The
 # label is defined by the attacker's knowledge being AttackerKnowledgeWithLabel.
 
-class SilentIterator():
+
+class SilentIterator:
     """
     SilentIterator implements the interface expected of iteration trackers, but does
     nothing.
     """
+
     def __init__(self, *args, **kwargs):
         pass
 
@@ -444,8 +446,9 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             # in the label vector returned by samples.
             self.current_label = 0
 
-    async def _async_generate_data(self, training_datasets: list[Dataset], training:
-                                   bool) -> list[Dataset]:
+    async def _async_generate_data(
+        self, training_datasets: list[Dataset], training: bool
+    ) -> list[Dataset]:
         """Generate synthetic data running multiple samples concurrently.
 
         Parameters
@@ -474,7 +477,9 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         tracker.close()
         return gen_datasets
 
-    def _sync_generate_data(self, training_datasets: list[Dataset], training: bool) -> list[Dataset]:
+    def _sync_generate_data(
+        self, training_datasets: list[Dataset], training: bool
+    ) -> list[Dataset]:
         """Generate synthetic data synchronously.
 
         Parameters
@@ -493,10 +498,13 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         return gen_datasets
 
     def _generate_samples(
-        self, num_samples: int, training: bool = True, ignore_memory: bool = False,
+        self,
+        num_samples: int,
+        training: bool = True,
+        ignore_memory: bool = False,
     ) -> tuple[list[Dataset], list[bool]]:
         """
-        Internal method to generate samples for training or testing. This outputs 
+        Internal method to generate samples for training or testing. This outputs
         two lists, the first of synthetic datasets and the second of labels (1 if
         the target is in the training dataset used to produce the corresponding
         dataset, and 0 otherwise).

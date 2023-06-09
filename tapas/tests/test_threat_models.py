@@ -22,6 +22,7 @@ from tapas.threat_models import (
 )
 from tapas.generators import Raw, Generator
 
+
 class RawConcurrent(Raw):
     """A generator that's like Raw, but uses a coroutine to return results async."""
 
@@ -31,6 +32,7 @@ class RawConcurrent(Raw):
     @property
     def label(self):
         return "RawConcurrent"
+
 
 dummy_data_description = DataDescription(
     [
@@ -54,7 +56,9 @@ knowledge_on_data = AuxiliaryDataKnowledge(
     dataset, auxiliary_split=0.5, num_training_records=2
 )
 knowledge_on_sdg = BlackBoxKnowledge(Raw(), num_synthetic_records=None)
-knowledge_on_sdg_concurrent = BlackBoxKnowledge(RawConcurrent(), num_synthetic_records=None)
+knowledge_on_sdg_concurrent = BlackBoxKnowledge(
+    RawConcurrent(), num_synthetic_records=None
+)
 
 
 class TestMIA(TestCase):
@@ -63,7 +67,7 @@ class TestMIA(TestCase):
     def _test_labelling_helper(self, generate_pairs, replace_target, use_concurrency):
         """Test whether the datasets are correctly labelled."""
         atk_know = knowledge_on_sdg_concurrent if use_concurrency else knowledge_on_sdg
-        num_concurrent =  5 if use_concurrency else 1
+        num_concurrent = 5 if use_concurrency else 1
         mia = TargetedMIA(
             knowledge_on_data,
             target_record,
