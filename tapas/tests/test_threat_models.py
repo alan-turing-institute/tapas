@@ -64,9 +64,12 @@ knowledge_on_sdg_concurrent = BlackBoxKnowledge(
 class TestMIA(TestCase):
     """Test the membership-inference attack."""
 
-    def _test_labelling_helper(self, generate_pairs, replace_target, use_concurrency):
+    def _test_labelling_helper(self, generate_pairs, replace_target, async_generator, use_concurrency):
         """Test whether the datasets are correctly labelled."""
-        atk_know = knowledge_on_sdg_concurrent if use_concurrency else knowledge_on_sdg
+        if not async_generator and use_concurrency:
+            # This combination of parameters doesn't make sense.
+            return None
+        atk_know = knowledge_on_sdg_concurrent if async_generator else knowledge_on_sdg
         num_concurrent = 5 if use_concurrency else 1
         mia = TargetedMIA(
             knowledge_on_data,
@@ -90,28 +93,52 @@ class TestMIA(TestCase):
             self.assertEqual(target_record in ds, target_in)
 
     def test_labelling_default(self):
-        self._test_labelling_helper(False, False, False)
+        self._test_labelling_helper(False, False, False, False)
 
     def test_labelling_pairs(self):
-        self._test_labelling_helper(True, False, False)
+        self._test_labelling_helper(True, False, False, False)
 
     def test_labelling_replace(self):
-        self._test_labelling_helper(False, True, False)
+        self._test_labelling_helper(False, True, False, False)
 
     def test_labelling_replace_pairs(self):
-        self._test_labelling_helper(True, True, False)
+        self._test_labelling_helper(True, True, False, False)
 
-    def test_labelling_default_concurrent(self):
-        self._test_labelling_helper(False, False, True)
+    def test_labelling_default_async(self):
+        self._test_labelling_helper(False, False, True, False)
 
-    def test_labelling_pairs_concurrent(self):
-        self._test_labelling_helper(True, False, True)
+    def test_labelling_pairs_async(self):
+        self._test_labelling_helper(True, False, True, False)
 
-    def test_labelling_replace_concurrent(self):
-        self._test_labelling_helper(False, True, True)
+    def test_labelling_replace_async(self):
+        self._test_labelling_helper(False, True, True, False)
 
-    def test_labelling_replace_pairs_concurrent(self):
-        self._test_labelling_helper(True, True, True)
+    def test_labelling_replace_pairs_async(self):
+        self._test_labelling_helper(True, True, True, False)
+
+    def test_labelling_default_threads(self):
+        self._test_labelling_helper(False, False, False, True)
+
+    def test_labelling_pairs_threads(self):
+        self._test_labelling_helper(True, False, False, True)
+
+    def test_labelling_replace_threads(self):
+        self._test_labelling_helper(False, True, False, True)
+
+    def test_labelling_replace_pairs_threads(self):
+        self._test_labelling_helper(True, True, False, True)
+
+    def test_labelling_default_async_threads(self):
+        self._test_labelling_helper(False, False, True, True)
+
+    def test_labelling_pairs_async_threads(self):
+        self._test_labelling_helper(True, False, True, True)
+
+    def test_labelling_replace_async_threads(self):
+        self._test_labelling_helper(False, True, True, True)
+
+    def test_labelling_replace_pairs_async_threads(self):
+        self._test_labelling_helper(True, True, True, True)
 
 
 class TestMIAMultipleTargets(TestCase):

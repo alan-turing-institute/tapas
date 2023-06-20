@@ -446,6 +446,12 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             # in the label vector returned by samples.
             self.current_label = 0
 
+    def _has_async_generator(self):
+        """Return a boolean for whether the generator attached to this threat model runs
+        its generation asynchonously or not.
+        """
+        return asyncio.iscoroutinefunction(self.atk_know_gen.generator.__call__)
+
     async def _async_generate_data(
         self, training_datasets: list[Dataset], training: bool
     ) -> list[Dataset]:
@@ -463,12 +469,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
 
         async def generate(ds):
             async with semaphore:
-                result = self.atk_know_gen.generate(ds, training_mode=training)
-                # We might have gotten a result or a future for a result, handle both.
-                try:
-                    result = await result
-                except TypeError:
-                    pass
+                result = await self.atk_know_gen.generate(ds, training_mode=training)
                 tracker.update(1)
                 return result
 
@@ -541,7 +542,14 @@ class LabelInferenceThreatModel(TrainableThreatModel):
                 num_samples, training=training
             )
             # Then, generate synthetic data from each original dataset.
-            if self.num_concurrent > 1:
+            use_async = self._has_async_generator()
+            if not use_async and self.num_concurrent > 1:
+                msg = (
+                    "Can not have num_concurrent > 1 if the generator provided is "
+                    "not async."
+                )
+                raise ValueError(msg)
+            if use_async:
                 gen_datasets = asyncio.get_event_loop().run_until_complete(
                     self._async_generate_data(training_datasets, training)
                 )
