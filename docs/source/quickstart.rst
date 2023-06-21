@@ -116,8 +116,8 @@ The groundhog attack is actually a particular instantiation of a larger class of
 
    from sklearn.ensemble import RandomForestClassifier
 
-   attacker = tapas.attacks.ShadowModellingAtack(
-      FeatureBasedSetClassifier(
+   attacker = tapas.attacks.ShadowModellingAttack(
+      tapas.attacks.FeatureBasedSetClassifier(
          tapas.attacks.NaiveSetFeature() + tapas.attacks.HistSetFeature() + tapas.attacks.CorrSetFeature(),
          RandomForestClassifier(n_estimators = 100)
       ),
