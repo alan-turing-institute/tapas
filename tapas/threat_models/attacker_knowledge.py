@@ -481,7 +481,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
     def _sync_generate_data(
         self, training_datasets: list[Dataset], training: bool
     ) -> list[Dataset]:
-        """Generate synthetic data synchronously.
+        """Generate synthetic data sequentially (as opposed to concurrently).
 
         Parameters
         ----------
