@@ -123,7 +123,7 @@ Shadow Modelling Attacks
 
 Shadow modelling is a common technique to build privacy attacks against privacy-enhancing technologies.
 The idea is to generate a large number of training "real" datasets :math:`(D_1^{(r)}, \dots, D_N^{(r)})` according to the attacker's knowledge (usually as subsets from an auxiliary dataset), then generate synthetic datasets from each of these: :math:`(D_1^{(s)}, \dots, D_N^{(s)})`.
-For a function :math:`\phi` that the attacker is trying to learn (e.g., :math:`phi(D) = I\{x \in D\})`), they train a machine learning model :math:`\mathcal{F}_\theta` to infer the value of :math:`\phi` over real datasets from the synthetic dataset: :math:`\mathcal{F}_\theta(D^{(s)}) = \phi(D^{(r)})`.
+For a function :math:`\phi` that the attacker is trying to learn (e.g., :math:`\phi(D) = I\{x \in D\})`), they train a machine learning model :math:`\mathcal{F}_\theta` to infer the value of :math:`\phi` over real datasets from the synthetic dataset: :math:`\mathcal{F}_\theta(D^{(s)}) = \phi(D^{(r)})`.
 
 The key design decision of a shadow modelling attack (``tapas.attacks.ShadowModellingAttack``) is in the choice of the classifier :math:`\mathcal{F}_\theta`.
 A challenge of applying shadow modelling to synthetic datasets is that the input of the classifier is *the whole synthetic dataset*, and is thus very high-dimensional.
@@ -142,15 +142,18 @@ A ``SetClassifier`` has an interface similar to ``scikit-learn`` classifiers, wi
 FeatureBasedSetClassifier
 +++++++++++++++++++++++++
 
-The main ``SetClassifier`` implemented by ``TAPAS`` is ``FeatureBasedSetClassifier``, a classifier that groups together two independent components:
+Implementing classifiers where the input features are a set is challenging. The main approach used in attacks against synthetic data is to first extract a vector of features from the dataset, then train a "classical" classifier using the features extracted.
+In ``TAPAS``, this is implemented by the ``FeatureBasedSetClassifier`` class, a classifier that combines two independent components:
 
 1. ``features``: A ``SetFeature`` object that extracts a vector of features (a ``numpy.array``) from a ``Dataset``. This object is a fixed function :math:`psi` and is not trainable.
 2. ``classifier``: A classifier from ``scikit-learn``, :math:`C_\theta`. This classifier is then trained (choosing :math:`\theta`) to infer the sensitive function :math:`\phi(D)` from the features extracted from a dataset.
 
-The corresponding classifier is obtained by combining these two elements as :math:`\mathcal{F}_\theta = C_\theta \circ \psi`.
+The corresponding set classifier is obtained by combining these two elements as :math:`\mathcal{F}_\theta = C_\theta \circ \psi`.
 
-``SetFeature`` objects primarily consist of a ``.extract`` method mapping datasets to a ``numpy.array`` of size (len(datasets), k) for some size k. Implementing a custom ``SetFeature`` only requires to create an object inhering from ``tapas.attacks.SetFeature`` and defining the ``.extract`` method.
-``TAPAS`` implements several simple ``SetFeature``.
+For classifiers, one should typically use a standard classifier that generalises well (given that training instances are expensive to produce), such as a ``RandomForestClassifier`` or a ``LogisticRegression``. The specific classifier used does not tend to impact the privacy analysis significantly.
+
+The main design choice for this family of attacks is in the choice of the feature extracted from the data (the ``SetFeature`` object). ``SetFeature`` objects primarily consist of a ``.extract`` method mapping datasets to a ``numpy.array`` of size (len(datasets), k) for some size k. Implementing a custom ``SetFeature`` only requires to create an object inheriting from ``tapas.attacks.SetFeature`` and defining the ``.extract`` method.
+In addition, ``TAPAS`` implements several ``SetFeature`` from prior work. The first three are from the Stadler et al. paper [1]_. The fourth one draws inspiration from attacks on query-based systems [3]_, and uses random targeted queries. Empirically, this set feature performs the best, and the resulting attack is usually the most accurate of all attacks  in ``TAPAS``.
 
 .. list-table::
 	:widths: 20 20 60
@@ -168,6 +171,12 @@ The corresponding classifier is obtained by combining these two elements as :mat
 	* - ``CorrSetFeature``
 	  - /
 	  - Computes the correlation coefficient between all attributes, with categorical columns 1-hot encoded. This is :math:`F_\text{corr}` from [1]_.
+	* - ``RandomTargetedQueryFeature``
+	  - :math:`target`, :math:`order`, :math:`number`
+	  - Selects :math:`number` different subsets of :math:`order` attributes at random, then for an input synthetic dataset compute the number of records in that dataset that match the target record :math:`target` on the selected attributes. The :math:`number` of queries gives the dimension of the feature vector. Note that this feature explicitly taylors the *target record*.
+
+
+``SetFeature`` objects can be concatenated together with the ``+`` operator (``__add__``). For instance, in the `paper's MIA example <https://github.com/alan-turing-institute/privacy-sdg-toolbox/blob/main/examples/paper/experiment_effeps.py>`_), we use a mixture of 1-, 2- and 3- way counting queries for the best-performing attack.
 
 
 GroundhogAttack
@@ -221,6 +230,6 @@ Disclaimer
 References
 ----------
 
-.. TODO: add the Usenix reference when the paper comes out.
-.. [1] Stadler, T., Oprisanu, B. and Troncoso, C., 2021. Synthetic data–anonymisation groundhog day. arXiv preprint arXiv:2011.07018.
+.. [1] Stadler, T., Oprisanu, B. and Troncoso, C., 2022. Synthetic data–anonymisation groundhog day. In 31st USENIX Security Symposium (USENIX Security 22) (pp. 1451-1468).
 .. [2] Elliot, M., 2015. Final report on the disclosure risk associated with the synthetic data produced by the sylls team. Report 2015, 2.
+.. [3] Cretu, A.M., Houssiau, F., Cully, A. and de Montjoye, Y.A., 2022, November. QuerySnout: Automating the Discovery of Attribute Inference Attacks against Query-Based Systems. In Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security (pp. 623-637).
