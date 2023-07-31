@@ -138,6 +138,7 @@ class TargetedAIA(LabelInferenceThreatModel):
         distribution: list = None,
         memorise_datasets: bool = True,
         iterator_tracker: Callable[[list], Iterable] = None,
+        num_concurrent: int = 1,
     ):
         LabelInferenceThreatModel.__init__(
             self,
@@ -152,6 +153,7 @@ class TargetedAIA(LabelInferenceThreatModel):
             memorise_datasets,
             iterator_tracker=iterator_tracker,
             num_labels=len(target_record),
+            num_concurrent=num_concurrent,
         )
         self.sensitive_attribute = sensitive_attribute
         self.attribute_values = attribute_values

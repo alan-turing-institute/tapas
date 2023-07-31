@@ -1,5 +1,6 @@
 """A test for threat models."""
 
+import asyncio
 import os
 from unittest import TestCase
 
@@ -20,6 +21,18 @@ from tapas.threat_models import (
     UncertainBoxKnowledge,
 )
 from tapas.generators import Raw, Generator
+
+
+class RawConcurrent(Raw):
+    """A generator that's like Raw, but uses a coroutine to return results async."""
+
+    async def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    @property
+    def label(self):
+        return "RawConcurrent"
+
 
 dummy_data_description = DataDescription(
     [
@@ -43,19 +56,28 @@ knowledge_on_data = AuxiliaryDataKnowledge(
     dataset, auxiliary_split=0.5, num_training_records=2
 )
 knowledge_on_sdg = BlackBoxKnowledge(Raw(), num_synthetic_records=None)
+knowledge_on_sdg_concurrent = BlackBoxKnowledge(
+    RawConcurrent(), num_synthetic_records=None
+)
 
 
 class TestMIA(TestCase):
     """Test the membership-inference attack."""
 
-    def _test_labelling_helper(self, generate_pairs, replace_target):
+    def _test_labelling_helper(self, generate_pairs, replace_target, async_generator, use_concurrency):
         """Test whether the datasets are correctly labelled."""
+        if not async_generator and use_concurrency:
+            # This combination of parameters doesn't make sense.
+            return None
+        atk_know = knowledge_on_sdg_concurrent if async_generator else knowledge_on_sdg
+        num_concurrent = 5 if use_concurrency else 1
         mia = TargetedMIA(
             knowledge_on_data,
             target_record,
-            knowledge_on_sdg,
+            atk_know,
             generate_pairs=generate_pairs,
             replace_target=replace_target,
+            num_concurrent=num_concurrent,
         )
         self.assertEqual(mia.multiple_label_mode, False)
         # Check that we generate the correct number of samples.
@@ -71,16 +93,52 @@ class TestMIA(TestCase):
             self.assertEqual(target_record in ds, target_in)
 
     def test_labelling_default(self):
-        self._test_labelling_helper(False, False)
+        self._test_labelling_helper(False, False, False, False)
 
     def test_labelling_pairs(self):
-        self._test_labelling_helper(True, False)
+        self._test_labelling_helper(True, False, False, False)
 
     def test_labelling_replace(self):
-        self._test_labelling_helper(False, True)
+        self._test_labelling_helper(False, True, False, False)
 
     def test_labelling_replace_pairs(self):
-        self._test_labelling_helper(True, True)
+        self._test_labelling_helper(True, True, False, False)
+
+    def test_labelling_default_async(self):
+        self._test_labelling_helper(False, False, True, False)
+
+    def test_labelling_pairs_async(self):
+        self._test_labelling_helper(True, False, True, False)
+
+    def test_labelling_replace_async(self):
+        self._test_labelling_helper(False, True, True, False)
+
+    def test_labelling_replace_pairs_async(self):
+        self._test_labelling_helper(True, True, True, False)
+
+    def test_labelling_default_threads(self):
+        self._test_labelling_helper(False, False, False, True)
+
+    def test_labelling_pairs_threads(self):
+        self._test_labelling_helper(True, False, False, True)
+
+    def test_labelling_replace_threads(self):
+        self._test_labelling_helper(False, True, False, True)
+
+    def test_labelling_replace_pairs_threads(self):
+        self._test_labelling_helper(True, True, False, True)
+
+    def test_labelling_default_async_threads(self):
+        self._test_labelling_helper(False, False, True, True)
+
+    def test_labelling_pairs_async_threads(self):
+        self._test_labelling_helper(True, False, True, True)
+
+    def test_labelling_replace_async_threads(self):
+        self._test_labelling_helper(False, True, True, True)
+
+    def test_labelling_replace_pairs_async_threads(self):
+        self._test_labelling_helper(True, True, True, True)
 
 
 class TestMIAMultipleTargets(TestCase):
@@ -268,7 +326,6 @@ class TestAttackerKnowledge(TestCase):
         with pytest.raises(Exception) as err:
             gen(dataset, training_mode=True)
         gen(dataset, training_mode=False)
-
 
     def test_uncertain_box(self):
         # First, define a silly 1-dimensional generator.
