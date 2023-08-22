@@ -29,6 +29,11 @@ print("Loading dataset...")
 data = tapas.datasets.TabularDataset.read(
     "data/2011 Census Microdata Teaching File", label="Census"
 )
+# Select an arbitrary target record (that is unique), and remove it from the dataset.
+target_record = data.get_records([1])
+# This step is important to ensure that the target record is not (incorrectly) added
+# to training datasets that are not supposed to contain it.
+data.drop_records([1], in_place=True)
 
 # We attack the (trivial) Raw generator, which outputs its training dataset.
 generator = tapas.generators.Raw()
@@ -62,7 +67,7 @@ sdg_knowledge = tapas.threat_models.BlackBoxKnowledge(
 threat_model = tapas.threat_models.TargetedMIA(
     attacker_knowledge_data=data_knowledge,
     # We here select the first record, arbitrarily.
-    target_record=data.get_records([0]),
+    target_record=target_record,
     attacker_knowledge_generator=sdg_knowledge,
     # These are mostly technical questions. They inform how the attacker will
     # be trained, but are not impactful changes of the threat model.

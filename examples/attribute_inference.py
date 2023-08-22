@@ -21,6 +21,8 @@ from sklearn.linear_model import LogisticRegression
 data = tapas.datasets.TabularDataset.read(
     "data/2011 Census Microdata Teaching File", label="Census"
 )
+target_record = data.get_records([1])
+data.drop_records([1], in_place=True)
 
 # Create a dummy generator.
 generator = tapas.generators.Raw()
@@ -39,7 +41,7 @@ threat_model = tapas.threat_models.TargetedAIA(
     # Specific to AIA: the sensitive attribute and its possible values.
     sensitive_attribute="Sex",
     attribute_values=["1", "2"],
-    target_record=data.get_records([0]),
+    target_record=target_record,
     attacker_knowledge_generator=sdg_knowledge,
 )
 

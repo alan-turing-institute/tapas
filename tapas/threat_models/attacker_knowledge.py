@@ -58,6 +58,11 @@ class AttackerKnowledgeOnData:
         """
         return self._label
 
+    @abstractmethod
+    def _get_data(self):
+        """Returns all real data used in this object."""
+        abstract
+
 
 class AttackerKnowledgeWithLabel(AttackerKnowledgeOnData):
     """
@@ -196,6 +201,10 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
     def label(self):
         return self.aux_data.label + " (AUX)"
 
+    def _get_data(self):
+        """Returns the auxiliary data used for train and test."""
+        return self.aux_data + self.test_data
+
 
 class ExactDataKnowledge(AttackerKnowledgeOnData):
     """
@@ -215,6 +224,10 @@ class ExactDataKnowledge(AttackerKnowledgeOnData):
     @property
     def label(self):
         return self.training_dataset.label + " (EXACT)"
+
+    def _get_data(self):
+        """Returns the exact data used as "rest of" the dataset."""
+        return self.training_dataset
 
 
 class AttackerKnowledgeOnGenerator:
