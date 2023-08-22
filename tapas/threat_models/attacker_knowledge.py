@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 from abc import ABC, abstractmethod
 import asyncio
+import warnings
+
 from .base_classes import TrainableThreatModel
 
 
@@ -57,6 +59,11 @@ class AttackerKnowledgeOnData:
 
         """
         return self._label
+
+    @abstractmethod
+    def _get_data(self):
+        """Returns all real data used in this object."""
+        abstract
 
 
 class AttackerKnowledgeWithLabel(AttackerKnowledgeOnData):
@@ -196,6 +203,10 @@ class AuxiliaryDataKnowledge(AttackerKnowledgeOnData):
     def label(self):
         return self.aux_data.label + " (AUX)"
 
+    def _get_data(self):
+        """Returns the auxiliary data used for train and test."""
+        return self.aux_data + self.test_data
+
 
 class ExactDataKnowledge(AttackerKnowledgeOnData):
     """
@@ -215,6 +226,10 @@ class ExactDataKnowledge(AttackerKnowledgeOnData):
     @property
     def label(self):
         return self.training_dataset.label + " (EXACT)"
+
+    def _get_data(self):
+        """Returns the exact data used as "rest of" the dataset."""
+        return self.training_dataset
 
 
 class AttackerKnowledgeOnGenerator:
@@ -355,6 +370,7 @@ class SilentIterator:
     """
     SilentIterator implements the interface expected of iteration trackers, but does
     nothing.
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -453,7 +469,10 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         return asyncio.iscoroutinefunction(self.atk_know_gen.generator.__call__)
 
     async def _async_generate_data(
-        self, training_datasets: list[Dataset], training: bool
+        self,
+        training_datasets: list[Dataset],
+        training: bool,
+        training_labels: list[np.array] = None,
     ) -> list[Dataset]:
         """Generate synthetic data running multiple samples concurrently.
 
@@ -463,6 +482,11 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             The original datasets based on which to generate synthetic data.
         training: bool
             Whether this is training of testing data.
+        training_labels: list of labels or None
+            The labels associated with the training datasets. This parameter 
+            conditions whether to save generated datasets to memory: if it is
+            None, datasets will *not* be saved.
+
         """
         tracker = self.iterator_tracker(total=len(training_datasets))
         semaphore = asyncio.Semaphore(self.num_concurrent)
@@ -476,12 +500,25 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         tasks = [generate(ds) for ds in training_datasets]
         gen_datasets = await asyncio.gather(*tasks)
         tracker.close()
+
+        # Add the entries generated to the memory.
+        if training_labels is not None:
+            mem_datasets, mem_labels = self._memory[training]
+            self._memory[training] = (
+                mem_datasets + gen_datasets,
+                mem_labels + training_labels,
+            )
+
         return gen_datasets
 
     def _sync_generate_data(
-        self, training_datasets: list[Dataset], training: bool
+        self,
+        training_datasets: list[Dataset],
+        training: bool,
+        training_labels: list[np.array] = None,
     ) -> list[Dataset]:
-        """Generate synthetic data sequentially (as opposed to concurrently).
+        """
+        Generate synthetic data sequentially (as opposed to concurrently).
 
         Parameters
         ----------
@@ -489,18 +526,30 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             The original datasets based on which to generate synthetic data.
         training: bool
             Whether this is training of testing data.
+        training_labels: list of labels or None
+            The labels associated with the training datasets. This parameter 
+            conditions whether to save generated datasets to memory: if it is
+            None, datasets will *not* be saved.
+
         """
         tracker = self.iterator_tracker(total=len(training_datasets))
+        use_memory = training_labels is not None
+        if use_memory:
+            mem_datasets, mem_labels = self._memory[training]
         gen_datasets = []
-        for ds in training_datasets:
-            gen_datasets.append(self.atk_know_gen.generate(ds, training_mode=training))
+        for idx, ds in enumerate(training_datasets):
+            synthetic_dataset = self.atk_know_gen.generate(ds, training_mode=training)
+            gen_datasets.append(synthetic_dataset)
+            if use_memory:
+                mem_datasets.append(synthetic_dataset)
+                mem_labels.append(training_labels[idx])
             tracker.update(1)
         tracker.close()
         return gen_datasets
 
     def _generate_samples(
         self,
-        num_samples: int,
+        num_samples: int = None,
         training: bool = True,
         ignore_memory: bool = False,
     ) -> tuple[list[Dataset], list[bool]]:
@@ -516,25 +565,33 @@ class LabelInferenceThreatModel(TrainableThreatModel):
 
         Parameters
         ----------
-        num_samples: int
-            The number of synthetic datasets to generate.
+        num_samples: int (default None)
+            The number of synthetic datasets to generate. If this is None, do not
+            generate any datasets and return all memoised datasets.
         training: bool (default, True)
             whether to generate samples from the training or test distribution.
         ignore_memory: bool, default False
             Whether to ignore the memoised datasets.
 
         """
-        # Retrieve memoized samples (if needed).
+        # Retrieve memoised samples (if needed), then decrease num_samples
+        # so that it becomes the number of new samples to generate.
         use_memory = (not ignore_memory) and self.memorise_datasets
+        assert use_memory or num_samples, "No samples to generate and no memory."
         if use_memory:
-            mem_datasets, mem_labels = self._memory[training]
-            num_samples -= len(mem_datasets)
-        else:
-            mem_datasets = []
-            mem_labels = []
+            if num_samples is None:
+                # Special case: return all memoised samples and nothing more.
+                memoised_samples = self._memory[training]
+                if len(memoised_samples[0]) == 0:
+                    warnings.warn(
+                        "No samples were generated or found in memory, with num_samples=None. Is this intentional?"
+                    )
+                return memoised_samples
+            else:
+                num_samples -= len(self._memory[training][0])
         # If there are samples to generate:
         if num_samples > 0:
-            # Generate sample: first, produce the original datasets with labels.
+            # Generate samples: first, produce the original datasets with labels.
             (
                 training_datasets,
                 gen_labels,
@@ -551,44 +608,49 @@ class LabelInferenceThreatModel(TrainableThreatModel):
                 raise ValueError(msg)
             if use_async:
                 gen_datasets = asyncio.get_event_loop().run_until_complete(
-                    self._async_generate_data(training_datasets, training)
+                    self._async_generate_data(
+                        training_datasets, training, gen_labels if use_memory else None
+                    )
                 )
             else:
-                gen_datasets = self._sync_generate_data(training_datasets, training)
-            # Add the entries generated to the memory.
-            if use_memory:
-                self._memory[training] = (
-                    mem_datasets + gen_datasets,
-                    mem_labels + gen_labels,
+                gen_datasets = self._sync_generate_data(
+                    training_datasets, training, gen_labels if use_memory else None
                 )
+
+        # Collate the datasets and labels to return. If memory is used, this
+        # fetches the datasets in memory (which includes the generated datasets).
+        # Otherwise, only use the generated datasets.
+        if use_memory:
+            mem_datasets, mem_labels = self._memory[training]
         else:
-            gen_datasets = []
-            gen_labels = []
-        # Finally, if in multiple-label mode, filter labels to only current.
-        # This only changes the output of this function, and not the memory.
-        all_labels = mem_labels + gen_labels
+            # These variables are always defined, because if use_memory is None, num_samples > 0.
+            mem_datasets, mem_labels = gen_datasets, gen_labels
+        # Finally, if in multiple-label mode, filter labels to only the current
+        # label (each label is of size self.num_labels, and this function returns
+        # values only for the current label).  This only changes the output of
+        # this function, and not the memory.
         if self.multiple_label_mode:
-            all_labels = [l[self.current_label] for l in all_labels]
-        # Combine results from the memory with generated results.
-        return mem_datasets + gen_datasets, all_labels
+            mem_labels = [l[self.current_label] for l in mem_labels]
+        return mem_datasets, mem_labels
 
     def generate_training_samples(
-        self, num_samples: int, ignore_memory: bool = False,
+        self, num_samples: int = None, ignore_memory: bool = False,
     ) -> tuple[list[Dataset], list[bool]]:
         """
         Generate samples to train an attack.
 
         Parameters
         ----------
-        num_samples: int
-            The number of synthetic datasets to generate.
+        num_samples: int (default None)
+            The number of synthetic datasets to generate. If this is None, do not
+            generate any datasets and return all memoised datasets.
         ignore_memory: bool, default False
-            Whether to use the memoized datasets, or ignore them.
+            Whether to use the memoised datasets, or ignore them.
         """
         return self._generate_samples(num_samples, True, ignore_memory)
 
     def test(
-        self, attack: Attack, num_samples: int = 100, ignore_memory: bool = False,
+        self, attack: Attack, num_samples: int = None, ignore_memory: bool = False,
     ) -> tuple[list[int], list[int]]:
         """
         Test an attack against this threat model. This samples `num_samples`
@@ -600,10 +662,13 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         ----------
         attack : Attack
             Attack to test.
+        num_samples: int (default None)
+            The number of tests datasets to generate and test against. If this
+            is None, this uses all memoised samples.
         num_samples : int
             Number of test datasets to generate and test against.
         ignore_memory: bool, default False
-            Whether to ignore the memoized datasets. Not recommended.
+            Whether to ignore the memoised datasets. Not recommended.
 
         Returns
         -------

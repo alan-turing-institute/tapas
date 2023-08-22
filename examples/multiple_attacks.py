@@ -23,6 +23,9 @@ from sklearn.neighbors import KernelDensity
 data = tapas.datasets.TabularDataset.read(
     "data/2011 Census Microdata Teaching File", label="Census"
 )
+target_record = data.get_records([1])
+data.drop_records([1], in_place=True)
+
 
 # Create a dummy generator.
 generator = tapas.generators.Raw()
@@ -38,7 +41,7 @@ sdg_knowledge = tapas.threat_models.BlackBoxKnowledge(
 
 threat_model = tapas.threat_models.TargetedMIA(
     attacker_knowledge_data=data_knowledge,
-    target_record=data.get_records([0]),
+    target_record=target_record,
     attacker_knowledge_generator=sdg_knowledge,
     generate_pairs=True,
     replace_target=True,

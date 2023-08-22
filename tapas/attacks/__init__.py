@@ -5,7 +5,6 @@ from .closest_distance import (
     LocalNeighbourhoodAttack,
 )
 from .distances import DistanceMetric, HammingDistance, LpDistance
-from .direct_linkage import DirectLinkage
 from .shadow_modelling import ShadowModellingAttack
 from .set_classifiers import (
     SetClassifier,
@@ -23,4 +22,3 @@ from .synthinference import (
     sklearnDensityEstimator,
     SyntheticPredictorAttack,
 )
-from .utils import load_attack

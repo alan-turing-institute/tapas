@@ -135,7 +135,7 @@ class TrainableThresholdAttack(Attack):
     def train(
         self,
         threat_model: LabelInferenceThreatModel,
-        num_samples: int = 100,
+        num_samples: int = None,
         **attack_score_kwargs,
     ):
         """
@@ -146,8 +146,10 @@ class TrainableThresholdAttack(Attack):
         ----------
         threat_model: LabelInferenceThreatModel
             The threat model from which to generate labelled samples.
-        num_samples: int (default, 100).
-            Number of training samples to generate to select the threshold.
+        num_samples: int (default, None).
+            Number of training samples to generate to select the threshold. If None,
+            use all pre-generated training samples (only do this if you have already
+            generated datasets).
         (optionally), additional keyword arguments, passed to _train_attack_score.
 
         """
@@ -258,7 +260,7 @@ class TrainableThresholdAttack(Attack):
 
     # Implement this if needed.
     def _train_attack_score(
-        self, threat_model: LabelInferenceThreatModel, num_samples: int = 100, **kwargs
+        self, threat_model: LabelInferenceThreatModel, num_samples: int = None, **kwargs
     ):
         """
         Train the attack score function (optional). By default, this does nothing.
@@ -267,8 +269,10 @@ class TrainableThresholdAttack(Attack):
         ----------------------
         threat_model: LabelInferenceThreatModel
             The threat model from which to generate training samples.
-        num_samples: int (default 100)
-            Number of samples to generate to train the attack score.
+        num_samples: int (default, None).
+            Number of training samples to generate to select the threshold. If None,
+            use all pre-generated training samples (only do this if you have already
+            generated datasets).
         optional keyword arguments: passed from .train(**kwargs).
 
         """

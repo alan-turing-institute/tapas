@@ -347,8 +347,8 @@ class TestAttackerKnowledge(TestCase):
             self.assertEqual(x[0], 117)
 
 
-class TestSaveLoad(TestCase):
-    """Check whether saving/loading threat models works."""
+class TestMemory(TestCase):
+    """Check whether saving/loading threat models works, as well as saving in memory."""
 
     def test_save_then_load(self):
         name = os.path.join(os.path.dirname(__file__), "outputs/threat_model_test")
@@ -389,3 +389,36 @@ class TestSaveLoad(TestCase):
                     self.assertEqual(v1, v2)
         # Finally, check that the name is properly set.
         self.assertEqual(threat_model_2._name, name)
+
+
+    def test_memory(self):
+        threat_model = TargetedMIA(
+            knowledge_on_data,
+            target_record,
+            knowledge_on_sdg,
+            generate_pairs=False,
+            replace_target=False,
+        )
+        # Without using memory.
+        for training in [True, False]:
+            for num_samples in [4, 7, 11, 20]:
+                mem_datasets, mem_labels = threat_model._generate_samples(
+                    num_samples, training, ignore_memory=True
+                )
+                self.assertEqual(len(mem_datasets), num_samples)
+                self.assertEqual(len(mem_labels), num_samples)
+                # Check that the memory is empty.
+                self.assertEqual(len(threat_model._memory[training][0]), 0)
+                self.assertEqual(len(threat_model._memory[training][1]), 0)
+        # Using memory.
+        for training in [True, False]:
+            for num_samples in [4, 7, 11, 20]:
+                mem_datasets, mem_labels = threat_model._generate_samples(
+                    num_samples, training, ignore_memory=False
+                )
+                self.assertEqual(len(mem_datasets), num_samples)
+                self.assertEqual(len(mem_labels), num_samples)
+                # Check that the memory has the right size.
+                self.assertEqual(len(threat_model._memory[training][0]), num_samples)
+                self.assertEqual(len(threat_model._memory[training][1]), num_samples)
+

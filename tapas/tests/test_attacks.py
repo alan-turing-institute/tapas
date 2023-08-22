@@ -73,7 +73,7 @@ class TestClosestDistance(TestCase):
         mia = self._make_mia(0, 0)
         print(mia.generate_training_samples(100))
         attack = ClosestDistanceMIA(criterion=("threshold", -0.3))
-        attack.train(mia)
+        attack.train(mia, num_samples=100)
         # Check that the training worked as intended.
         self.assertEqual(attack._threshold, -0.3)
         # Check that the score is working as intended.
@@ -87,7 +87,7 @@ class TestClosestDistance(TestCase):
 
         # Perform the attack for a user *in* the dataset.
         attack = ClosestDistanceMIA(criterion=("threshold", -0.3))
-        attack.train(self._make_mia(0, 1))
+        attack.train(self._make_mia(0, 1), num_samples=100)
         print("attack")
         self.assertEqual(attack.attack([self.dataset])[0], True)
 
@@ -103,9 +103,9 @@ class TestClosestDistance(TestCase):
             replace_target=True,
         )
         attack_tpr = ClosestDistanceMIA(criterion=("tpr", 0.1))
-        attack_tpr.train(mia)
+        attack_tpr.train(mia, num_samples=100)
         attack_fpr = ClosestDistanceMIA(criterion=("fpr", 0.1))
-        attack_fpr.train(mia)
+        attack_fpr.train(mia, num_samples=100)
 
     def test_distances(self):
         # Check that the other distances run and have zero.
@@ -318,7 +318,7 @@ class TestGroundHog:
             BlackBoxKnowledge(Raw(), num_synthetic_records=200),
         )
         attack = GroundhogAttack()
-        attack.train(mia)
+        attack.train(mia, num_samples=10)
 
 
 if __name__ == "__main__":

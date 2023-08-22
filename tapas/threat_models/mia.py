@@ -24,6 +24,7 @@ from .attacker_knowledge import (
 from ..report import MIAttackSummary
 
 import numpy as np
+import warnings
 
 
 class MIALabeller(AttackerKnowledgeWithLabel):
@@ -174,6 +175,8 @@ class TargetedMIA(LabelInferenceThreatModel):
             num_labels=len(target_record),
             num_concurrent=num_concurrent,
         )
+        # Check that the targets are not already in the data (soft).
+        self._assert_non_membership(target_record, attacker_knowledge_data)
         # Save the target recordS, and the current record (0).
         if self.multiple_label_mode:
             # Since calling .get_records creates a new Dataset object every
@@ -184,6 +187,27 @@ class TargetedMIA(LabelInferenceThreatModel):
             self.set_label(0)
         else:
             self.target_record = target_record
+
+    def _assert_non_membership(self, target_record, attacker_knowledge_data):
+        """
+        Checks that target records are not used in the attacker knowledge's data.
+
+        This does not raise an error but a warning that can be ignored. However,
+        in most cases, it is recommended to ensure that target records are not also
+        found in the auxiliary data, as this may make the task of inferring membership
+        less meaningful: i.e., although "the" target record was not added to the
+        dataset, another identical record is present in that data.
+
+        """
+        # Get all records used to simulate real training data.
+        data_used = attacker_knowledge_data._get_data()
+        num_records_found_in_data = sum([(r in data_used) for r in target_record])
+        if num_records_found_in_data > 0:
+            warnings.warn(
+                f"{num_records_found_in_data} target record(s) were found in the auxiliary data. "
+                + "This is not recommended: it is best to remove target records to avoid duplicates "
+                + "and ensure that the task of membership inference is meaningful."
+            )
 
     # Wrap the test method to output a MIAttackSummary.
     def _wrap_output(self, truth_labels, pred_labels, scores, attack):

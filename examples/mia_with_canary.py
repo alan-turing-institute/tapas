@@ -18,9 +18,9 @@ data, canary = create_canary(real_data)
 
 canary.set_id(-1)
 
-# For comparison, we are also going to select a random record (0) as target.
-target = data.get_records([0])
-data.drop_records(record_ids=[0], in_place=True)
+# For comparison, we are also going to select a random unique record (1) as target.
+target = data.get_records([1])
+data.drop_records(record_ids=[1], in_place=True)
 
 # Since the target is a dataset, we can add the canary record to it to form
 # a dataset of two targets.
@@ -54,7 +54,7 @@ for threat_model_for_a_target in threat_model:
     attacker.train(
         threat_model_for_a_target, num_samples=100,
     )
-    summaries.append(threat_model_for_a_target.test(attacker))
+    summaries.append(threat_model_for_a_target.test(attacker, num_samples=100))
 
 # Finally, group together the summaries as a report.
 reports = [tapas.report.MIAttackReport(summaries), tapas.report.ROCReport(summaries)]

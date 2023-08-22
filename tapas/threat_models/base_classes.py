@@ -18,7 +18,7 @@ from which training datasets are sampled, with or without the target record.
 
 from abc import ABC, abstractmethod
 
-# For
+# To save and load threat models from file.
 import pickle
 
 
