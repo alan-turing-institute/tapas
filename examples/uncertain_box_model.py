@@ -59,10 +59,12 @@ description = DataDescription(
     [{"name": "a", "type": "finite", "representation": num_categories}],
     label="1-D"
 )
+# Records in the (exactly known) dataset are numbers < num_categories-1.
 dataset = TabularDataset(
     pd.DataFrame(np.random.randint(num_categories - 1, size=(1000,)), columns=["a"]),
     description
 )
+# The target is unique: the only record with value num_categories-1.
 target = TabularDataset(
     pd.DataFrame([[num_categories - 1]], columns=["a"]), description,
 )
@@ -71,6 +73,9 @@ target = TabularDataset(
 atk_data_knowledge = ExactDataKnowledge(dataset)
 
 # Three different threat-models, in increasing order of knowledge on the generator.
+# All threat models share the same generator: the noisy histogram. The threat models
+# need access to a generator (even in the no-box scenario) in order to generate test
+# samples to evaluate the attack.
 generator = NoisyHistogram()
 
 atk_generator_knowledge = [
