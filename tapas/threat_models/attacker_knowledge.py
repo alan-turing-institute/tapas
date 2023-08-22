@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 from abc import ABC, abstractmethod
 import asyncio
+import warnings
+
 from .base_classes import TrainableThreatModel
 
 
@@ -467,7 +469,10 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         return asyncio.iscoroutinefunction(self.atk_know_gen.generator.__call__)
 
     async def _async_generate_data(
-        self, training_datasets: list[Dataset], training: bool, training_labels: list[np.array] = None,
+        self,
+        training_datasets: list[Dataset],
+        training: bool,
+        training_labels: list[np.array] = None,
     ) -> list[Dataset]:
         """Generate synthetic data running multiple samples concurrently.
 
@@ -576,7 +581,12 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         if use_memory:
             if num_samples is None:
                 # Special case: return all memoised samples and nothing more.
-                return self._memory[training]
+                memoised_samples = self._memory[training]
+                if len(memoised_samples[0]) == 0:
+                    warnings.warn(
+                        "No samples were generated or found in memory, with num_samples=None. Is this intentional?"
+                    )
+                return memoised_samples
             else:
                 num_samples -= len(self._memory[training][0])
         # If there are samples to generate:
@@ -598,7 +608,9 @@ class LabelInferenceThreatModel(TrainableThreatModel):
                 raise ValueError(msg)
             if use_async:
                 gen_datasets = asyncio.get_event_loop().run_until_complete(
-                    self._async_generate_data(training_datasets, training, gen_labels if use_memory else None)
+                    self._async_generate_data(
+                        training_datasets, training, gen_labels if use_memory else None
+                    )
                 )
             else:
                 gen_datasets = self._sync_generate_data(
