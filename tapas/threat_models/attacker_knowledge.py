@@ -355,6 +355,7 @@ class SilentIterator:
     """
     SilentIterator implements the interface expected of iteration trackers, but does
     nothing.
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -453,7 +454,7 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         return asyncio.iscoroutinefunction(self.atk_know_gen.generator.__call__)
 
     async def _async_generate_data(
-        self, training_datasets: list[Dataset], training: bool
+        self, training_datasets: list[Dataset], training: bool, training_labels: list[np.array] = None,
     ) -> list[Dataset]:
         """Generate synthetic data running multiple samples concurrently.
 
@@ -463,6 +464,11 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             The original datasets based on which to generate synthetic data.
         training: bool
             Whether this is training of testing data.
+        training_labels: list of labels or None
+            The labels associated with the training datasets. This parameter 
+            conditions whether to save generated datasets to memory: if it is
+            None, datasets will *not* be saved.
+
         """
         tracker = self.iterator_tracker(total=len(training_datasets))
         semaphore = asyncio.Semaphore(self.num_concurrent)
@@ -476,12 +482,25 @@ class LabelInferenceThreatModel(TrainableThreatModel):
         tasks = [generate(ds) for ds in training_datasets]
         gen_datasets = await asyncio.gather(*tasks)
         tracker.close()
+
+        # Add the entries generated to the memory.
+        if training_labels is not None:
+            mem_datasets, mem_labels = self._memory[training]
+            self._memory[training] = (
+                mem_datasets + gen_datasets,
+                mem_labels + training_labels,
+            )
+
         return gen_datasets
 
     def _sync_generate_data(
-        self, training_datasets: list[Dataset], training: bool
+        self,
+        training_datasets: list[Dataset],
+        training: bool,
+        training_labels: list[np.array] = None,
     ) -> list[Dataset]:
-        """Generate synthetic data sequentially (as opposed to concurrently).
+        """
+        Generate synthetic data sequentially (as opposed to concurrently).
 
         Parameters
         ----------
@@ -489,11 +508,23 @@ class LabelInferenceThreatModel(TrainableThreatModel):
             The original datasets based on which to generate synthetic data.
         training: bool
             Whether this is training of testing data.
+        training_labels: list of labels or None
+            The labels associated with the training datasets. This parameter 
+            conditions whether to save generated datasets to memory: if it is
+            None, datasets will *not* be saved.
+
         """
         tracker = self.iterator_tracker(total=len(training_datasets))
+        use_memory = training_labels is not None
+        if use_memory:
+            mem_datasets, mem_labels = self._memory[training]
         gen_datasets = []
-        for ds in training_datasets:
-            gen_datasets.append(self.atk_know_gen.generate(ds, training_mode=training))
+        for idx, ds in enumerate(training_datasets):
+            synthetic_dataset = self.atk_know_gen.generate(ds, training_mode=training)
+            gen_datasets.append(synthetic_dataset)
+            if use_memory:
+                mem_datasets.append(synthetic_dataset)
+                mem_labels.append(training_labels[idx])
             tracker.update(1)
         tracker.close()
         return gen_datasets
@@ -554,17 +585,13 @@ class LabelInferenceThreatModel(TrainableThreatModel):
                 raise ValueError(msg)
             if use_async:
                 gen_datasets = asyncio.get_event_loop().run_until_complete(
-                    self._async_generate_data(training_datasets, training)
+                    self._async_generate_data(training_datasets, training, gen_labels if use_memory else None)
                 )
             else:
-                gen_datasets = self._sync_generate_data(training_datasets, training)
-            # Add the entries generated to the memory.
-            if use_memory:
-                mem_datasets, mem_labels = self._memory[training]
-                self._memory[training] = (
-                    mem_datasets + gen_datasets,
-                    mem_labels + gen_labels,
+                gen_datasets = self._sync_generate_data(
+                    training_datasets, training, gen_labels if use_memory else None
                 )
+
         # Collate the datasets and labels to return. If memory is used, this
         # fetches the datasets in memory (which includes the generated datasets).
         # Otherwise, only use the generated datasets.
