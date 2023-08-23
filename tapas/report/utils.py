@@ -5,6 +5,17 @@ import numpy as np
 
 from sklearn.metrics import roc_curve
 
+# List of all metrics that can be used in a report.
+ALL_METRICS = [
+    "accuracy",
+    "true_positive_rate",
+    "false_positive_rate",
+    "mia_advantage",
+    "privacy_gain",
+    "auc",
+    "effective_epsilon",
+]
+
 # configurable axis ranges
 axis_ranges = {
     "accuracy": (0, 1),
@@ -19,7 +30,7 @@ color_pal = sns.color_palette("colorblind", 10)
 
 
 def metric_comparison_plots(
-    data, comparison_label, fixed_pair_label, metrics, marker_label, output_path
+    data, comparison_label, fixed_pair_label, metrics, marker_label, output_path,
 ):
 
     """
@@ -31,15 +42,16 @@ def metric_comparison_plots(
     data: dataframe
         Input dataframe from the MIAttackReport class
     comparison_label: str
-        Name of column that will be use as X axis
+        Name of column that will be used as X axis.
     fixed_pair_columns: list[str]
-             Columns in dataframe to fix (groupby) for a given figure in order to make meaningful comparisons. It can be any pair
+        Columns in dataframe to fix (groupby) for a given figure in order to make meaningful comparisons.
+        It can be any pair of columns from the report.
     metrics:  list[str]
         List of metrics to be used in the report, these can be any of the following:
         "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage", "privacy_gain", "auc".
     marker_label: str
         Column in dataframe that be used to as marker in a point plot comparison. It can be either: 'generator',
-    'attack' or 'target_id'.
+        'attack' or 'target_id'.
     output_path: str
         Path where the figure is to be saved.
 
@@ -54,6 +66,7 @@ def metric_comparison_plots(
         fig, axs = plt.subplots(len(metrics), sharex=True)
 
         for i, metric in enumerate(metrics):
+            # sns.boxplot
             sns.pointplot(
                 data=pair,
                 y=metric,
@@ -62,9 +75,12 @@ def metric_comparison_plots(
                 order=np.unique(pair[comparison_label]),
                 ax=axs[i],
                 dodge=True,
-                errwidth=1,
-                linestyles="",
-                errorbar="ci",
+                # Disable lines between points for different x.
+                join=False,
+                # Plot the 95% confidence interval. In most cases, this will only
+                # appear when the corresponding Report uses sample bootstrapping.
+                errwidth=4,
+                errorbar=('pi', 95),
             )
             axs[i].legend([], [], frameon=False)
             axs[i].set_ylabel(metric, fontsize=20)

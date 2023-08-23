@@ -203,7 +203,10 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
         float
 
         """
-        scores = self.scores if self.scores is not None else self.predictions
+        # If all labels are identical, roc_auc_score fails. If that happens, return 0.5.
+        if len(np.unique(self.labels)) < 2:
+            return 0.5
+        scores = self.scores if (self.scores is not None) else self.predictions
         return roc_auc_score(self.labels, scores)
 
     @property
@@ -228,6 +231,8 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
 
         """
         if self.scores is None:
+            if self.fp <= 0 or self.tp >= 1:
+                return np.inf
             return np.log(max(self.tp / self.fp, (1 - self.fp) / (1 - self.tp)))
         else:
             # Arbitrary threshold on the minimum count needed for TP/FP comp.
@@ -239,15 +244,22 @@ class BinaryLabelInferenceAttackSummary(LabelInferenceAttackSummary):
             # Remove potential duplicates.
             significant_thresholds = np.unique(significant_thresholds)
             # Compute the TP and FP for each threshold.
-            tp = np.array([
-                np.mean(self.scores[self.labels == 1] >= t)
-                for t in significant_thresholds
-            ])
-            fp = np.array([
-                np.mean(self.scores[self.labels == 0] >= t)
-                for t in significant_thresholds
-            ])
-            return np.log(max(np.max(tp/fp), np.max((1-fp)/(1-tp))))
+            tp = np.array(
+                [
+                    np.mean(self.scores[self.labels == 1] >= t)
+                    for t in significant_thresholds
+                ]
+            )
+            fp = np.array(
+                [
+                    np.mean(self.scores[self.labels == 0] >= t)
+                    for t in significant_thresholds
+                ]
+            )
+            # Prevent divides by zero by manually checking if they would occur.
+            if np.any((fp == 0) & (tp > 0)) or np.any((tp == 1) & (fp < 1)):
+                return np.inf
+            return np.log(max(np.max(tp / fp), np.max((1 - fp) / (1 - tp))))
 
     def get_metric_filename(self, postfix=""):
         return f"BinaryLIAttack_result_{postfix}.csv"
@@ -550,3 +562,6 @@ class BinaryAIAttackSummary(AIAttackSummary, BinaryLabelInferenceAttackSummary):
             [self.get_header(), BinaryLabelInferenceAttackSummary.get_metrics(self),],
             axis=1,
         )
+
+
+## TODO: CLEAN UP WITH GET_HEADERS ETC?

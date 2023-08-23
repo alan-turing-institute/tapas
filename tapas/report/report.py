@@ -7,13 +7,14 @@ comprehensive picture of the robustness of a generator against attacks.
 """
 
 from abc import ABC, abstractmethod
+import copy
 import numpy as np
 import os
 import pandas as pd
 from scipy.stats import binomtest
 
-from .attack_summary import MIAttackSummary
-from .utils import metric_comparison_plots, plot_roc_curve
+from .attack_summary import AttackSummary, MIAttackSummary
+from .utils import metric_comparison_plots, plot_roc_curve, ALL_METRICS
 
 
 class Report(ABC):
@@ -40,18 +41,7 @@ class BinaryLabelAttackReport(Report):
 
     """
 
-    # List of all metrics that can be used in a report.
-    ALL_METRICS = [
-        "accuracy",
-        "true_positive_rate",
-        "false_positive_rate",
-        "mia_advantage",
-        "privacy_gain",
-        "auc",
-        "effective_epsilon",
-    ]
-
-    def __init__(self, summaries, metrics=None):
+    def __init__(self, summaries, metrics=None, num_bootstrap=None):
         """
         Parameters
         ----------
@@ -82,12 +72,36 @@ class BinaryLabelAttackReport(Report):
             List of metrics to be used in the report, these can be any of the following:
             "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage",
             "privacy_gain", and "auc". If left as None, all metrics are used.
+        num_bootstrap: int or None (detault)
+            If not None, the metrics are estimated using boostrapping of the scores and
+            labels, with num_boostrap giving the number of bootstrapped samples. This
+            will result in (estimated) confidence intervals in the plot. This can only
+            be done when summaries are given as input and not dataframe of metrics.
 
         """
+        if num_bootstrap is not None:
+            all_metrics = []
+            for summary in summaries:
+                assert isinstance(
+                    summary, AttackSummary
+                ), "Need AttackSummary for boostrapping."
+                for _ in range(num_bootstrap):
+                    sub_summary = copy.deepcopy(summary)
+                    # Bootstrap (sampling with replacement) the labels and scores.
+                    n = len(summary.labels)
+                    indices = np.random.choice(n, size=n, replace=True)
+                    sub_summary.labels = summary.labels[indices]
+                    sub_summary.scores = summary.scores[indices]
+                    sub_summary.predictions = summary.predictions[indices]
+                    # Compute the metrics on each.
+                    all_metrics.append(sub_summary.get_metrics())
+            # Concatenate all bootstrapped metrics as a single summary.
+            summaries = pd.concat(all_metrics)
+        # If the summaries are not already metrics, convert them to metrics.
         if not isinstance(summaries, pd.DataFrame):
             summaries = pd.concat([s.get_metrics() for s in summaries])
         self.attacks_data = summaries
-        self.metrics = metrics or MIAttackReport.ALL_METRICS
+        self.metrics = metrics or ALL_METRICS
 
     def compare(self, comparison_column, fixed_pair_columns, marker_column, filepath):
         """
@@ -200,7 +214,7 @@ class MIAttackReport(BinaryLabelAttackReport):
 
         """
 
-        metrics = metrics or MIAttackReport.ALL_METRICS
+        metrics = metrics or ALL_METRICS
         df_list = []
 
         for attack in attacks:
@@ -401,7 +415,7 @@ class EffectiveEpsilonReport(Report):
             negative_count = np.sum(l == False)
             # We adapt in case the min count is too small.
             min_count = min(10, 1 + int(len(s) * 0.1))
-            # The minimum value of numerator if 
+            # The minimum value of numerator if
             min_count_for_num = max(10, int(len(s) * 0.05))
             # Do not consider the first and last 10 thresholds, since we allow FP=0.
             for threshold in np.unique(np.sort(s)[min_count:-min_count]):
@@ -494,6 +508,6 @@ class EffectiveEpsilonReport(Report):
         )
         ci_fpr = bi_fpr.proportion_ci(confidence_level_half)
         # Effective epsilon is estimated as log(tpr/fpr), and this is thus the confidence interval.
-        low_bound = max(0, np.log(ci_tpr.low / ci_fpr.high))
+        low_bound = max(0, np.log(ci_tpr.low / ci_fpr.high)) if ci_fpr.high > 0 else np.inf
         high_bound = np.log(ci_tpr.high / ci_fpr.low) if ci_fpr.low > 0 else np.inf
         return low_bound, high_bound
