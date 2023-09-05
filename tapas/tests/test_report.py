@@ -6,13 +6,14 @@ import datetime
 from tapas.report import MIAttackSummary, MIAttackReport, EffectiveEpsilonReport
 
 
-class MIAReport(unittest.TestCase):
+class MIAReportTest(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
 
-        # generating attack data in the format that is expected for the MIAttackReport class.
-        attacks = []
-        for i in range(1000):
+        # Generating attack data in the format that is expected for the MIAttackReport class.
+        # Note that this is not realistic: we have multiple answers values for each header.
+        summaries = []
+        for i in range(100):
             attack_dict = {
                 "labels": np.random.randint(2, size=100),
                 "predictions": np.random.randint(2, size=100),
@@ -20,14 +21,13 @@ class MIAReport(unittest.TestCase):
                 "generator": np.random.choice(
                     ["RandomGenerator1", "RandomGenerator2", "RandomGenerator3"]
                 ),
-                "dataset": np.random.choice(["TestData1"]),
+                "dataset": "TestData1",
                 "target_id": str(np.random.randint(1, 5, size=1)[0]),
                 "attack": np.random.choice(["RandomGuess1", "RandomGuess2"]),
             }
+            summaries.append(attack_dict)
 
-            attacks.append(attack_dict)
-
-        self.report = MIAttackReport.load_summary_statistics(attacks)
+        self.report = MIAttackReport.load_summary_statistics(summaries)
 
     def test_setup(self):
         self.assertTrue(self.report.attacks_data.shape, [9, 10])
@@ -53,11 +53,31 @@ class MIAReport(unittest.TestCase):
         self.assertEqual(n_figures, 20)  # Added a dimension to plot.
 
 
-class EffectiveEpsilon(unittest.TestCase):
+class BoostrapReportTest(unittest.TestCase):
+
+    def test_publish(self):
+        np.random.seed(0)
+        labels = np.random.randint(2, size=100)
+        scores = labels + np.random.normal(loc=0, scale=0.7, size=labels.shape)
+        predictions = scores > 0.5
+        attack_summary = MIAttackSummary(
+            labels, predictions, scores, "Random", "Example", "Test", "Target"
+        )
+        filepath_timestamp = os.path.join(
+            os.path.dirname(__file__),
+            f'outputs/tapas_report_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}',
+        )
+        report = MIAttackReport([attack_summary], num_bootstrap=100, metrics=['accuracy', 'auc'])
+        report.publish(filepath_timestamp)
+        # For comparison, the report without using bootstrapping.
+        report = MIAttackReport([attack_summary], metrics=['accuracy', 'auc'])
+        report.publish(filepath_timestamp + '_exact')
+
+
+class EffectiveEpsilonTest(unittest.TestCase):
     def test_clopper_pearson(self):
         # Construct an artificial setup where the Clopper-Pearson bound should
         # be close to epsilon = 1.
-        # TODO: refactor this to make it work.
         num_trials = int(1e3)  # A lot of samples for accurate bound.
         for epsilon in [0.1, 1, 10]:
             labels = np.random.randint(2, size=(num_trials,))
