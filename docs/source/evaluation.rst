@@ -37,7 +37,14 @@ The plots produced by ``BinaryLabelAttackReport.publish`` display all specified 
 This method generates plots for all values of two specific columns (``fixed_pair_columns``), where the comparison is performed according to another column, ``comparison_column``.
 The choice of disaggregation (dataset/generator/target/attack) is inspired by the work of Stadler et al., and intends to cover a range of common use cases. Other comparions (e.g., across threat models) must be implemented manually.
 
-.. TODO: this seems like something to look into. 
+
+Confidence interval estimation
+++++++++++++++++++++++++++++++
+
+By default, the values reported by the reports are point estimates, computed using all labels and scores/predictions available for each experiment (i.e., dataset, generator, target, and attack). These estimates can "get lucky" with the randomness in experiments, and may misrepresent the success rate of attacks, especially when the number of samples is small. In order to get an idea on the confidence of an estimate, ``TAPAS`` allows plot reports to be augmented with 95% confidence intervals, estimated by bootstrapping the labels/scores/predictions.
+
+To enable confidence intervals, set the ``num_bootstrap`` argument of ``BinaryLabelAttackReport`` to a positive integer. This sets the number of bootstrapped samples to generate to estimate the confidence interval.
+
 
 
 ROC curve
