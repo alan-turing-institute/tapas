@@ -73,6 +73,7 @@ def metric_comparison_plots(
         fig, axs = plt.subplots(len(metrics), sharex=True)
 
         for i, metric in enumerate(metrics):
+            # sns.boxplot
             sns.pointplot(
                 data=pair,
                 y=metric,

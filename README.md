@@ -1,10 +1,10 @@
-![tests](https://github.com/alan-turing-institute/privacy-sdg-toolbox/actions/workflows/ci.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/privacy-sdg-toolbox/badge/?version=latest)](https://privacy-sdg-toolbox.readthedocs.io/en/latest/?badge=latest)
+![tests](https://github.com/alan-turing-institute/privacy-sdg-toolbox/actions/workflows/ci.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/tapas-privacy/badge/?version=latest)](https://tapas-privacy.readthedocs.io/en/latest/index.html)
 
 # TAPAS: a Toolbox for Adversarial Privacy Auditing of Synthetic Data
 
 Evaluating the privacy of synthetic data with an adversarial toolbox. This code implements the TAPAS toolbox presented in [the associated paper](https://arxiv.org/abs/2211.06550).
 
-[Documentation.](https://privacy-sdg-toolbox.readthedocs.io/en/latest/index.html#)
+[Documentation.](https://tapas-privacy.readthedocs.io/en/latest/index.html)
 
 
 ## Reference

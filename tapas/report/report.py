@@ -17,7 +17,6 @@ import warnings
 from .attack_summary import AttackSummary, MIAttackSummary
 from .utils import metric_comparison_plots, plot_roc_curve, DEFAULT_METRICS
 
-
 class Report(ABC):
     """
     A report groups together the outputs of a range of attacks, potentially
@@ -96,7 +95,7 @@ class BinaryLabelAttackReport(Report):
             for summary in summaries:
                 assert isinstance(
                     summary, AttackSummary
-                ), "Cannot boostrap from pandas DataFrame."
+                ), "Cannot boostrap from pandas DataFrame. Use AttackSummary instead."
                 for _ in range(num_bootstrap):
                     sub_summary = copy.deepcopy(summary)
                     # Bootstrap (sampling with replacement) the labels and scores.
@@ -227,6 +226,7 @@ class MIAttackReport(BinaryLabelAttackReport):
         """
 
         metrics = metrics or DEFAULT_METRICS
+
         df_list = []
 
         for attack in attacks:
