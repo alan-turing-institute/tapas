@@ -3,12 +3,13 @@ Evaluation
 ==========
 
 The module ``tapas.report`` provides tools to analyse the outcome of attacks, and in particular compare different attacks and threat models.
-The outcome of an attack is obtained from ``ThreatModel.test(attack)``, which returns an ``AttackSummary`` object.
+The outcome of an attack (an experiment) is obtained from ``ThreatModel.test(attack)``, which returns an ``AttackSummary`` object.
 This object contains information about how the attack performed: typically, the outcome for a number of simulations.
 
 ``Report`` objects aggregate ``AttackSummary`` objects from different attacks to produce a human-readable output.
 These objects provide a ``.publish(filepath)`` method, which publishes a "report" of these attacks, saved as one or more files in the folder indicated by ``filepath``. ``TAPAS`` implements different reports.
 
+This page explains the API of reporting in ``TAPAS``. To see what the results look like in practice, see the `reporting.py <https://github.com/alan-turing-institute/privacy-sdg-toolbox/blob/main/examples/reporting.py>`_ example.
 
 
 Classification Metrics
@@ -17,7 +18,7 @@ Classification Metrics
 ``BinaryLabelAttackReport`` and its subclasses ``MIAttackReport``/``AIAttackReport`` aggregate summaries resulting from membership- or attribute-inference attacks by computing a range of classification metrics on each summary. The ``.publish`` method generates a range of plots, showing all metrics across different datasets, attacks, and generators.
 
 The metrics are extracted from the ``AttackSummary``, and thus all metrics implemented in the latter transfer to the ``Report``.
-For binary classification tasks (MIA/Binary AIA), the following metrics are generated:
+For binary classification tasks (MIA/Binary AIA), the following metrics are computed:
 
 - ``accuracy``: the success rate of the attack.
 - ``true_positive_rate``: the probability that the attack makes a correct guess for a positive record (label 1).
