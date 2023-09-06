@@ -16,6 +16,13 @@ ALL_METRICS = [
     "effective_epsilon",
 ]
 
+DEFAULT_METRICS = [
+    "accuracy",
+    "privacy_gain",
+    "auc",
+]
+
+
 # configurable axis ranges
 axis_ranges = {
     "accuracy": (0, 1),
@@ -174,7 +181,7 @@ def plot_roc_curve(
 
     ax.legend(loc="lower right", fontsize=20)
 
-    # We add a small margin to protect [0,1].
+    # We add a small margin to correctly display [0,1].
     margin = 0.01
     if low_corner:
         ax.set_xlim([0 - margin * zoom_in, zoom_in])
@@ -189,6 +196,8 @@ def plot_roc_curve(
         fig.suptitle(title, fontweight="bold", fontsize=24)
 
     filename = f"ROC_curve{suffix}.png"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
     plt.savefig(os.path.join(output_path, filename))
 
     plt.close(fig)

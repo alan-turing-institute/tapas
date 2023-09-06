@@ -12,10 +12,10 @@ import numpy as np
 import os
 import pandas as pd
 from scipy.stats import binomtest
+import warnings
 
 from .attack_summary import AttackSummary, MIAttackSummary
-from .utils import metric_comparison_plots, plot_roc_curve, ALL_METRICS
-
+from .utils import metric_comparison_plots, plot_roc_curve, DEFAULT_METRICS
 
 class Report(ABC):
     """
@@ -45,33 +45,37 @@ class BinaryLabelAttackReport(Report):
         """
         Parameters
         ----------
-        summaries: dataframe
-            Dataframe where each row is the result of a given attack as obtained from 
-            he BinaryLabelInferenceAttackSummary class. The dataframe must have the
-            following structure:
-            Index:
-                RangeIndex
-            Columns:
-                dataset: str
-                target_id: str
-                generator: str
-                attack: str
-                accuracy: float
-                true_positive_rate: float
-                false_positive_rate: float
-                mia_advantage: float
-                privacy_gain: float
-                auc: float
-                effective_epsilon: float
+        summaries: iterable of AttackSummary objects, or DataFrame
+            The summaries output by ThreatModel.test as a result of an experiment.
+            Specifically, these should be BinaryLabelInferenceAttackSummary objects.
+            These objects contain the labels, predictions and scores for each test
+            sample, and a range of metrics computed from these, using get_metrics.
 
-            Alternatively, this can be passed as an iterable of BinaryLabelInferenceAttackSummary
-            objects, in which case .get_metrics() is called on each object, and the results are
-            concatenated as one DataFrame.
+            When *not* using bootstrapping, you may instead directly provide a
+            pandas DataFrame containing the metrics. This is not recommended, and will
+            be deprecated in a future release.
+            The dataframe must have the following structure:
+                Index:
+                    RangeIndex
+                Columns:
+                    dataset: str
+                    target_id: str
+                    generator: str
+                    attack: str
+                    accuracy: float
+                    true_positive_rate: float
+                    false_positive_rate: float
+                    mia_advantage: float
+                    privacy_gain: float
+                    auc: float
+                    effective_epsilon: float
 
         metrics: list[str]
             List of metrics to be used in the report, these can be any of the following:
             "accuracy", "true_positive_rate", "false_positive_rate", "mia_advantage",
-            "privacy_gain", and "auc". If left as None, all metrics are used.
+            "privacy_gain", and "auc". If left as None, a selection of metrics is used
+            (see DEFAULT_METRICS in utils.py).
+
         num_bootstrap: int or None (detault)
             If not None, the metrics are estimated using boostrapping of the scores and
             labels, with num_boostrap giving the number of bootstrapped samples. This
@@ -79,12 +83,19 @@ class BinaryLabelAttackReport(Report):
             be done when summaries are given as input and not dataframe of metrics.
 
         """
+        if isinstance(summaries, pd.DataFrame):
+            warnings.warn(
+                "Passing a pandas DataFrame of metrics will be removed in a future release. Use AttackSummary instead.",
+                PendingDeprecationWarning,
+            )
         if num_bootstrap is not None:
+            # Do the bootstrapping here: for each summary, bootstrap labels, scores
+            # and predictions and compute all the metrics, then compute all metrics.
             all_metrics = []
             for summary in summaries:
                 assert isinstance(
                     summary, AttackSummary
-                ), "Need AttackSummary for boostrapping."
+                ), "Cannot boostrap from pandas DataFrame. Use AttackSummary instead."
                 for _ in range(num_bootstrap):
                     sub_summary = copy.deepcopy(summary)
                     # Bootstrap (sampling with replacement) the labels and scores.
@@ -101,7 +112,7 @@ class BinaryLabelAttackReport(Report):
         if not isinstance(summaries, pd.DataFrame):
             summaries = pd.concat([s.get_metrics() for s in summaries])
         self.attacks_data = summaries
-        self.metrics = metrics or ALL_METRICS
+        self.metrics = metrics or DEFAULT_METRICS
 
     def compare(self, comparison_column, fixed_pair_columns, marker_column, filepath):
         """
@@ -214,7 +225,8 @@ class MIAttackReport(BinaryLabelAttackReport):
 
         """
 
-        metrics = metrics or ALL_METRICS
+        metrics = metrics or DEFAULT_METRICS
+
         df_list = []
 
         for attack in attacks:
@@ -246,28 +258,47 @@ class ROCReport(Report):
     """
     Report the Receiver Operating Characteristic curves for several attacks.
 
+    TODO: explain the disaggregation
+
     """
 
-    def __init__(self, attack_summaries, suffix="", eff_epsilon=None, zooms=[1]):
+    def __init__(
+        self,
+        attack_summaries,
+        suffix="",
+        disaggregate_by=None,
+        curve_label="attack",
+        eff_epsilon=None,
+        zooms=[1],
+    ):
         """
         Parameters
         ----------
         attack_summaries: list[BinaryLabelInferenceAttackSummary]
             The output of binary label-inference attacks. These can have
             been applied to different threat models (including datasets).
-        suffix: str
+        suffix: str (default "")
             Text to display in the title, and filename.
+        disaggregate_by: str or None (default)
+            TODO
+            generator, attack, dataset, target_id
+        curve_label: str, default 'attack'
+            Summary attribute to use as legend label for individual ROC curves.
+            By default, each ROC curve corresponds to one attack.
         eff_epsilon: float or None
-            If not None, the value of effective epsilon used to plot the
-            TP/FP and TN/FN curves. If None, no curves are plotted.
+            If not None, TP/FP and TN/FN bounds are displayed on the plot for
+            the specified value of effective epsilon. If None, no curves are plotted.
         zooms: list of floats, default [1]
-            List of zooms of ROC curves to produce. A zoom is a restriction of
-            the ROC curve to [0,zoom_in] x [0,zoom_in]. This allows to visualise
-            the TPR at low FPR for privacy analysis.
+            List of zooms of ROC curves to produce. For each zoom < 1, the ROC curves
+            restricted to [0, zoom] x [0, zoom] (low corner) and [1-zoom, zoom] x
+            [1-zoom, zoom] (high corner). This allows to visualise the TPR at low FPR 
+            (and TNR at low FNR) for privacy analysis.
 
         """
         self.summaries = attack_summaries
         self.suffix = suffix
+        self.disaggregate_by = disaggregate_by
+        self.curve_label = curve_label
         self.eff_epsilon = eff_epsilon
         self.zooms = zooms
 
@@ -276,23 +307,52 @@ class ROCReport(Report):
         Plot the ROC curves and save them to disk.
 
         """
-        for zoom_in in self.zooms:
-            for low_corner in [True, False] if zoom_in < 1 else [True]:
-                plot_roc_curve(
-                    [(s.labels, s.scores) for s in self.summaries],
-                    [s.attack for s in self.summaries],
-                    f"Comparison of ROC curves ({self.suffix})",
-                    filepath,
-                    self.suffix
-                    + (
-                        f"_zoom={'' if low_corner else '-'}{zoom_in}"
-                        if zoom_in < 1
-                        else ""
-                    ),
-                    eff_epsilon=self.eff_epsilon,
-                    zoom_in=zoom_in,
-                    low_corner=low_corner,
-                )
+        # Disaggregate the summaries by some specified value, if required.
+        if self.disaggregate_by is not None:
+            column_values = set(
+                [getattr(s, self.disaggregate_by) for s in self.summaries]
+            )
+            grouped_summaries = [
+                [s for s in self.summaries if getattr(s, self.disaggregate_by) == v]
+                for v in column_values
+            ]
+            group_suffix = [f"_{self.disaggregate_by}={v}" for v in column_values]
+        else:
+            grouped_summaries = [self.summaries]
+            group_suffix = [""]
+        # Do all the plots: per zoom value, corner, and value disaggregation.
+        for summaries, g_suffix in zip(grouped_summaries, group_suffix):
+            for zoom_in in self.zooms:
+                for low_corner in [True, False] if zoom_in < 1 else [True]:
+                    # Decoration: have a nicely formatted file suffix and title.
+                    suffix = (
+                        self.suffix
+                        + (
+                            f"_zoom={zoom_in}_{'low' if low_corner else 'high'}"
+                            if zoom_in < 1
+                            else ""
+                        )
+                        + g_suffix
+                    )
+                    title = "Comparison of ROC curves"
+                    if suffix:
+                        tokens = suffix.split("_")
+                        if not tokens[0]:  # Remove the initial _.
+                            tokens = tokens[1:]
+                        title += "\n(" + (", ".join(tokens)) + ")"
+                    # Display the ROC curve for this setup.
+                    plot_roc_curve(
+                        [(s.labels, s.scores) for s in summaries],
+                        [
+                            getattr(s, self.curve_label) for s in summaries
+                        ],  # Legend labels.
+                        title,
+                        filepath,
+                        suffix,
+                        eff_epsilon=self.eff_epsilon,
+                        zoom_in=zoom_in,
+                        low_corner=low_corner,
+                    )
 
 
 class EffectiveEpsilonReport(Report):
@@ -310,7 +370,7 @@ class EffectiveEpsilonReport(Report):
 
     Recommendations:
     - Use ExactDataKnowledge as auxiliary data knowledge.
-    - Have a large enough number of test samples.
+    - Have a large number of test samples.
 
     """
 
@@ -320,6 +380,7 @@ class EffectiveEpsilonReport(Report):
         validation_split=0.1,
         confidence_levels=(0.9, 0.95, 0.99),
         heuristic="cp",
+        suffix=None,
     ):
         """
         Parameters
@@ -329,14 +390,17 @@ class EffectiveEpsilonReport(Report):
             threat model. One of these attacks (the one with highest TP/FP) will
             be used to estimate the effective epsilon.
         validation_split: float in (0,1)
-            Fraction of each summary to use as validation, to select the attack
+            Fraction of each summary to use as validation, i.e., to select the attack
             and threshold to use in the estimation.
         confidence_levels: list[float in (0,1)], or a float.
             The confidence levels for which to compute the estimate.
-        heuristic: str
+        heuristic: str, default "cp"
             Which heuristic to use to choose the attack and threshold used for
             estimation of Clopper-Pearson bounds. Acceptable values are "cp"
-            (max effeps with Clopper-Pearson) and "ratio" (max TP/FP).
+            (max effeps with Clopper-Pearson) and "ratio" (max TP/FP). See the
+            documentation of specific methods for additional details.
+        suffix: str or None
+            String to add to the report's filename (optional).
 
         """
         self.summaries = attack_summaries
@@ -351,6 +415,7 @@ class EffectiveEpsilonReport(Report):
             "cp": self._select_attack_cp,
             "ratio": self._select_attack_ratio,
         }[heuristic]
+        self.suffix = '_'+suffix if suffix else ''
 
     def publish(self, filepath):
         """
@@ -366,8 +431,9 @@ class EffectiveEpsilonReport(Report):
         # First, select an attack and threshold.
         index, threshold, inverse = self._select_attack()
         summary = self.summaries[index]
+        text_inverse = ' (using negatives TN/FN)' if inverse else ''
         print(
-            f"Using attack {summary.attack} with threshold {threshold} and {inverse}."
+            f"Using attack {summary.attack} with threshold {threshold}{text_inverse}."
         )
         # Compute the effective epsilon for each confidence level.
         split_index = int(self.split * len(summary.scores))
@@ -386,21 +452,22 @@ class EffectiveEpsilonReport(Report):
         df_epsilons = pd.DataFrame(
             epsilons, columns=["confidence", "epsilon_low", "epsilon_high"]
         )
-        df_epsilons.to_csv(os.path.join(filepath, "effective_epsilon.csv"))
+        df_epsilons.to_csv(os.path.join(filepath, f"effective_epsilon{self.suffix}.csv"))
         return df_epsilons
 
     def _select_attack_ratio(self):
         """
-        Select an attack and threshold from the summaries. This uses the ratio TP/FP
-        of the attack as selection criterion. If FP=0 for any attack/threshold, then
-        the attack/threshold with highest TP for FP=0 is selected. In order to avoid
-        the case where FP = 1 by chance, we exclude the first and last10 values of
-        threshold for each attack (or first and last 10% of threshold values,
-        whichever is lowest).
+        Select an attack and threshold from the validation summaries. This uses the
+        ratio TP/FP of the attack as selection criterion. If FP=0 for any attack and
+        threshold, then the attack/threshold with highest TP for FP=0 is selected. 
+
+        In order to make this more robust to randomness in sampling (i.e., to avoid
+        the case where FP = 0 by chance), this excludes the first and last 10 values
+        _or_ 10% of threshold values, whichever is lowest.
 
         This heuristic privileges "worst-case" setups where TP>0 for FP=0. Since such
         situations are forbidden by DP, this is where the highest potential epsilon
-        can be found. This is however quite sensitive to randomness.
+        can be found. This is however sensitive to randomness.
 
         """
         # Best effective epsilon found so far, and the corresponding (index, threshold).
@@ -447,13 +514,13 @@ class EffectiveEpsilonReport(Report):
 
     def _select_attack_cp(self, conf_level=0.9):
         """
-        Select an attack and threshold from the summaries. This uses the CP
-        bounds to estimate effective epsilon with relatively low confidence
-        (to allow for smaller sample size).
+        Select an attack and threshold from the validation summaries. This
+        heuristic computes the effective-epsilon (with Clopper-Pearson bounds
+        and a low confidence level, 90% by default) for each attack and threshold,
+        and selects the most successful one (highest on sample).
 
-        This heuristic privileges safe values, and tends to consistently find
-        high-ish values of epsilon, but not necessarily the most successful
-        attack (i.e. it is conservative).
+        This heuristic tends to consistently find good attacks, but not often the
+        best one (i.e. it is consistent but conservative).
 
         """
         best_eps = -1
@@ -508,6 +575,8 @@ class EffectiveEpsilonReport(Report):
         )
         ci_fpr = bi_fpr.proportion_ci(confidence_level_half)
         # Effective epsilon is estimated as log(tpr/fpr), and this is thus the confidence interval.
-        low_bound = max(0, np.log(ci_tpr.low / ci_fpr.high)) if ci_fpr.high > 0 else np.inf
+        low_bound = (
+            max(0, np.log(ci_tpr.low / ci_fpr.high)) if ci_fpr.high > 0 else np.inf
+        )
         high_bound = np.log(ci_tpr.high / ci_fpr.low) if ci_fpr.low > 0 else np.inf
         return low_bound, high_bound
